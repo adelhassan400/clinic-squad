@@ -1,0 +1,966 @@
+openapi: 3.1.0
+info:
+  # Do not change the title, if the title changes, the import paths will be broken
+  title: Api
+  version: 0.1.0
+  description: ClinicSquad API specification
+servers:
+  - url: /api
+    description: Base API path
+tags:
+  - name: health
+    description: Health operations
+  - name: auth
+    description: Authentication operations
+  - name: clinics
+    description: Clinic management
+  - name: patients
+    description: Patient management
+  - name: appointments
+    description: Appointment management
+  - name: finances
+    description: Financial management
+  - name: subscriptions
+    description: Subscription management
+  - name: dashboard
+    description: Dashboard summaries
+paths:
+  /healthz:
+    get:
+      operationId: healthCheck
+      tags: [health]
+      summary: Health check
+      responses:
+        "200":
+          description: Healthy
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthStatus"
+
+  /auth/register:
+    post:
+      operationId: registerUser
+      tags: [auth]
+      summary: Register a new clinic admin
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RegisterBody"
+      responses:
+        "201":
+          description: Registered successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthResponse"
+        "409":
+          description: Email already exists
+
+  /auth/login:
+    post:
+      operationId: loginUser
+      tags: [auth]
+      summary: Login
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginBody"
+      responses:
+        "200":
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthResponse"
+        "401":
+          description: Invalid credentials
+
+  /auth/me:
+    get:
+      operationId: getCurrentUser
+      tags: [auth]
+      summary: Get current user
+      responses:
+        "200":
+          description: Current user
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+
+  /clinics/{clinicId}:
+    get:
+      operationId: getClinic
+      tags: [clinics]
+      summary: Get clinic by ID
+      parameters:
+        - in: path
+          name: clinicId
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Clinic data
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Clinic"
+
+  /clinics/{clinicId}/subscription:
+    get:
+      operationId: getSubscription
+      tags: [subscriptions]
+      summary: Get clinic subscription
+      parameters:
+        - in: path
+          name: clinicId
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Subscription details
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Subscription"
+    post:
+      operationId: createSubscription
+      tags: [subscriptions]
+      summary: Create or upgrade subscription
+      parameters:
+        - in: path
+          name: clinicId
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateSubscriptionBody"
+      responses:
+        "201":
+          description: Subscription created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Subscription"
+
+  /clinics/{clinicId}/patients:
+    get:
+      operationId: listPatients
+      tags: [patients]
+      summary: List all patients
+      parameters:
+        - in: path
+          name: clinicId
+          required: true
+          schema:
+            type: string
+        - in: query
+          name: search
+          schema:
+            type: string
+        - in: query
+          name: page
+          schema:
+            type: integer
+            default: 1
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            default: 20
+      responses:
+        "200":
+          description: List of patients
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PatientList"
+    post:
+      operationId: createPatient
+      tags: [patients]
+      summary: Add a new patient
+      parameters:
+        - in: path
+          name: clinicId
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreatePatientBody"
+      responses:
+        "201":
+          description: Patient created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Patient"
+
+  /clinics/{clinicId}/patients/{patientId}:
+    get:
+      operationId: getPatient
+      tags: [patients]
+      summary: Get patient by ID
+      parameters:
+        - in: path
+          name: clinicId
+          required: true
+          schema:
+            type: string
+        - in: path
+          name: patientId
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Patient details
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Patient"
+    put:
+      operationId: updatePatient
+      tags: [patients]
+      summary: Update patient
+      parameters:
+        - in: path
+          name: clinicId
+          required: true
+          schema:
+            type: string
+        - in: path
+          name: patientId
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreatePatientBody"
+      responses:
+        "200":
+          description: Updated patient
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Patient"
+    delete:
+      operationId: deletePatient
+      tags: [patients]
+      summary: Delete patient
+      parameters:
+        - in: path
+          name: clinicId
+          required: true
+          schema:
+            type: string
+        - in: path
+          name: patientId
+          required: true
+          schema:
+            type: string
+      responses:
+        "204":
+          description: Deleted
+
+  /clinics/{clinicId}/appointments:
+    get:
+      operationId: listAppointments
+      tags: [appointments]
+      summary: List appointments
+      parameters:
+        - in: path
+          name: clinicId
+          required: true
+          schema:
+            type: string
+        - in: query
+          name: date
+          schema:
+            type: string
+            format: date
+        - in: query
+          name: status
+          schema:
+            type: string
+            enum: [scheduled, completed, cancelled, no_show]
+        - in: query
+          name: page
+          schema:
+            type: integer
+            default: 1
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            default: 20
+      responses:
+        "200":
+          description: List of appointments
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AppointmentList"
+    post:
+      operationId: createAppointment
+      tags: [appointments]
+      summary: Create appointment
+      parameters:
+        - in: path
+          name: clinicId
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateAppointmentBody"
+      responses:
+        "201":
+          description: Appointment created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Appointment"
+
+  /clinics/{clinicId}/appointments/{appointmentId}:
+    put:
+      operationId: updateAppointment
+      tags: [appointments]
+      summary: Update appointment
+      parameters:
+        - in: path
+          name: clinicId
+          required: true
+          schema:
+            type: string
+        - in: path
+          name: appointmentId
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateAppointmentBody"
+      responses:
+        "200":
+          description: Updated appointment
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Appointment"
+    delete:
+      operationId: deleteAppointment
+      tags: [appointments]
+      summary: Delete appointment
+      parameters:
+        - in: path
+          name: clinicId
+          required: true
+          schema:
+            type: string
+        - in: path
+          name: appointmentId
+          required: true
+          schema:
+            type: string
+      responses:
+        "204":
+          description: Deleted
+
+  /clinics/{clinicId}/finances:
+    get:
+      operationId: listFinances
+      tags: [finances]
+      summary: List financial records
+      parameters:
+        - in: path
+          name: clinicId
+          required: true
+          schema:
+            type: string
+        - in: query
+          name: type
+          schema:
+            type: string
+            enum: [income, expense]
+        - in: query
+          name: month
+          schema:
+            type: integer
+        - in: query
+          name: year
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: List of financial records
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FinanceList"
+    post:
+      operationId: createFinanceRecord
+      tags: [finances]
+      summary: Create financial record
+      parameters:
+        - in: path
+          name: clinicId
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateFinanceBody"
+      responses:
+        "201":
+          description: Financial record created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Finance"
+
+  /clinics/{clinicId}/dashboard:
+    get:
+      operationId: getDashboardSummary
+      tags: [dashboard]
+      summary: Get dashboard summary stats
+      parameters:
+        - in: path
+          name: clinicId
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Dashboard summary
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DashboardSummary"
+
+  /clinics/{clinicId}/appointments/today:
+    get:
+      operationId: getTodayAppointments
+      tags: [appointments]
+      summary: Get today's appointments
+      parameters:
+        - in: path
+          name: clinicId
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Today's appointments
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Appointment"
+
+  /clinics/{clinicId}/finances/summary:
+    get:
+      operationId: getFinanceSummary
+      tags: [finances]
+      summary: Get financial summary
+      parameters:
+        - in: path
+          name: clinicId
+          required: true
+          schema:
+            type: string
+        - in: query
+          name: year
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Financial summary with monthly breakdown
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FinanceSummary"
+
+  # SuperAdmin endpoints
+  /admin/clinics:
+    get:
+      operationId: adminListClinics
+      tags: [clinics]
+      summary: SuperAdmin - list all clinics
+      responses:
+        "200":
+          description: All clinics
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Clinic"
+
+  /admin/clinics/{clinicId}/activate:
+    post:
+      operationId: adminActivateClinic
+      tags: [clinics]
+      summary: SuperAdmin - activate clinic
+      parameters:
+        - in: path
+          name: clinicId
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Activated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Clinic"
+
+  /admin/clinics/{clinicId}/block:
+    post:
+      operationId: adminBlockClinic
+      tags: [clinics]
+      summary: SuperAdmin - block clinic
+      parameters:
+        - in: path
+          name: clinicId
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Blocked
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Clinic"
+
+  /admin/subscriptions/{clinicId}/confirm:
+    post:
+      operationId: adminConfirmSubscription
+      tags: [subscriptions]
+      summary: SuperAdmin - confirm payment and activate subscription
+      parameters:
+        - in: path
+          name: clinicId
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Confirmed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Subscription"
+
+components:
+  schemas:
+    HealthStatus:
+      type: object
+      properties:
+        status:
+          type: string
+      required: [status]
+
+    RegisterBody:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          minLength: 6
+        clinicName:
+          type: string
+        ownerName:
+          type: string
+      required: [email, password, clinicName, ownerName]
+
+    LoginBody:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+      required: [email, password]
+
+    AuthResponse:
+      type: object
+      properties:
+        user:
+          $ref: "#/components/schemas/User"
+        clinic:
+          $ref: "#/components/schemas/Clinic"
+        token:
+          type: string
+      required: [user, clinic, token]
+
+    User:
+      type: object
+      properties:
+        id:
+          type: string
+        email:
+          type: string
+        role:
+          type: string
+          enum: [admin, secretary, superadmin]
+        clinicId:
+          type: string
+        name:
+          type: string
+        isBlocked:
+          type: boolean
+      required: [id, email, role, clinicId, name, isBlocked]
+
+    Clinic:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        ownerId:
+          type: string
+        status:
+          type: string
+          enum: [pending, active, blocked, deleted]
+        subscriptionStatus:
+          type: string
+          enum: [trial, basic, premium, expired]
+        trialEndDate:
+          type: string
+          format: date-time
+        subscriptionPlan:
+          type: string
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+      required: [id, name, ownerId, status, subscriptionStatus, trialEndDate, createdAt]
+
+    Subscription:
+      type: object
+      properties:
+        id:
+          type: string
+        clinicId:
+          type: string
+        planType:
+          type: string
+          enum: [basic, premium]
+        startDate:
+          type: string
+          format: date-time
+        endDate:
+          type: string
+          format: date-time
+        paymentStatus:
+          type: string
+          enum: [pending, confirmed, failed]
+        amount:
+          type: number
+        createdAt:
+          type: string
+          format: date-time
+      required: [id, clinicId, planType, startDate, endDate, paymentStatus, amount, createdAt]
+
+    CreateSubscriptionBody:
+      type: object
+      properties:
+        planType:
+          type: string
+          enum: [basic, premium]
+        paymentProof:
+          type: string
+          description: Base64 or URL of payment proof image
+      required: [planType]
+
+    Patient:
+      type: object
+      properties:
+        id:
+          type: string
+        clinicId:
+          type: string
+        name:
+          type: string
+        phone:
+          type: string
+        dateOfBirth:
+          type: string
+          format: date
+        gender:
+          type: string
+          enum: [male, female, other]
+        bloodType:
+          type: string
+          nullable: true
+        allergies:
+          type: string
+          nullable: true
+        notes:
+          type: string
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+      required: [id, clinicId, name, phone, gender, createdAt]
+
+    CreatePatientBody:
+      type: object
+      properties:
+        name:
+          type: string
+        phone:
+          type: string
+        dateOfBirth:
+          type: string
+          format: date
+        gender:
+          type: string
+          enum: [male, female, other]
+        bloodType:
+          type: string
+          nullable: true
+        allergies:
+          type: string
+          nullable: true
+        notes:
+          type: string
+          nullable: true
+      required: [name, phone, gender]
+
+    PatientList:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/Patient"
+        total:
+          type: integer
+        page:
+          type: integer
+        limit:
+          type: integer
+      required: [data, total, page, limit]
+
+    Appointment:
+      type: object
+      properties:
+        id:
+          type: string
+        clinicId:
+          type: string
+        patientId:
+          type: string
+        patientName:
+          type: string
+        date:
+          type: string
+          format: date
+        time:
+          type: string
+        status:
+          type: string
+          enum: [scheduled, completed, cancelled, no_show]
+        type:
+          type: string
+        notes:
+          type: string
+          nullable: true
+        fee:
+          type: number
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+      required: [id, clinicId, patientId, patientName, date, time, status, type, createdAt]
+
+    CreateAppointmentBody:
+      type: object
+      properties:
+        patientId:
+          type: string
+        date:
+          type: string
+          format: date
+        time:
+          type: string
+        type:
+          type: string
+        notes:
+          type: string
+          nullable: true
+        fee:
+          type: number
+          nullable: true
+      required: [patientId, date, time, type]
+
+    UpdateAppointmentBody:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [scheduled, completed, cancelled, no_show]
+        date:
+          type: string
+          format: date
+        time:
+          type: string
+        notes:
+          type: string
+          nullable: true
+        fee:
+          type: number
+          nullable: true
+
+    AppointmentList:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/Appointment"
+        total:
+          type: integer
+        page:
+          type: integer
+        limit:
+          type: integer
+      required: [data, total, page, limit]
+
+    Finance:
+      type: object
+      properties:
+        id:
+          type: string
+        clinicId:
+          type: string
+        type:
+          type: string
+          enum: [income, expense]
+        category:
+          type: string
+        amount:
+          type: number
+        description:
+          type: string
+        date:
+          type: string
+          format: date
+        createdAt:
+          type: string
+          format: date-time
+      required: [id, clinicId, type, category, amount, description, date, createdAt]
+
+    CreateFinanceBody:
+      type: object
+      properties:
+        type:
+          type: string
+          enum: [income, expense]
+        category:
+          type: string
+        amount:
+          type: number
+        description:
+          type: string
+        date:
+          type: string
+          format: date
+      required: [type, category, amount, description, date]
+
+    FinanceList:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/Finance"
+        total:
+          type: integer
+        totalIncome:
+          type: number
+        totalExpense:
+          type: number
+      required: [data, total, totalIncome, totalExpense]
+
+    FinanceSummary:
+      type: object
+      properties:
+        totalIncome:
+          type: number
+        totalExpense:
+          type: number
+        netProfit:
+          type: number
+        monthlyBreakdown:
+          type: array
+          items:
+            type: object
+            properties:
+              month:
+                type: integer
+              income:
+                type: number
+              expense:
+                type: number
+            required: [month, income, expense]
+      required: [totalIncome, totalExpense, netProfit, monthlyBreakdown]
+
+    DashboardSummary:
+      type: object
+      properties:
+        totalPatients:
+          type: integer
+        newPatientsThisMonth:
+          type: integer
+        todayAppointments:
+          type: integer
+        completedAppointments:
+          type: integer
+        monthlyRevenue:
+          type: number
+        monthlyExpenses:
+          type: number
+        upcomingAppointments:
+          type: integer
+        subscriptionStatus:
+          type: string
+        trialDaysLeft:
+          type: integer
+          nullable: true
+      required: [totalPatients, newPatientsThisMonth, todayAppointments, completedAppointments, monthlyRevenue, monthlyExpenses, upcomingAppointments, subscriptionStatus]
