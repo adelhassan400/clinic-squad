@@ -24,6 +24,10 @@ tags:
     description: Subscription management
   - name: dashboard
     description: Dashboard summaries
+  - name: team
+    description: Team members and invitations
+  - name: invitations
+    description: Public invitation acceptance
 paths:
   /healthz:
     get:
@@ -562,6 +566,165 @@ paths:
               schema:
                 $ref: "#/components/schemas/Clinic"
 
+  /clinics/{clinicId}/team/members:
+    get:
+      operationId: listTeamMembers
+      tags: [team]
+      summary: List clinic team members (admin + invited members)
+      parameters:
+        - in: path
+          name: clinicId
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: List of team members and capacity
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TeamOverview"
+
+  /clinics/{clinicId}/team/members/{userId}:
+    delete:
+      operationId: removeTeamMember
+      tags: [team]
+      summary: Remove a team member from the clinic
+      parameters:
+        - in: path
+          name: clinicId
+          required: true
+          schema:
+            type: string
+        - in: path
+          name: userId
+          required: true
+          schema:
+            type: string
+      responses:
+        "204":
+          description: Removed
+        "403":
+          description: Cannot remove the clinic owner
+
+  /clinics/{clinicId}/team/invitations:
+    get:
+      operationId: listInvitations
+      tags: [team]
+      summary: List pending invitations for the clinic
+      parameters:
+        - in: path
+          name: clinicId
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Pending invitations
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Invitation"
+    post:
+      operationId: createInvitation
+      tags: [team]
+      summary: Invite a secretary or nurse by email
+      parameters:
+        - in: path
+          name: clinicId
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateInvitationBody"
+      responses:
+        "201":
+          description: Invitation created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Invitation"
+        "409":
+          description: Email already on team or already invited
+        "402":
+          description: Plan member limit reached
+
+  /clinics/{clinicId}/team/invitations/{invitationId}:
+    delete:
+      operationId: revokeInvitation
+      tags: [team]
+      summary: Revoke a pending invitation
+      parameters:
+        - in: path
+          name: clinicId
+          required: true
+          schema:
+            type: string
+        - in: path
+          name: invitationId
+          required: true
+          schema:
+            type: string
+      responses:
+        "204":
+          description: Revoked
+
+  /invitations/{token}:
+    get:
+      operationId: getInvitation
+      tags: [invitations]
+      summary: Get invitation details by token (public)
+      parameters:
+        - in: path
+          name: token
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Invitation details
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InvitationPublic"
+        "404":
+          description: Invalid or expired invitation
+
+  /invitations/{token}/accept:
+    post:
+      operationId: acceptInvitation
+      tags: [invitations]
+      summary: Accept invitation, set password, and sign in
+      parameters:
+        - in: path
+          name: token
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AcceptInvitationBody"
+      responses:
+        "200":
+          description: Accepted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthResponse"
+        "404":
+          description: Invalid or expired invitation
+        "409":
+          description: Email already in use
+
   /admin/subscriptions/{clinicId}/confirm:
     post:
       operationId: adminConfirmSubscription
@@ -589,6 +752,115 @@ components:
         status:
           type: string
       required: [status]
+
+    Invitation:
+      type: object
+      properties:
+        id:
+          type: string
+        clinicId:
+          type: string
+        email:
+          type: string
+        name:
+          type: string
+        role:
+          type: string
+          enum: [secretary, nurse]
+        token:
+          type: string
+        status:
+          type: string
+          enum: [pending, accepted, revoked, expired]
+        invitedBy:
+          type: string
+        expiresAt:
+          type: string
+          format: date-time
+        createdAt:
+          type: string
+          format: date-time
+      required: [id, clinicId, email, name, role, token, status, invitedBy, expiresAt, createdAt]
+
+    InvitationPublic:
+      type: object
+      properties:
+        email:
+          type: string
+        name:
+          type: string
+        role:
+          type: string
+          enum: [secretary, nurse]
+        clinicName:
+          type: string
+        expiresAt:
+          type: string
+          format: date-time
+      required: [email, name, role, clinicName, expiresAt]
+
+    CreateInvitationBody:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+        name:
+          type: string
+          minLength: 1
+        role:
+          type: string
+          enum: [secretary, nurse]
+      required: [email, name, role]
+
+    AcceptInvitationBody:
+      type: object
+      properties:
+        password:
+          type: string
+          minLength: 6
+        name:
+          type: string
+          minLength: 1
+      required: [password]
+
+    TeamMember:
+      type: object
+      properties:
+        id:
+          type: string
+        email:
+          type: string
+        name:
+          type: string
+        role:
+          type: string
+          enum: [admin, secretary, nurse]
+        isOwner:
+          type: boolean
+        isBlocked:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+      required: [id, email, name, role, isOwner, isBlocked, createdAt]
+
+    TeamOverview:
+      type: object
+      properties:
+        members:
+          type: array
+          items:
+            $ref: "#/components/schemas/TeamMember"
+        pendingCount:
+          type: integer
+        memberLimit:
+          type: integer
+        usedSlots:
+          type: integer
+        plan:
+          type: string
+      required: [members, pendingCount, memberLimit, usedSlots, plan]
 
     RegisterBody:
       type: object
@@ -635,7 +907,7 @@ components:
           type: string
         role:
           type: string
-          enum: [admin, secretary, superadmin]
+          enum: [admin, secretary, nurse, superadmin]
         clinicId:
           type: string
         name:

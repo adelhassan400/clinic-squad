@@ -17,12 +17,14 @@ import type {
 } from "@tanstack/react-query";
 
 import type {
+  AcceptInvitationBody,
   Appointment,
   AppointmentList,
   AuthResponse,
   Clinic,
   CreateAppointmentBody,
   CreateFinanceBody,
+  CreateInvitationBody,
   CreatePatientBody,
   CreateSubscriptionBody,
   DashboardSummary,
@@ -31,6 +33,8 @@ import type {
   FinanceSummary,
   GetFinanceSummaryParams,
   HealthStatus,
+  Invitation,
+  InvitationPublic,
   ListAppointmentsParams,
   ListFinancesParams,
   ListPatientsParams,
@@ -39,6 +43,7 @@ import type {
   PatientList,
   RegisterBody,
   Subscription,
+  TeamOverview,
   UpdateAppointmentBody,
   User,
 } from "./api.schemas";
@@ -2242,6 +2247,616 @@ export const useAdminBlockClinic = <
   TContext
 > => {
   return useMutation(getAdminBlockClinicMutationOptions(options));
+};
+
+/**
+ * @summary List clinic team members (admin + invited members)
+ */
+export const getListTeamMembersUrl = (clinicId: string) => {
+  return `/api/clinics/${clinicId}/team/members`;
+};
+
+export const listTeamMembers = async (
+  clinicId: string,
+  options?: RequestInit,
+): Promise<TeamOverview> => {
+  return customFetch<TeamOverview>(getListTeamMembersUrl(clinicId), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getListTeamMembersQueryKey = (clinicId: string) => {
+  return [`/api/clinics/${clinicId}/team/members`] as const;
+};
+
+export const getListTeamMembersQueryOptions = <
+  TData = Awaited<ReturnType<typeof listTeamMembers>>,
+  TError = ErrorType<unknown>,
+>(
+  clinicId: string,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof listTeamMembers>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getListTeamMembersQueryKey(clinicId);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof listTeamMembers>>> = ({
+    signal,
+  }) => listTeamMembers(clinicId, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: !!clinicId,
+    ...queryOptions,
+  } as UseQueryOptions<
+    Awaited<ReturnType<typeof listTeamMembers>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type ListTeamMembersQueryResult = NonNullable<
+  Awaited<ReturnType<typeof listTeamMembers>>
+>;
+export type ListTeamMembersQueryError = ErrorType<unknown>;
+
+/**
+ * @summary List clinic team members (admin + invited members)
+ */
+
+export function useListTeamMembers<
+  TData = Awaited<ReturnType<typeof listTeamMembers>>,
+  TError = ErrorType<unknown>,
+>(
+  clinicId: string,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof listTeamMembers>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getListTeamMembersQueryOptions(clinicId, options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Remove a team member from the clinic
+ */
+export const getRemoveTeamMemberUrl = (clinicId: string, userId: string) => {
+  return `/api/clinics/${clinicId}/team/members/${userId}`;
+};
+
+export const removeTeamMember = async (
+  clinicId: string,
+  userId: string,
+  options?: RequestInit,
+): Promise<void> => {
+  return customFetch<void>(getRemoveTeamMemberUrl(clinicId, userId), {
+    ...options,
+    method: "DELETE",
+  });
+};
+
+export const getRemoveTeamMemberMutationOptions = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof removeTeamMember>>,
+    TError,
+    { clinicId: string; userId: string },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof removeTeamMember>>,
+  TError,
+  { clinicId: string; userId: string },
+  TContext
+> => {
+  const mutationKey = ["removeTeamMember"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof removeTeamMember>>,
+    { clinicId: string; userId: string }
+  > = (props) => {
+    const { clinicId, userId } = props ?? {};
+
+    return removeTeamMember(clinicId, userId, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type RemoveTeamMemberMutationResult = NonNullable<
+  Awaited<ReturnType<typeof removeTeamMember>>
+>;
+
+export type RemoveTeamMemberMutationError = ErrorType<void>;
+
+/**
+ * @summary Remove a team member from the clinic
+ */
+export const useRemoveTeamMember = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof removeTeamMember>>,
+    TError,
+    { clinicId: string; userId: string },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof removeTeamMember>>,
+  TError,
+  { clinicId: string; userId: string },
+  TContext
+> => {
+  return useMutation(getRemoveTeamMemberMutationOptions(options));
+};
+
+/**
+ * @summary List pending invitations for the clinic
+ */
+export const getListInvitationsUrl = (clinicId: string) => {
+  return `/api/clinics/${clinicId}/team/invitations`;
+};
+
+export const listInvitations = async (
+  clinicId: string,
+  options?: RequestInit,
+): Promise<Invitation[]> => {
+  return customFetch<Invitation[]>(getListInvitationsUrl(clinicId), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getListInvitationsQueryKey = (clinicId: string) => {
+  return [`/api/clinics/${clinicId}/team/invitations`] as const;
+};
+
+export const getListInvitationsQueryOptions = <
+  TData = Awaited<ReturnType<typeof listInvitations>>,
+  TError = ErrorType<unknown>,
+>(
+  clinicId: string,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof listInvitations>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getListInvitationsQueryKey(clinicId);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof listInvitations>>> = ({
+    signal,
+  }) => listInvitations(clinicId, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: !!clinicId,
+    ...queryOptions,
+  } as UseQueryOptions<
+    Awaited<ReturnType<typeof listInvitations>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type ListInvitationsQueryResult = NonNullable<
+  Awaited<ReturnType<typeof listInvitations>>
+>;
+export type ListInvitationsQueryError = ErrorType<unknown>;
+
+/**
+ * @summary List pending invitations for the clinic
+ */
+
+export function useListInvitations<
+  TData = Awaited<ReturnType<typeof listInvitations>>,
+  TError = ErrorType<unknown>,
+>(
+  clinicId: string,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof listInvitations>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getListInvitationsQueryOptions(clinicId, options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Invite a secretary or nurse by email
+ */
+export const getCreateInvitationUrl = (clinicId: string) => {
+  return `/api/clinics/${clinicId}/team/invitations`;
+};
+
+export const createInvitation = async (
+  clinicId: string,
+  createInvitationBody: CreateInvitationBody,
+  options?: RequestInit,
+): Promise<Invitation> => {
+  return customFetch<Invitation>(getCreateInvitationUrl(clinicId), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(createInvitationBody),
+  });
+};
+
+export const getCreateInvitationMutationOptions = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createInvitation>>,
+    TError,
+    { clinicId: string; data: BodyType<CreateInvitationBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof createInvitation>>,
+  TError,
+  { clinicId: string; data: BodyType<CreateInvitationBody> },
+  TContext
+> => {
+  const mutationKey = ["createInvitation"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof createInvitation>>,
+    { clinicId: string; data: BodyType<CreateInvitationBody> }
+  > = (props) => {
+    const { clinicId, data } = props ?? {};
+
+    return createInvitation(clinicId, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type CreateInvitationMutationResult = NonNullable<
+  Awaited<ReturnType<typeof createInvitation>>
+>;
+export type CreateInvitationMutationBody = BodyType<CreateInvitationBody>;
+export type CreateInvitationMutationError = ErrorType<void>;
+
+/**
+ * @summary Invite a secretary or nurse by email
+ */
+export const useCreateInvitation = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createInvitation>>,
+    TError,
+    { clinicId: string; data: BodyType<CreateInvitationBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof createInvitation>>,
+  TError,
+  { clinicId: string; data: BodyType<CreateInvitationBody> },
+  TContext
+> => {
+  return useMutation(getCreateInvitationMutationOptions(options));
+};
+
+/**
+ * @summary Revoke a pending invitation
+ */
+export const getRevokeInvitationUrl = (
+  clinicId: string,
+  invitationId: string,
+) => {
+  return `/api/clinics/${clinicId}/team/invitations/${invitationId}`;
+};
+
+export const revokeInvitation = async (
+  clinicId: string,
+  invitationId: string,
+  options?: RequestInit,
+): Promise<void> => {
+  return customFetch<void>(getRevokeInvitationUrl(clinicId, invitationId), {
+    ...options,
+    method: "DELETE",
+  });
+};
+
+export const getRevokeInvitationMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof revokeInvitation>>,
+    TError,
+    { clinicId: string; invitationId: string },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof revokeInvitation>>,
+  TError,
+  { clinicId: string; invitationId: string },
+  TContext
+> => {
+  const mutationKey = ["revokeInvitation"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof revokeInvitation>>,
+    { clinicId: string; invitationId: string }
+  > = (props) => {
+    const { clinicId, invitationId } = props ?? {};
+
+    return revokeInvitation(clinicId, invitationId, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type RevokeInvitationMutationResult = NonNullable<
+  Awaited<ReturnType<typeof revokeInvitation>>
+>;
+
+export type RevokeInvitationMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Revoke a pending invitation
+ */
+export const useRevokeInvitation = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof revokeInvitation>>,
+    TError,
+    { clinicId: string; invitationId: string },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof revokeInvitation>>,
+  TError,
+  { clinicId: string; invitationId: string },
+  TContext
+> => {
+  return useMutation(getRevokeInvitationMutationOptions(options));
+};
+
+/**
+ * @summary Get invitation details by token (public)
+ */
+export const getGetInvitationUrl = (token: string) => {
+  return `/api/invitations/${token}`;
+};
+
+export const getInvitation = async (
+  token: string,
+  options?: RequestInit,
+): Promise<InvitationPublic> => {
+  return customFetch<InvitationPublic>(getGetInvitationUrl(token), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetInvitationQueryKey = (token: string) => {
+  return [`/api/invitations/${token}`] as const;
+};
+
+export const getGetInvitationQueryOptions = <
+  TData = Awaited<ReturnType<typeof getInvitation>>,
+  TError = ErrorType<void>,
+>(
+  token: string,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getInvitation>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetInvitationQueryKey(token);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getInvitation>>> = ({
+    signal,
+  }) => getInvitation(token, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: !!token,
+    ...queryOptions,
+  } as UseQueryOptions<
+    Awaited<ReturnType<typeof getInvitation>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetInvitationQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getInvitation>>
+>;
+export type GetInvitationQueryError = ErrorType<void>;
+
+/**
+ * @summary Get invitation details by token (public)
+ */
+
+export function useGetInvitation<
+  TData = Awaited<ReturnType<typeof getInvitation>>,
+  TError = ErrorType<void>,
+>(
+  token: string,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getInvitation>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetInvitationQueryOptions(token, options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Accept invitation, set password, and sign in
+ */
+export const getAcceptInvitationUrl = (token: string) => {
+  return `/api/invitations/${token}/accept`;
+};
+
+export const acceptInvitation = async (
+  token: string,
+  acceptInvitationBody: AcceptInvitationBody,
+  options?: RequestInit,
+): Promise<AuthResponse> => {
+  return customFetch<AuthResponse>(getAcceptInvitationUrl(token), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(acceptInvitationBody),
+  });
+};
+
+export const getAcceptInvitationMutationOptions = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof acceptInvitation>>,
+    TError,
+    { token: string; data: BodyType<AcceptInvitationBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof acceptInvitation>>,
+  TError,
+  { token: string; data: BodyType<AcceptInvitationBody> },
+  TContext
+> => {
+  const mutationKey = ["acceptInvitation"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof acceptInvitation>>,
+    { token: string; data: BodyType<AcceptInvitationBody> }
+  > = (props) => {
+    const { token, data } = props ?? {};
+
+    return acceptInvitation(token, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type AcceptInvitationMutationResult = NonNullable<
+  Awaited<ReturnType<typeof acceptInvitation>>
+>;
+export type AcceptInvitationMutationBody = BodyType<AcceptInvitationBody>;
+export type AcceptInvitationMutationError = ErrorType<void>;
+
+/**
+ * @summary Accept invitation, set password, and sign in
+ */
+export const useAcceptInvitation = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof acceptInvitation>>,
+    TError,
+    { token: string; data: BodyType<AcceptInvitationBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof acceptInvitation>>,
+  TError,
+  { token: string; data: BodyType<AcceptInvitationBody> },
+  TContext
+> => {
+  return useMutation(getAcceptInvitationMutationOptions(options));
 };
 
 /**

@@ -9,7 +9,8 @@ ClinicSquad is a multi-tenant medical clinic management SaaS for Egyptian clinic
 - **Authentication**: Register/Login with sha256+base64 token, stored in localStorage
 - **15-Day Free Trial**: New clinics get trial period automatically
 - **Subscription Plans**: Basic (200 EGP) / Premium (400 EGP) — WhatsApp payment, confirmed by superadmin
-- **Roles**: admin, secretary, superadmin
+- **Roles**: admin, secretary, nurse, superadmin
+- **Team Management** (admin-only): invite secretaries/nurses by email, copyable invite links, capacity meter — trial/basic = 2 members, premium = 10
 - **Patient Management**: CRUD with search, blood type, allergies, medical notes
 - **Appointment Scheduling**: Create/update/delete appointments, status tracking
 - **Finance Dashboard**: Premium-only, income/expense tracking, monthly charts (Recharts)

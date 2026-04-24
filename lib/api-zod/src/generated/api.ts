@@ -38,7 +38,7 @@ export const LoginUserResponse = zod.object({
   user: zod.object({
     id: zod.string(),
     email: zod.string(),
-    role: zod.enum(["admin", "secretary", "superadmin"]),
+    role: zod.enum(["admin", "secretary", "nurse", "superadmin"]),
     clinicId: zod.string(),
     name: zod.string(),
     isBlocked: zod.boolean(),
@@ -62,7 +62,7 @@ export const LoginUserResponse = zod.object({
 export const GetCurrentUserResponse = zod.object({
   id: zod.string(),
   email: zod.string(),
-  role: zod.enum(["admin", "secretary", "superadmin"]),
+  role: zod.enum(["admin", "secretary", "nurse", "superadmin"]),
   clinicId: zod.string(),
   name: zod.string(),
   isBlocked: zod.boolean(),
@@ -490,6 +490,132 @@ export const AdminBlockClinicResponse = zod.object({
   trialEndDate: zod.coerce.date(),
   subscriptionPlan: zod.string().nullish(),
   createdAt: zod.coerce.date(),
+});
+
+/**
+ * @summary List clinic team members (admin + invited members)
+ */
+export const ListTeamMembersParams = zod.object({
+  clinicId: zod.coerce.string(),
+});
+
+export const ListTeamMembersResponse = zod.object({
+  members: zod.array(
+    zod.object({
+      id: zod.string(),
+      email: zod.string(),
+      name: zod.string(),
+      role: zod.enum(["admin", "secretary", "nurse"]),
+      isOwner: zod.boolean(),
+      isBlocked: zod.boolean(),
+      createdAt: zod.coerce.date(),
+    }),
+  ),
+  pendingCount: zod.number(),
+  memberLimit: zod.number(),
+  usedSlots: zod.number(),
+  plan: zod.string(),
+});
+
+/**
+ * @summary Remove a team member from the clinic
+ */
+export const RemoveTeamMemberParams = zod.object({
+  clinicId: zod.coerce.string(),
+  userId: zod.coerce.string(),
+});
+
+/**
+ * @summary List pending invitations for the clinic
+ */
+export const ListInvitationsParams = zod.object({
+  clinicId: zod.coerce.string(),
+});
+
+export const ListInvitationsResponseItem = zod.object({
+  id: zod.string(),
+  clinicId: zod.string(),
+  email: zod.string(),
+  name: zod.string(),
+  role: zod.enum(["secretary", "nurse"]),
+  token: zod.string(),
+  status: zod.enum(["pending", "accepted", "revoked", "expired"]),
+  invitedBy: zod.string(),
+  expiresAt: zod.coerce.date(),
+  createdAt: zod.coerce.date(),
+});
+export const ListInvitationsResponse = zod.array(ListInvitationsResponseItem);
+
+/**
+ * @summary Invite a secretary or nurse by email
+ */
+export const CreateInvitationParams = zod.object({
+  clinicId: zod.coerce.string(),
+});
+
+export const CreateInvitationBody = zod.object({
+  email: zod.string().email(),
+  name: zod.string().min(1),
+  role: zod.enum(["secretary", "nurse"]),
+});
+
+/**
+ * @summary Revoke a pending invitation
+ */
+export const RevokeInvitationParams = zod.object({
+  clinicId: zod.coerce.string(),
+  invitationId: zod.coerce.string(),
+});
+
+/**
+ * @summary Get invitation details by token (public)
+ */
+export const GetInvitationParams = zod.object({
+  token: zod.coerce.string(),
+});
+
+export const GetInvitationResponse = zod.object({
+  email: zod.string(),
+  name: zod.string(),
+  role: zod.enum(["secretary", "nurse"]),
+  clinicName: zod.string(),
+  expiresAt: zod.coerce.date(),
+});
+
+/**
+ * @summary Accept invitation, set password, and sign in
+ */
+export const AcceptInvitationParams = zod.object({
+  token: zod.coerce.string(),
+});
+
+export const acceptInvitationBodyPasswordMin = 6;
+
+export const AcceptInvitationBody = zod.object({
+  password: zod.string().min(acceptInvitationBodyPasswordMin),
+  name: zod.string().min(1).optional(),
+});
+
+export const AcceptInvitationResponse = zod.object({
+  user: zod.object({
+    id: zod.string(),
+    email: zod.string(),
+    role: zod.enum(["admin", "secretary", "nurse", "superadmin"]),
+    clinicId: zod.string(),
+    name: zod.string(),
+    isBlocked: zod.boolean(),
+  }),
+  clinic: zod.object({
+    id: zod.string(),
+    name: zod.string(),
+    ownerId: zod.string(),
+    status: zod.enum(["pending", "active", "blocked", "deleted"]),
+    subscriptionStatus: zod.enum(["trial", "basic", "premium", "expired"]),
+    trialEndDate: zod.coerce.date(),
+    subscriptionPlan: zod.string().nullish(),
+    createdAt: zod.coerce.date(),
+  }),
+  token: zod.string(),
 });
 
 /**

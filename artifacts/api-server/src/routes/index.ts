@@ -6,11 +6,15 @@ import patientsRouter from "./patients";
 import appointmentsRouter from "./appointments";
 import financesRouter from "./finances";
 import adminRouter from "./admin";
+import teamRouter from "./team";
+import invitationsRouter from "./invitations";
 
 const router: IRouter = Router();
 
 router.use(healthRouter);
 router.use("/auth", authRouter);
+router.use("/invitations", invitationsRouter);
+router.use("/clinics/:clinicId/team", teamRouter);
 router.use("/clinics", clinicsRouter);
 router.use("/clinics/:clinicId/patients", patientsRouter);
 router.use("/clinics/:clinicId/appointments", appointmentsRouter);

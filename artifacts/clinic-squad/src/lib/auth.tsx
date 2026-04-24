@@ -3,7 +3,7 @@ import { createContext, useContext, useState, useEffect, ReactNode } from "react
 export interface AuthUser {
   id: string;
   email: string;
-  role: "admin" | "secretary" | "superadmin";
+  role: "admin" | "secretary" | "nurse" | "superadmin";
   clinicId: string;
   name: string;
   isBlocked: boolean;

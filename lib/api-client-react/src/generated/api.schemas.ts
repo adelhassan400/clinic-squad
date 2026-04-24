@@ -9,6 +9,102 @@ export interface HealthStatus {
   status: string;
 }
 
+export type InvitationRole =
+  (typeof InvitationRole)[keyof typeof InvitationRole];
+
+export const InvitationRole = {
+  secretary: "secretary",
+  nurse: "nurse",
+} as const;
+
+export type InvitationStatus =
+  (typeof InvitationStatus)[keyof typeof InvitationStatus];
+
+export const InvitationStatus = {
+  pending: "pending",
+  accepted: "accepted",
+  revoked: "revoked",
+  expired: "expired",
+} as const;
+
+export interface Invitation {
+  id: string;
+  clinicId: string;
+  email: string;
+  name: string;
+  role: InvitationRole;
+  token: string;
+  status: InvitationStatus;
+  invitedBy: string;
+  expiresAt: string;
+  createdAt: string;
+}
+
+export type InvitationPublicRole =
+  (typeof InvitationPublicRole)[keyof typeof InvitationPublicRole];
+
+export const InvitationPublicRole = {
+  secretary: "secretary",
+  nurse: "nurse",
+} as const;
+
+export interface InvitationPublic {
+  email: string;
+  name: string;
+  role: InvitationPublicRole;
+  clinicName: string;
+  expiresAt: string;
+}
+
+export type CreateInvitationBodyRole =
+  (typeof CreateInvitationBodyRole)[keyof typeof CreateInvitationBodyRole];
+
+export const CreateInvitationBodyRole = {
+  secretary: "secretary",
+  nurse: "nurse",
+} as const;
+
+export interface CreateInvitationBody {
+  email: string;
+  /** @minLength 1 */
+  name: string;
+  role: CreateInvitationBodyRole;
+}
+
+export interface AcceptInvitationBody {
+  /** @minLength 6 */
+  password: string;
+  /** @minLength 1 */
+  name?: string;
+}
+
+export type TeamMemberRole =
+  (typeof TeamMemberRole)[keyof typeof TeamMemberRole];
+
+export const TeamMemberRole = {
+  admin: "admin",
+  secretary: "secretary",
+  nurse: "nurse",
+} as const;
+
+export interface TeamMember {
+  id: string;
+  email: string;
+  name: string;
+  role: TeamMemberRole;
+  isOwner: boolean;
+  isBlocked: boolean;
+  createdAt: string;
+}
+
+export interface TeamOverview {
+  members: TeamMember[];
+  pendingCount: number;
+  memberLimit: number;
+  usedSlots: number;
+  plan: string;
+}
+
 export interface RegisterBody {
   email: string;
   /** @minLength 6 */
@@ -27,6 +123,7 @@ export type UserRole = (typeof UserRole)[keyof typeof UserRole];
 export const UserRole = {
   admin: "admin",
   secretary: "secretary",
+  nurse: "nurse",
   superadmin: "superadmin",
 } as const;
 
