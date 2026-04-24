@@ -1,16 +1,19 @@
 import { useAuth } from "@/lib/auth";
 import { useTheme } from "@/lib/theme";
+import { useCurrency } from "@/lib/currency";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Crown, Sun, Moon, Shield, AlertTriangle } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Crown, Sun, Moon, Shield, AlertTriangle, Coins } from "lucide-react";
 import { Link } from "wouter";
 import { formatDate, getTrialDaysLeft } from "@/lib/utils";
 
 export default function SettingsPage() {
   const { user, clinic } = useAuth();
   const { theme, toggleTheme } = useTheme();
+  const { currency, setCurrencyCode, options: currencyOptions, format: formatMoney } = useCurrency();
 
   const trialDaysLeft = clinic?.subscriptionStatus === "trial"
     ? getTrialDaysLeft(clinic.trialEndDate)
@@ -110,6 +113,34 @@ export default function SettingsPage() {
                 <Button variant="outline" size="sm" onClick={toggleTheme} data-testid="toggle-theme-settings">
                   {theme === "dark" ? <><Sun className="w-4 h-4 mr-2" />Light Mode</> : <><Moon className="w-4 h-4 mr-2" />Dark Mode</>}
                 </Button>
+              </div>
+            </div>
+
+            {/* Currency */}
+            <div className="rounded-xl border border-border bg-card p-6">
+              <h2 className="font-semibold mb-4 flex items-center gap-2">
+                <Coins className="w-4 h-4" /> Currency
+              </h2>
+              <div className="flex items-center justify-between gap-4">
+                <div className="min-w-0">
+                  <p className="text-sm font-medium">Display currency</p>
+                  <p className="text-xs text-muted-foreground">
+                    Used for fees, finances and dashboard amounts. Example: {formatMoney(1000)}
+                  </p>
+                </div>
+                <Select value={currency.code} onValueChange={setCurrencyCode}>
+                  <SelectTrigger className="w-[220px]" data-testid="select-currency">
+                    <SelectValue placeholder="Select currency" />
+                  </SelectTrigger>
+                  <SelectContent className="max-h-[320px]">
+                    {currencyOptions.map((c) => (
+                      <SelectItem key={c.code} value={c.code} data-testid={`currency-option-${c.code}`}>
+                        <span className="mr-2">{c.flag}</span>
+                        {c.country} — {c.code}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
             </div>
 

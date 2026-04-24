@@ -2,8 +2,9 @@ import { useAuth } from "@/lib/auth";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { useGetDashboardSummary, useGetTodayAppointments, getGetDashboardSummaryQueryKey, getGetTodayAppointmentsQueryKey } from "@workspace/api-client-react";
-import { formatCurrency, formatDate, getTrialDaysLeft, getTrialUrgency } from "@/lib/utils";
+import { formatDate, getTrialDaysLeft, getTrialUrgency } from "@/lib/utils";
 import { cn } from "@/lib/utils";
+import { useCurrency } from "@/lib/currency";
 import { Users, Calendar, TrendingUp, Clock, CheckCircle, AlertTriangle, Crown, ArrowRight } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -42,6 +43,7 @@ function AppointmentStatusBadge({ status }: { status: string }) {
 }
 
 export default function DashboardPage() {
+  const { format: formatCurrency } = useCurrency();
   const { clinic } = useAuth();
   const clinicId = clinic?.id ?? "";
 

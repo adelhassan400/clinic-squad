@@ -24,6 +24,7 @@ import {
   ChevronsUpDown, Check, Users, List, ChevronLeft, ChevronRight
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useCurrency } from "@/lib/currency";
 
 const apptSchema = z.object({
   patientId: z.string().min(1, "Select a patient"),
@@ -202,11 +203,12 @@ interface DayCalendarProps {
   onComplete: (id: string) => void;
   onCancel: (id: string) => void;
   onDelete: (id: string) => void;
+  currencyCode: string;
 }
 
 function DayCalendar({
   appointments, date, onPrevDay, onNextDay, onToday,
-  onClickSlot, onComplete, onCancel, onDelete
+  onClickSlot, onComplete, onCancel, onDelete, currencyCode
 }: DayCalendarProps) {
   const hours = Array.from({ length: DAY_END - DAY_START }, (_, i) => DAY_START + i);
   const totalHeight = hours.length * HOUR_HEIGHT;
@@ -373,7 +375,7 @@ function DayCalendar({
                     <div className="flex items-center justify-between mt-1">
                       <span className={cn("text-xs font-mono font-medium", s.text)}>{appt.time}</span>
                       {appt.fee && (
-                        <span className="text-xs text-muted-foreground">{appt.fee} EGP</span>
+                        <span className="text-xs text-muted-foreground">{appt.fee} {currencyCode}</span>
                       )}
                     </div>
                   </div>
@@ -389,6 +391,7 @@ function DayCalendar({
 
 // --- Main Page ---
 export default function AppointmentsPage() {
+  const { currency: { code: currencyCode } } = useCurrency();
   const { clinic } = useAuth();
   const clinicId = clinic?.id ?? "";
   const { toast } = useToast();
@@ -589,7 +592,7 @@ export default function AppointmentsPage() {
                       </div>
                       <div>
                         <p className="text-sm font-medium">{appt.patientName}</p>
-                        {appt.fee && <p className="text-xs text-muted-foreground">{appt.fee} EGP</p>}
+                        {appt.fee && <p className="text-xs text-muted-foreground">{appt.fee} {currencyCode}</p>}
                       </div>
                     </div>
                     <div>
@@ -650,6 +653,7 @@ export default function AppointmentsPage() {
                 onComplete={(id) => handleStatus(id, "completed")}
                 onCancel={(id) => handleStatus(id, "cancelled")}
                 onDelete={handleDelete}
+                currencyCode={currencyCode}
               />
             )
           )}
@@ -693,7 +697,7 @@ export default function AppointmentsPage() {
                 )}
               </div>
               <div>
-                <Label>Fee (EGP)</Label>
+                <Label>Fee ({currencyCode})</Label>
                 <Input {...form.register("fee")} type="number" placeholder="150" className="mt-1" />
               </div>
               <div>

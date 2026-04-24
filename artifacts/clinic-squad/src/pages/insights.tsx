@@ -8,6 +8,7 @@ import {
 } from "@workspace/api-client-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
+import { useCurrency } from "@/lib/currency";
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer,
   AreaChart, Area, CartesianGrid, PieChart, Pie, Cell, Legend,
@@ -112,6 +113,7 @@ function Section({ title, sub, children }: { title: string; sub?: React.ReactNod
 // ─── Main Page ─────────────────────────────────────────────────────────────
 
 export default function InsightsPage() {
+  const { symbol: currencySymbol } = useCurrency();
   const { clinic } = useAuth();
   const clinicId = clinic?.id ?? "";
   const now = new Date();
@@ -252,8 +254,8 @@ export default function InsightsPage() {
             />
             <MetricCard
               label="Monthly Revenue"
-              value={`${fmt(summary?.monthlyRevenue ?? 0)} EGP`}
-              sub={`${fmt(summary?.monthlyExpenses ?? 0)} EGP expenses`}
+              value={`${fmt(summary?.monthlyRevenue ?? 0)} ${currencySymbol}`}
+              sub={`${fmt(summary?.monthlyExpenses ?? 0)} ${currencySymbol} expenses`}
               icon={DollarSign}
               color="bg-primary"
               loading={summaryLoading}
@@ -468,7 +470,7 @@ export default function InsightsPage() {
                     <div key={label} className="text-center p-3 rounded-lg bg-muted/30">
                       <p className="text-xs text-muted-foreground">{label}</p>
                       <p className={cn("text-lg font-bold tabular-nums mt-0.5", color)}>
-                        {value.toLocaleString()} EGP
+                        {value.toLocaleString()} {currencySymbol}
                       </p>
                     </div>
                   ))}
@@ -499,7 +501,7 @@ export default function InsightsPage() {
                       width={50}
                       tickFormatter={v => `${(v / 1000).toFixed(0)}k`}
                     />
-                    <Tooltip content={<ChartTooltip suffix=" EGP" />} />
+                    <Tooltip content={<ChartTooltip suffix={` ${currencySymbol}`} />} />
                     <Area
                       type="monotone"
                       dataKey="income"

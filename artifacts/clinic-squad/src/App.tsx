@@ -5,6 +5,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider } from "@/lib/auth";
 import { ThemeProvider } from "@/lib/theme";
 import { LangProvider } from "@/lib/lang";
+import { CurrencyProvider } from "@/lib/currency";
 
 import LandingPage from "@/pages/landing";
 import LoginPage from "@/pages/login";
@@ -56,14 +57,16 @@ function App() {
     <QueryClientProvider client={queryClient}>
       <ThemeProvider>
         <LangProvider>
-          <AuthProvider>
-            <TooltipProvider>
-              <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
-                <Router />
-              </WouterRouter>
-              <Toaster />
-            </TooltipProvider>
-          </AuthProvider>
+          <CurrencyProvider>
+            <AuthProvider>
+              <TooltipProvider>
+                <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
+                  <Router />
+                </WouterRouter>
+                <Toaster />
+              </TooltipProvider>
+            </AuthProvider>
+          </CurrencyProvider>
         </LangProvider>
       </ThemeProvider>
     </QueryClientProvider>

@@ -3,6 +3,7 @@ import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { useGetPatient, useListAppointments, getGetPatientQueryKey, getListAppointmentsQueryKey } from "@workspace/api-client-react";
 import { formatDate } from "@/lib/utils";
+import { useCurrency } from "@/lib/currency";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ArrowLeft, User, Phone, Calendar, Droplets } from "lucide-react";
@@ -26,6 +27,7 @@ function StatusBadge({ status }: { status: string }) {
 }
 
 export default function PatientDetailPage({ params }: Props) {
+  const { currency: { code: currencyCode } } = useCurrency();
   const { clinic } = useAuth();
   const clinicId = clinic?.id ?? "";
   const patientId = params.id;
@@ -122,7 +124,7 @@ export default function PatientDetailPage({ params }: Props) {
                           <p className="text-xs text-muted-foreground">{formatDate(appt.date)} at {appt.time}</p>
                         </div>
                         <StatusBadge status={appt.status} />
-                        {appt.fee && <span className="text-sm font-mono text-muted-foreground">{appt.fee} EGP</span>}
+                        {appt.fee && <span className="text-sm font-mono text-muted-foreground">{appt.fee} {currencyCode}</span>}
                       </div>
                     ))}
                   </div>

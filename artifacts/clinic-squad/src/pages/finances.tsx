@@ -7,7 +7,8 @@ import {
   getListFinancesQueryKey, getGetFinanceSummaryQueryKey
 } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
-import { formatCurrency, formatDate } from "@/lib/utils";
+import { formatDate } from "@/lib/utils";
+import { useCurrency } from "@/lib/currency";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -40,6 +41,7 @@ export default function FinancesPage() {
   const qc = useQueryClient();
   const [addOpen, setAddOpen] = useState(false);
   const currentYear = new Date().getFullYear();
+  const { format: formatCurrency, currency } = useCurrency();
 
   const isPremium = clinic?.subscriptionStatus === "premium";
   const isExpired = clinic?.subscriptionStatus === "expired";
@@ -244,7 +246,7 @@ export default function FinancesPage() {
                 {form.formState.errors.category && <p className="text-xs text-destructive mt-1">{form.formState.errors.category.message}</p>}
               </div>
               <div>
-                <Label>Amount (EGP) *</Label>
+                <Label>Amount ({currency.code}) *</Label>
                 <Input {...form.register("amount")} type="number" step="0.01" placeholder="1500" className="mt-1" />
                 {form.formState.errors.amount && <p className="text-xs text-destructive mt-1">{form.formState.errors.amount.message}</p>}
               </div>
