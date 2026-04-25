@@ -141,7 +141,14 @@ export default function PatientsPage() {
                       <span className="text-xs font-bold text-primary">{patient.name.charAt(0)}</span>
                     </div>
                     <div className="min-w-0">
-                      <p className="text-sm font-medium truncate">{patient.name}</p>
+                      <div className="flex items-center gap-2">
+                        <p className="text-sm font-medium truncate">{patient.name}</p>
+                        {patient.code && (
+                          <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-primary/10 text-primary border border-primary/20 shrink-0">
+                            {patient.code}
+                          </span>
+                        )}
+                      </div>
                       {patient.bloodType && <p className="text-xs text-muted-foreground">Blood: {patient.bloodType}</p>}
                     </div>
                   </div>

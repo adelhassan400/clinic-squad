@@ -1,10 +1,42 @@
 import { Router } from "express";
-import { eq, and, ilike } from "drizzle-orm";
+import { eq, and } from "drizzle-orm";
 import { db, patientsTable } from "@workspace/db";
 import { CreatePatientBody } from "@workspace/api-zod";
 import { randomUUID } from "crypto";
 
 const router = Router({ mergeParams: true });
+
+function serialize(p: typeof patientsTable.$inferSelect) {
+  return {
+    id: p.id,
+    clinicId: p.clinicId,
+    code: p.code,
+    name: p.name,
+    phone: p.phone,
+    dateOfBirth: p.dateOfBirth,
+    gender: p.gender,
+    bloodType: p.bloodType,
+    allergies: p.allergies,
+    notes: p.notes,
+    createdAt: p.createdAt.toISOString(),
+  };
+}
+
+async function nextPatientCode(clinicId: string): Promise<string> {
+  const existing = await db
+    .select({ code: patientsTable.code })
+    .from(patientsTable)
+    .where(eq(patientsTable.clinicId, clinicId));
+  let max = 0;
+  for (const row of existing) {
+    const m = row.code?.match(/^PT-(\d+)$/);
+    if (m) {
+      const n = parseInt(m[1], 10);
+      if (n > max) max = n;
+    }
+  }
+  return `PT-${String(max + 1).padStart(4, "0")}`;
+}
 
 router.get("/", async (req, res) => {
   const { clinicId } = req.params;
@@ -15,18 +47,20 @@ router.get("/", async (req, res) => {
 
   let patients = await db.select().from(patientsTable).where(eq(patientsTable.clinicId, clinicId));
   if (search) {
-    patients = patients.filter(p => p.name.toLowerCase().includes(search.toLowerCase()) || p.phone.includes(search));
+    const s = search.toLowerCase();
+    patients = patients.filter(
+      (p) =>
+        p.name.toLowerCase().includes(s) ||
+        p.phone.includes(search) ||
+        (p.code ?? "").toLowerCase().includes(s),
+    );
   }
 
   const total = patients.length;
   const paged = patients.slice(offset, offset + limit);
 
   return res.json({
-    data: paged.map(p => ({
-      id: p.id, clinicId: p.clinicId, name: p.name, phone: p.phone,
-      dateOfBirth: p.dateOfBirth, gender: p.gender, bloodType: p.bloodType,
-      allergies: p.allergies, notes: p.notes, createdAt: p.createdAt.toISOString(),
-    })),
+    data: paged.map(serialize),
     total,
     page,
     limit,
@@ -40,9 +74,10 @@ router.post("/", async (req, res) => {
 
   const { name, phone, dateOfBirth, gender, bloodType, allergies, notes } = parsed.data;
   const id = randomUUID();
+  const code = await nextPatientCode(clinicId);
 
   await db.insert(patientsTable).values({
-    id, clinicId, name, phone,
+    id, clinicId, code, name, phone,
     dateOfBirth: dateOfBirth ?? null,
     gender,
     bloodType: bloodType ?? null,
@@ -51,11 +86,7 @@ router.post("/", async (req, res) => {
   });
 
   const patient = (await db.select().from(patientsTable).where(eq(patientsTable.id, id)).limit(1))[0];
-  return res.status(201).json({
-    id: patient.id, clinicId: patient.clinicId, name: patient.name, phone: patient.phone,
-    dateOfBirth: patient.dateOfBirth, gender: patient.gender, bloodType: patient.bloodType,
-    allergies: patient.allergies, notes: patient.notes, createdAt: patient.createdAt.toISOString(),
-  });
+  return res.status(201).json(serialize(patient));
 });
 
 router.get("/:patientId", async (req, res) => {
@@ -65,11 +96,7 @@ router.get("/:patientId", async (req, res) => {
   const p = patients[0];
   if (!p) return res.status(404).json({ error: "Patient not found" });
 
-  return res.json({
-    id: p.id, clinicId: p.clinicId, name: p.name, phone: p.phone,
-    dateOfBirth: p.dateOfBirth, gender: p.gender, bloodType: p.bloodType,
-    allergies: p.allergies, notes: p.notes, createdAt: p.createdAt.toISOString(),
-  });
+  return res.json(serialize(p));
 });
 
 router.put("/:patientId", async (req, res) => {
@@ -83,11 +110,7 @@ router.put("/:patientId", async (req, res) => {
     .where(and(eq(patientsTable.id, patientId), eq(patientsTable.clinicId, clinicId)));
 
   const p = (await db.select().from(patientsTable).where(eq(patientsTable.id, patientId)).limit(1))[0];
-  return res.json({
-    id: p.id, clinicId: p.clinicId, name: p.name, phone: p.phone,
-    dateOfBirth: p.dateOfBirth, gender: p.gender, bloodType: p.bloodType,
-    allergies: p.allergies, notes: p.notes, createdAt: p.createdAt.toISOString(),
-  });
+  return res.json(serialize(p));
 });
 
 router.delete("/:patientId", async (req, res) => {

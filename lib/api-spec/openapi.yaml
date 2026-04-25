@@ -98,6 +98,23 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/User"
+    patch:
+      operationId: updateProfile
+      tags: [auth]
+      summary: Update current user profile
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateProfileBody"
+      responses:
+        "200":
+          description: Updated user
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
 
   /clinics/{clinicId}:
     get:
@@ -1016,9 +1033,21 @@ components:
           type: string
         name:
           type: string
+        specialty:
+          type: string
+          nullable: true
         isBlocked:
           type: boolean
       required: [id, email, role, clinicId, name, isBlocked]
+
+    UpdateProfileBody:
+      type: object
+      properties:
+        name:
+          type: string
+        specialty:
+          type: string
+          nullable: true
 
     Clinic:
       type: object
@@ -1090,6 +1119,9 @@ components:
           type: string
         clinicId:
           type: string
+        code:
+          type: string
+          nullable: true
         name:
           type: string
         phone:
@@ -1370,10 +1402,16 @@ components:
           type: string
         patientPhone:
           type: string
+        patientCode:
+          type: string
+          nullable: true
         doctorId:
           type: string
         doctorName:
           type: string
+        doctorSpecialty:
+          type: string
+          nullable: true
         date:
           type: string
           format: date

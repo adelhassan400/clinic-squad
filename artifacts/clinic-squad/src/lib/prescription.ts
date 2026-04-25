@@ -176,7 +176,7 @@ function buildPrintHtml(p: Prescription, clinicName: string): string {
     <section class="meta">
       <div>
         <div class="label">Patient</div>
-        <div class="value">${escapeHtml(p.patientName)}</div>
+        <div class="value">${escapeHtml(p.patientName)}${p.patientCode ? ` <span class="small" style="color:#0d9488;font-weight:600;">· ${escapeHtml(p.patientCode)}</span>` : ""}</div>
         <div class="small">${escapeHtml(p.patientPhone || "")}</div>
       </div>
       <div>
@@ -186,6 +186,7 @@ function buildPrintHtml(p: Prescription, clinicName: string): string {
       <div>
         <div class="label">Doctor</div>
         <div class="value">Dr. ${escapeHtml(p.doctorName)}</div>
+        ${p.doctorSpecialty ? `<div class="small">${escapeHtml(p.doctorSpecialty)}</div>` : ""}
       </div>
       <div>
         <div class="label">Prescription ID</div>
@@ -229,7 +230,7 @@ function buildPrintHtml(p: Prescription, clinicName: string): string {
       <div class="signature">
         <div class="line"></div>
         <div class="name">Dr. ${escapeHtml(p.doctorName)}</div>
-        <div class="small">Signature</div>
+        <div class="small">${p.doctorSpecialty ? escapeHtml(p.doctorSpecialty) : "Signature"}</div>
       </div>
     </footer>
   </div>
@@ -265,9 +266,9 @@ function normalizePhone(raw: string): string {
 function buildWhatsAppMessage(p: Prescription, clinicName: string): string {
   const lines: string[] = [];
   lines.push(`*${clinicName || "Clinic"} — Prescription*`);
-  lines.push(`Patient: ${p.patientName}`);
+  lines.push(`Patient: ${p.patientName}${p.patientCode ? ` (${p.patientCode})` : ""}`);
   lines.push(`Date: ${p.date}`);
-  lines.push(`Doctor: Dr. ${p.doctorName}`);
+  lines.push(`Doctor: Dr. ${p.doctorName}${p.doctorSpecialty ? ` — ${p.doctorSpecialty}` : ""}`);
   if (p.diagnosis) lines.push(`Diagnosis: ${p.diagnosis}`);
   lines.push("");
   lines.push("*Medications:*");

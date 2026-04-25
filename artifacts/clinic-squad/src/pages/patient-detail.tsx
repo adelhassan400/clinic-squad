@@ -71,7 +71,14 @@ export default function PatientDetailPage({ params }: Props) {
                     <span className="text-2xl font-bold text-primary">{patient.name.charAt(0)}</span>
                   </div>
                   <div className="flex-1">
-                    <h1 className="text-xl font-bold mb-1">{patient.name}</h1>
+                    <div className="flex items-center gap-2 mb-1 flex-wrap">
+                      <h1 className="text-xl font-bold">{patient.name}</h1>
+                      {patient.code && (
+                        <span className="text-xs font-mono px-2 py-0.5 rounded bg-primary/10 text-primary border border-primary/20">
+                          {patient.code}
+                        </span>
+                      )}
+                    </div>
                     <div className="flex flex-wrap gap-4 text-sm text-muted-foreground">
                       <span className="flex items-center gap-1.5">
                         <Phone className="w-3.5 h-3.5" />{patient.phone}

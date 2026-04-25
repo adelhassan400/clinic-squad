@@ -6,6 +6,7 @@ export interface AuthUser {
   role: "admin" | "secretary" | "nurse" | "superadmin";
   clinicId: string;
   name: string;
+  specialty?: string | null;
   isBlocked: boolean;
 }
 
@@ -32,6 +33,7 @@ interface AuthContextType extends AuthState {
   login: (user: AuthUser, clinic: AuthClinic, token: string) => void;
   logout: () => void;
   updateClinic: (clinic: AuthClinic) => void;
+  updateUser: (user: AuthUser) => void;
 }
 
 const AuthContext = createContext<AuthContextType | null>(null);
@@ -74,6 +76,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     });
   };
 
+  const updateUser = (user: AuthUser) => {
+    setState(prev => {
+      const newState = { ...prev, user };
+      localStorage.setItem("clinicsquad_auth", JSON.stringify(newState));
+      return newState;
+    });
+  };
+
   return (
     <AuthContext.Provider value={{
       ...state,
@@ -82,6 +92,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       login,
       logout,
       updateClinic,
+      updateUser,
     }}>
       {children}
     </AuthContext.Provider>

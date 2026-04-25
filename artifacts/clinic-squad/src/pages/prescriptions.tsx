@@ -42,6 +42,8 @@ import {
   Eye,
   X,
   FileText,
+  Stethoscope,
+  User as UserIcon,
 } from "lucide-react";
 import { formatDate } from "@/lib/utils";
 import { printPrescription, sendPrescriptionWhatsApp } from "@/lib/prescription";
@@ -211,11 +213,12 @@ export function PrescriptionsContent({ initialPatientId, embedded }: Prescriptio
         )}
       </div>
 
-      {/* Create form */}
+      {/* Create form + live preview */}
       {showForm && isAdmin && (
+        <div className="grid lg:grid-cols-[1fr_minmax(0,420px)] gap-5 mb-6">
         <form
           onSubmit={handleSubmit}
-          className="rounded-xl border border-border bg-card p-6 mb-6 space-y-4"
+          className="rounded-xl border border-border bg-card p-6 space-y-4"
         >
           <div className="grid sm:grid-cols-2 gap-4">
             <div>
@@ -359,6 +362,19 @@ export function PrescriptionsContent({ initialPatientId, embedded }: Prescriptio
             </Button>
           </div>
         </form>
+
+        {/* Live preview panel */}
+        <LivePreview
+          clinicName={clinic?.name ?? ""}
+          doctorName={user?.name ?? ""}
+          doctorSpecialty={user?.specialty ?? null}
+          patient={patientList.find((p) => p.id === patientId) ?? null}
+          date={date}
+          diagnosis={diagnosis}
+          notes={notes}
+          items={items}
+        />
+        </div>
       )}
 
       {/* Search */}
@@ -527,6 +543,130 @@ export function PrescriptionsContent({ initialPatientId, embedded }: Prescriptio
           )}
         </DialogContent>
       </Dialog>
+    </div>
+  );
+}
+
+interface LivePreviewProps {
+  clinicName: string;
+  doctorName: string;
+  doctorSpecialty: string | null;
+  patient: { name: string; phone: string; code?: string | null } | null;
+  date: string;
+  diagnosis: string;
+  notes: string;
+  items: ItemForm[];
+}
+
+function LivePreview({ clinicName, doctorName, doctorSpecialty, patient, date, diagnosis, notes, items }: LivePreviewProps) {
+  const filledItems = items.filter((i) => i.drug.trim());
+  return (
+    <div className="lg:sticky lg:top-4 self-start">
+      <div className="rounded-xl border-2 border-primary/20 bg-card shadow-sm overflow-hidden">
+        <div className="bg-primary/5 px-4 py-2 border-b border-primary/20 flex items-center gap-2">
+          <Eye className="w-3.5 h-3.5 text-primary" />
+          <span className="text-xs font-semibold uppercase tracking-wider text-primary">Live Preview</span>
+        </div>
+
+        <div className="p-5 space-y-4">
+          {/* Header */}
+          <div className="flex items-start justify-between border-b-2 border-primary/40 pb-3">
+            <div>
+              <p className="text-base font-bold text-primary leading-tight">{clinicName || "Clinic"}</p>
+              <p className="text-[10px] uppercase tracking-wider text-muted-foreground mt-0.5">E-Prescription</p>
+            </div>
+            <span className="text-xs font-bold tracking-widest text-muted-foreground">Rx</span>
+          </div>
+
+          {/* Doctor + Patient */}
+          <div className="grid grid-cols-2 gap-3 text-xs">
+            <div className="space-y-0.5">
+              <p className="text-[9px] uppercase tracking-wider text-muted-foreground flex items-center gap-1">
+                <Stethoscope className="w-2.5 h-2.5" /> Doctor
+              </p>
+              <p className="font-semibold text-sm">Dr. {doctorName || "—"}</p>
+              <p className="text-[11px] text-muted-foreground italic">
+                {doctorSpecialty || <span className="text-amber-600 not-italic">Set specialty in Settings</span>}
+              </p>
+            </div>
+            <div className="space-y-0.5">
+              <p className="text-[9px] uppercase tracking-wider text-muted-foreground flex items-center gap-1">
+                <UserIcon className="w-2.5 h-2.5" /> Patient
+              </p>
+              <p className="font-semibold text-sm">{patient?.name || <span className="text-muted-foreground/60 font-normal">No patient selected</span>}</p>
+              {patient && (
+                <div className="flex items-center gap-1.5">
+                  {patient.code && (
+                    <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-primary/10 text-primary border border-primary/20">
+                      {patient.code}
+                    </span>
+                  )}
+                  <span className="text-[11px] text-muted-foreground">{patient.phone}</span>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Date + Diagnosis */}
+          <div className="grid grid-cols-2 gap-3 text-xs border-t border-border pt-3">
+            <div>
+              <p className="text-[9px] uppercase tracking-wider text-muted-foreground">Date</p>
+              <p className="font-medium">{date || "—"}</p>
+            </div>
+            {diagnosis && (
+              <div>
+                <p className="text-[9px] uppercase tracking-wider text-muted-foreground">Diagnosis</p>
+                <p className="font-medium">{diagnosis}</p>
+              </div>
+            )}
+          </div>
+
+          {/* Medications */}
+          <div className="border-t border-border pt-3">
+            <p className="text-[9px] uppercase tracking-wider text-muted-foreground mb-2">
+              Medications ({filledItems.length})
+            </p>
+            {filledItems.length === 0 ? (
+              <p className="text-xs text-muted-foreground/60 italic py-3 text-center bg-muted/30 rounded">
+                Start typing a drug name to preview…
+              </p>
+            ) : (
+              <ol className="space-y-1.5">
+                {filledItems.map((it, i) => {
+                  const detail = [it.dosage, it.frequency, it.duration].filter((s) => s.trim()).join(" · ");
+                  return (
+                    <li key={i} className="text-xs border-l-2 border-primary/40 ps-2.5 py-0.5">
+                      <p className="font-semibold">
+                        <span className="text-muted-foreground">{i + 1}.</span> {it.drug}
+                      </p>
+                      {detail && <p className="text-[11px] text-muted-foreground mt-0.5">{detail}</p>}
+                      {it.notes && <p className="text-[11px] text-muted-foreground italic mt-0.5">↳ {it.notes}</p>}
+                    </li>
+                  );
+                })}
+              </ol>
+            )}
+          </div>
+
+          {notes && (
+            <div className="border-t border-border pt-3">
+              <p className="text-[9px] uppercase tracking-wider text-amber-700 dark:text-amber-500 mb-1">Notes</p>
+              <p className="text-xs bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900 rounded p-2">
+                {notes}
+              </p>
+            </div>
+          )}
+
+          {/* Signature */}
+          <div className="border-t border-border pt-3 flex justify-end">
+            <div className="text-end">
+              <div className="border-t border-foreground/40 w-32 mb-1 ms-auto"></div>
+              <p className="text-xs font-bold">Dr. {doctorName || "—"}</p>
+              {doctorSpecialty && <p className="text-[10px] text-muted-foreground">{doctorSpecialty}</p>}
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { eq, and, desc } from "drizzle-orm";
-import { db, prescriptionsTable, patientsTable, clinicsTable } from "@workspace/db";
+import { db, prescriptionsTable, patientsTable, clinicsTable, usersTable } from "@workspace/db";
 import { CreatePrescriptionBody } from "@workspace/api-zod";
 import { randomUUID } from "crypto";
 import { requireAuth, requireRole } from "../middlewares/auth";
@@ -18,14 +18,18 @@ async function loadClinic(clinicId: string) {
 async function serializePrescription(row: typeof prescriptionsTable.$inferSelect) {
   const patientRows = await db.select().from(patientsTable).where(eq(patientsTable.id, row.patientId)).limit(1);
   const patient = patientRows[0];
+  const doctorRows = await db.select().from(usersTable).where(eq(usersTable.id, row.doctorId)).limit(1);
+  const doctor = doctorRows[0];
   return {
     id: row.id,
     clinicId: row.clinicId,
     patientId: row.patientId,
     patientName: patient?.name ?? "",
     patientPhone: patient?.phone ?? "",
+    patientCode: patient?.code ?? null,
     doctorId: row.doctorId,
     doctorName: row.doctorName,
+    doctorSpecialty: doctor?.specialty ?? null,
     date: row.date,
     diagnosis: row.diagnosis,
     notes: row.notes,

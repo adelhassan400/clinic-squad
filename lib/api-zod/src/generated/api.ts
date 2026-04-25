@@ -41,6 +41,7 @@ export const LoginUserResponse = zod.object({
     role: zod.enum(["admin", "secretary", "nurse", "superadmin"]),
     clinicId: zod.string(),
     name: zod.string(),
+    specialty: zod.string().nullish(),
     isBlocked: zod.boolean(),
   }),
   clinic: zod.object({
@@ -65,6 +66,25 @@ export const GetCurrentUserResponse = zod.object({
   role: zod.enum(["admin", "secretary", "nurse", "superadmin"]),
   clinicId: zod.string(),
   name: zod.string(),
+  specialty: zod.string().nullish(),
+  isBlocked: zod.boolean(),
+});
+
+/**
+ * @summary Update current user profile
+ */
+export const UpdateProfileBody = zod.object({
+  name: zod.string().optional(),
+  specialty: zod.string().nullish(),
+});
+
+export const UpdateProfileResponse = zod.object({
+  id: zod.string(),
+  email: zod.string(),
+  role: zod.enum(["admin", "secretary", "nurse", "superadmin"]),
+  clinicId: zod.string(),
+  name: zod.string(),
+  specialty: zod.string().nullish(),
   isBlocked: zod.boolean(),
 });
 
@@ -140,6 +160,7 @@ export const ListPatientsResponse = zod.object({
     zod.object({
       id: zod.string(),
       clinicId: zod.string(),
+      code: zod.string().nullish(),
       name: zod.string(),
       phone: zod.string(),
       dateOfBirth: zod.coerce.date().optional(),
@@ -183,6 +204,7 @@ export const GetPatientParams = zod.object({
 export const GetPatientResponse = zod.object({
   id: zod.string(),
   clinicId: zod.string(),
+  code: zod.string().nullish(),
   name: zod.string(),
   phone: zod.string(),
   dateOfBirth: zod.coerce.date().optional(),
@@ -214,6 +236,7 @@ export const UpdatePatientBody = zod.object({
 export const UpdatePatientResponse = zod.object({
   id: zod.string(),
   clinicId: zod.string(),
+  code: zod.string().nullish(),
   name: zod.string(),
   phone: zod.string(),
   dateOfBirth: zod.coerce.date().optional(),
@@ -394,8 +417,10 @@ export const ListPrescriptionsResponse = zod.object({
       patientId: zod.string(),
       patientName: zod.string(),
       patientPhone: zod.string(),
+      patientCode: zod.string().nullish(),
       doctorId: zod.string(),
       doctorName: zod.string(),
+      doctorSpecialty: zod.string().nullish(),
       date: zod.coerce.date(),
       diagnosis: zod.string().nullish(),
       notes: zod.string().nullish(),
@@ -453,8 +478,10 @@ export const GetPrescriptionResponse = zod.object({
   patientId: zod.string(),
   patientName: zod.string(),
   patientPhone: zod.string(),
+  patientCode: zod.string().nullish(),
   doctorId: zod.string(),
   doctorName: zod.string(),
+  doctorSpecialty: zod.string().nullish(),
   date: zod.coerce.date(),
   diagnosis: zod.string().nullish(),
   notes: zod.string().nullish(),
@@ -707,6 +734,7 @@ export const AcceptInvitationResponse = zod.object({
     role: zod.enum(["admin", "secretary", "nurse", "superadmin"]),
     clinicId: zod.string(),
     name: zod.string(),
+    specialty: zod.string().nullish(),
     isBlocked: zod.boolean(),
   }),
   clinic: zod.object({

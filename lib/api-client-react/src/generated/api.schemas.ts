@@ -133,6 +133,7 @@ export interface User {
   role: UserRole;
   clinicId: string;
   name: string;
+  specialty?: string | null;
   isBlocked: boolean;
 }
 
@@ -170,6 +171,11 @@ export interface AuthResponse {
   user: User;
   clinic: Clinic;
   token: string;
+}
+
+export interface UpdateProfileBody {
+  name?: string;
+  specialty?: string | null;
 }
 
 export type SubscriptionPlanType =
@@ -225,6 +231,7 @@ export const PatientGender = {
 export interface Patient {
   id: string;
   clinicId: string;
+  code?: string | null;
   name: string;
   phone: string;
   dateOfBirth?: string;
@@ -399,8 +406,10 @@ export interface Prescription {
   patientId: string;
   patientName: string;
   patientPhone: string;
+  patientCode?: string | null;
   doctorId: string;
   doctorName: string;
+  doctorSpecialty?: string | null;
   date: string;
   diagnosis?: string | null;
   notes?: string | null;

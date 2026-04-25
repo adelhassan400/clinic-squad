@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import { useAuth } from "@/lib/auth";
 import { useTheme } from "@/lib/theme";
 import { useCurrency } from "@/lib/currency";
@@ -5,15 +6,34 @@ import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Crown, Sun, Moon, Shield, AlertTriangle, Coins } from "lucide-react";
+import { Crown, Sun, Moon, Shield, AlertTriangle, Coins, Stethoscope } from "lucide-react";
 import { Link } from "wouter";
 import { formatDate, getTrialDaysLeft } from "@/lib/utils";
+import { useUpdateProfile } from "@workspace/api-client-react";
+import { useToast } from "@/hooks/use-toast";
 
 export default function SettingsPage() {
-  const { user, clinic } = useAuth();
+  const { user, clinic, updateUser } = useAuth();
   const { theme, toggleTheme } = useTheme();
   const { currency, setCurrencyCode, options: currencyOptions, format: formatMoney } = useCurrency();
+  const { toast } = useToast();
+  const [specialty, setSpecialty] = useState(user?.specialty ?? "");
+  useEffect(() => { setSpecialty(user?.specialty ?? ""); }, [user?.specialty]);
+  const updateProfile = useUpdateProfile();
+  const isDoctor = user?.role === "admin" || user?.role === "superadmin";
+
+  async function saveSpecialty() {
+    try {
+      const updated = await updateProfile.mutateAsync({ data: { specialty: specialty.trim() || null } });
+      updateUser({ ...(user as any), specialty: updated.specialty ?? null });
+      toast({ title: "Specialty updated" });
+    } catch (err: any) {
+      toast({ title: "Failed to update", description: err?.message, variant: "destructive" });
+    }
+  }
 
   const trialDaysLeft = clinic?.subscriptionStatus === "trial"
     ? getTrialDaysLeft(clinic.trialEndDate)
@@ -29,7 +49,7 @@ export default function SettingsPage() {
             {/* Profile */}
             <div className="rounded-xl border border-border bg-card p-6">
               <h2 className="font-semibold mb-4">Profile</h2>
-              <div className="flex items-center gap-4">
+              <div className="flex items-center gap-4 mb-4">
                 <div className="w-14 h-14 rounded-full bg-primary/10 flex items-center justify-center">
                   <span className="text-xl font-bold text-primary">{user?.name?.charAt(0)}</span>
                 </div>
@@ -39,6 +59,33 @@ export default function SettingsPage() {
                   <Badge className="mt-1 text-xs capitalize">{user?.role}</Badge>
                 </div>
               </div>
+              {isDoctor && (
+                <div className="border-t border-border pt-4">
+                  <Label htmlFor="specialty" className="flex items-center gap-1.5 mb-1.5 text-sm">
+                    <Stethoscope className="w-3.5 h-3.5" />
+                    Medical Specialty
+                  </Label>
+                  <p className="text-xs text-muted-foreground mb-2">
+                    Shown on every prescription you issue (e.g. Cardiology, Pediatrics, Internal Medicine).
+                  </p>
+                  <div className="flex gap-2">
+                    <Input
+                      id="specialty"
+                      value={specialty}
+                      onChange={(e) => setSpecialty(e.target.value)}
+                      placeholder="e.g. General Practitioner"
+                      data-testid="input-specialty"
+                    />
+                    <Button
+                      onClick={saveSpecialty}
+                      disabled={updateProfile.isPending || specialty === (user?.specialty ?? "")}
+                      data-testid="button-save-specialty"
+                    >
+                      {updateProfile.isPending ? "Saving..." : "Save"}
+                    </Button>
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Clinic */}

@@ -111,14 +111,17 @@ router.post("/login", async (req, res) => {
   return res.json({ user: userObj, clinic: clinicObj, token: generateToken(user.id) });
 });
 
-router.get("/me", async (req, res) => {
+function userIdFromAuth(req: any): string | null {
   const authHeader = req.headers.authorization;
-  if (!authHeader?.startsWith("Bearer ")) {
-    return res.status(401).json({ error: "Unauthorized" });
-  }
+  if (!authHeader?.startsWith("Bearer ")) return null;
   const token = authHeader.replace("Bearer ", "");
   const decoded = Buffer.from(token, "base64").toString();
-  const userId = decoded.split(":")[0];
+  return decoded.split(":")[0] || null;
+}
+
+router.get("/me", async (req, res) => {
+  const userId = userIdFromAuth(req);
+  if (!userId) return res.status(401).json({ error: "Unauthorized" });
 
   const users = await db.select().from(usersTable).where(eq(usersTable.id, userId)).limit(1);
   const user = users[0];
@@ -126,7 +129,29 @@ router.get("/me", async (req, res) => {
     return res.status(401).json({ error: "Invalid token" });
   }
 
-  return res.json({ id: user.id, email: user.email, role: user.role, clinicId: user.clinicId, name: user.name, isBlocked: user.isBlocked });
+  return res.json({ id: user.id, email: user.email, role: user.role, clinicId: user.clinicId, name: user.name, specialty: user.specialty, isBlocked: user.isBlocked });
+});
+
+router.patch("/me", async (req, res) => {
+  const userId = userIdFromAuth(req);
+  if (!userId) return res.status(401).json({ error: "Unauthorized" });
+
+  const body = req.body ?? {};
+  const updates: { name?: string; specialty?: string | null } = {};
+  if (typeof body.name === "string" && body.name.trim()) updates.name = body.name.trim();
+  if (body.specialty === null || typeof body.specialty === "string") {
+    updates.specialty = body.specialty === null ? null : (body.specialty as string).trim() || null;
+  }
+  if (Object.keys(updates).length === 0) {
+    return res.status(400).json({ error: "No valid fields to update" });
+  }
+
+  await db.update(usersTable).set(updates).where(eq(usersTable.id, userId));
+  const users = await db.select().from(usersTable).where(eq(usersTable.id, userId)).limit(1);
+  const user = users[0];
+  if (!user) return res.status(404).json({ error: "User not found" });
+
+  return res.json({ id: user.id, email: user.email, role: user.role, clinicId: user.clinicId, name: user.name, specialty: user.specialty, isBlocked: user.isBlocked });
 });
 
 export default router;
