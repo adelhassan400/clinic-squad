@@ -21,11 +21,12 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import {
   Plus, Calendar, Trash2, CheckCircle, XCircle, Loader2,
-  ChevronsUpDown, Check, Users, List, ChevronLeft, ChevronRight, Pill
+  ChevronsUpDown, Check, Users, List, ChevronLeft, ChevronRight, Pill, MessageCircle
 } from "lucide-react";
 import { Link } from "wouter";
 import { cn } from "@/lib/utils";
 import { useCurrency } from "@/lib/currency";
+import { openWhatsApp, whatsappAppointmentReminder } from "@/lib/whatsapp";
 
 const apptSchema = z.object({
   patientId: z.string().min(1, "Select a patient"),
@@ -632,6 +633,30 @@ export default function AppointmentsPage() {
                           <Pill className="w-3.5 h-3.5" />
                         </Button>
                       </Link>
+                      <Button
+                        variant="ghost" size="icon" className="h-7 w-7 text-green-600 hover:bg-green-100 dark:hover:bg-green-900/30"
+                        onClick={() => {
+                          const phone = patientList.find(p => p.id === appt.patientId)?.phone ?? "";
+                          if (!phone) {
+                            toast({ title: "No phone number on file", variant: "destructive" });
+                            return;
+                          }
+                          openWhatsApp(
+                            phone,
+                            whatsappAppointmentReminder({
+                              patientName: appt.patientName,
+                              clinicName: clinic?.name ?? "the clinic",
+                              date: appt.date,
+                              time: appt.time,
+                              type: appt.type,
+                            })
+                          );
+                        }}
+                        title="Send WhatsApp reminder"
+                        data-testid={`whatsapp-appt-${appt.id}`}
+                      >
+                        <MessageCircle className="w-3.5 h-3.5" />
+                      </Button>
                       <Button
                         variant="ghost" size="icon" className="h-7 w-7 text-destructive hover:bg-destructive/10"
                         onClick={() => handleDelete(appt.id)}

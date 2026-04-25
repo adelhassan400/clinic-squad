@@ -7,9 +7,10 @@ import { formatDate } from "@/lib/utils";
 import { useCurrency } from "@/lib/currency";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ArrowLeft, User, Phone, Calendar, Droplets } from "lucide-react";
+import { ArrowLeft, User, Phone, Calendar, Droplets, MessageCircle } from "lucide-react";
 import { Link } from "wouter";
 import { cn } from "@/lib/utils";
+import { openWhatsApp, whatsappPatientGreeting } from "@/lib/whatsapp";
 
 interface Props { params: { id: string } }
 
@@ -79,10 +80,28 @@ export default function PatientDetailPage({ params }: Props) {
                         </span>
                       )}
                     </div>
-                    <div className="flex flex-wrap gap-4 text-sm text-muted-foreground">
+                    <div className="flex flex-wrap gap-4 text-sm text-muted-foreground items-center">
                       <span className="flex items-center gap-1.5">
                         <Phone className="w-3.5 h-3.5" />{patient.phone}
                       </span>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="h-7 px-2 text-xs text-green-600 border-green-600/30 hover:bg-green-50 dark:hover:bg-green-900/20"
+                        onClick={() =>
+                          openWhatsApp(
+                            patient.phone,
+                            whatsappPatientGreeting({
+                              patientName: patient.name,
+                              clinicName: clinic?.name ?? "the clinic",
+                            })
+                          )
+                        }
+                        data-testid="button-whatsapp-patient"
+                      >
+                        <MessageCircle className="w-3.5 h-3.5 mr-1" />
+                        WhatsApp
+                      </Button>
                       <span className="flex items-center gap-1.5 capitalize">
                         <User className="w-3.5 h-3.5" />{patient.gender}
                       </span>

@@ -18,8 +18,9 @@ import { useToast } from "@/hooks/use-toast";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Plus, Search, Users, Trash2, Eye, Loader2 } from "lucide-react";
+import { Plus, Search, Users, Trash2, Eye, Loader2, MessageCircle } from "lucide-react";
 import { Link } from "wouter";
+import { openWhatsApp, whatsappPatientGreeting } from "@/lib/whatsapp";
 
 const patientSchema = z.object({
   name: z.string().min(2, "Name required"),
@@ -161,6 +162,24 @@ export default function PatientsPage() {
                         <Eye className="w-3.5 h-3.5" />
                       </Button>
                     </Link>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8 text-green-600 hover:bg-green-100 dark:hover:bg-green-900/30"
+                      onClick={() =>
+                        openWhatsApp(
+                          patient.phone,
+                          whatsappPatientGreeting({
+                            patientName: patient.name,
+                            clinicName: clinic?.name ?? "the clinic",
+                          })
+                        )
+                      }
+                      title="Send WhatsApp message"
+                      data-testid={`whatsapp-patient-${patient.id}`}
+                    >
+                      <MessageCircle className="w-3.5 h-3.5" />
+                    </Button>
                     <Button
                       variant="ghost"
                       size="icon"

@@ -1,7 +1,8 @@
 import { useAuth } from "@/lib/auth";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
-import { useGetDashboardSummary, useGetTodayAppointments, getGetDashboardSummaryQueryKey, getGetTodayAppointmentsQueryKey } from "@workspace/api-client-react";
+import { useGetDashboardSummary, useGetTodayAppointments, useUpdateAppointment, getGetDashboardSummaryQueryKey, getGetTodayAppointmentsQueryKey, getListAppointmentsQueryKey } from "@workspace/api-client-react";
+import { useQueryClient } from "@tanstack/react-query";
 import { formatDate, getTrialDaysLeft, getTrialUrgency } from "@/lib/utils";
 import { cn } from "@/lib/utils";
 import { useCurrency } from "@/lib/currency";
@@ -10,6 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Link } from "wouter";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useToast } from "@/hooks/use-toast";
 
 function StatCard({ label, value, icon: Icon, sub, color }: {
   label: string; value: string | number; icon: typeof Users; sub?: string; color?: string;
@@ -46,6 +48,8 @@ export default function DashboardPage() {
   const { format: formatCurrency } = useCurrency();
   const { clinic } = useAuth();
   const clinicId = clinic?.id ?? "";
+  const { toast } = useToast();
+  const qc = useQueryClient();
 
   const { data: summary, isLoading: summaryLoading } = useGetDashboardSummary(clinicId, {
     query: { enabled: !!clinicId, queryKey: getGetDashboardSummaryQueryKey(clinicId) }
@@ -54,6 +58,23 @@ export default function DashboardPage() {
   const { data: todayAppts, isLoading: apptLoading } = useGetTodayAppointments(clinicId, {
     query: { enabled: !!clinicId, queryKey: getGetTodayAppointmentsQueryKey(clinicId) }
   });
+
+  const updateAppointment = useUpdateAppointment();
+
+  const handleCheckIn = (appointmentId: string, patientName: string) => {
+    updateAppointment.mutate(
+      { clinicId, appointmentId, data: { status: "completed" } },
+      {
+        onSuccess: () => {
+          toast({ title: `${patientName} checked in` });
+          qc.invalidateQueries({ queryKey: getGetTodayAppointmentsQueryKey(clinicId) });
+          qc.invalidateQueries({ queryKey: getGetDashboardSummaryQueryKey(clinicId) });
+          qc.invalidateQueries({ queryKey: getListAppointmentsQueryKey(clinicId) });
+        },
+        onError: () => toast({ title: "Check-in failed", variant: "destructive" }),
+      }
+    );
+  };
 
   const trialDaysLeft = clinic?.subscriptionStatus === "trial"
     ? getTrialDaysLeft(clinic.trialEndDate)
@@ -154,6 +175,19 @@ export default function DashboardPage() {
                     <div className="flex items-center gap-3 shrink-0">
                       <span className="text-xs text-muted-foreground font-mono">{appt.time}</span>
                       <AppointmentStatusBadge status={appt.status} />
+                      {appt.status === "scheduled" && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="h-7 px-2 text-xs text-green-600 border-green-600/30 hover:bg-green-50 dark:hover:bg-green-900/20"
+                          onClick={() => handleCheckIn(appt.id, appt.patientName)}
+                          disabled={updateAppointment.isPending}
+                          data-testid={`checkin-${appt.id}`}
+                        >
+                          <CheckCircle className="w-3.5 h-3.5 mr-1" />
+                          Check-in
+                        </Button>
+                      )}
                     </div>
                   </div>
                 ))}
