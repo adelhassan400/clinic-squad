@@ -4,6 +4,7 @@ import { useAuth } from "@/lib/auth";
 import { useTheme } from "@/lib/theme";
 import { useLang } from "@/lib/lang";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
+import { GlobalSearch } from "@/components/GlobalSearch";
 import { getTrialDaysLeft, getTrialUrgency } from "@/lib/utils";
 import {
   LayoutDashboard, Users, Calendar, TrendingUp,
@@ -228,6 +229,10 @@ export function DashboardLayout({ children }: Props) {
           >
             <Menu className="w-5 h-5" />
           </Button>
+
+          {/* Global patient search */}
+          <GlobalSearch />
+
           <div className="flex-1" />
 
           {/* Language switcher always visible in top bar */}
