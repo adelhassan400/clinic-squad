@@ -3,9 +3,11 @@ import { useLocation } from "wouter";
 import { useAuth } from "@/lib/auth";
 import { Loader2 } from "lucide-react";
 
+type Role = "admin" | "secretary" | "nurse" | "superadmin";
+
 interface Props {
   children: ReactNode;
-  requireRole?: "admin" | "secretary" | "superadmin";
+  requireRole?: Role | Role[];
 }
 
 export function ProtectedRoute({ children, requireRole }: Props) {
@@ -25,7 +27,13 @@ export function ProtectedRoute({ children, requireRole }: Props) {
     return null;
   }
 
-  if (requireRole && user?.role !== requireRole) {
+  const allowedRoles = requireRole
+    ? Array.isArray(requireRole)
+      ? requireRole
+      : [requireRole]
+    : null;
+
+  if (allowedRoles && (!user?.role || !allowedRoles.includes(user.role as Role))) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="text-center">

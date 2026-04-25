@@ -25,12 +25,18 @@ export function DashboardLayout({ children }: Props) {
   const [location] = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
+  const isAdmin = user?.role === "admin" || user?.role === "superadmin";
+
   const navItems = [
     { href: "/dashboard", labelKey: "sidebar.dashboard", icon: LayoutDashboard },
     { href: "/patients", labelKey: "sidebar.patients", icon: Users },
     { href: "/appointments", labelKey: "sidebar.appointments", icon: Calendar },
-    { href: "/insights", labelKey: "sidebar.insights", icon: BarChart2 },
-    { href: "/finances", labelKey: "sidebar.finances", icon: TrendingUp },
+    ...(isAdmin
+      ? [
+          { href: "/insights", labelKey: "sidebar.insights", icon: BarChart2 },
+          { href: "/finances", labelKey: "sidebar.finances", icon: TrendingUp },
+        ]
+      : []),
     { href: "/settings", labelKey: "sidebar.settings", icon: Settings },
   ];
 
@@ -124,7 +130,7 @@ export function DashboardLayout({ children }: Props) {
             );
           })}
 
-          {user?.role === "admin" && (
+          {isAdmin && (
             <Link
               href="/team"
               data-testid="nav-team"

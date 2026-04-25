@@ -215,7 +215,7 @@ export default function InsightsPage() {
   const totalAppts = allAppts?.data.length ?? 0;
 
   return (
-    <ProtectedRoute>
+    <ProtectedRoute requireRole={["admin", "superadmin"]}>
       <DashboardLayout>
         <div className="p-6 max-w-6xl mx-auto space-y-6">
 

@@ -16,6 +16,7 @@ import {
 import { useAuth } from "@/lib/auth";
 import { useLang } from "@/lib/lang";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
+import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -158,7 +159,8 @@ export default function TeamPage() {
   };
 
   return (
-    <DashboardLayout>
+    <ProtectedRoute requireRole={["admin", "superadmin"]}>
+      <DashboardLayout>
       <div className="p-6 max-w-5xl mx-auto space-y-6">
         {/* Page header */}
         <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3">
@@ -438,6 +440,7 @@ export default function TeamPage() {
           )}
         </div>
       </div>
-    </DashboardLayout>
+      </DashboardLayout>
+    </ProtectedRoute>
   );
 }

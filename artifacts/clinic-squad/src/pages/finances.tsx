@@ -80,7 +80,7 @@ export default function FinancesPage() {
   // Locked for non-premium users
   if (!isPremium && !isExpired) {
     return (
-      <ProtectedRoute>
+      <ProtectedRoute requireRole={["admin", "superadmin"]}>
         <DashboardLayout>
           <div className="p-6 max-w-4xl mx-auto">
             <h1 className="text-2xl font-bold mb-2">Finances</h1>
@@ -112,7 +112,7 @@ export default function FinancesPage() {
   })) ?? [];
 
   return (
-    <ProtectedRoute>
+    <ProtectedRoute requireRole={["admin", "superadmin"]}>
       <DashboardLayout>
         <div className="p-6 max-w-6xl mx-auto">
           <div className="flex items-center justify-between mb-6">
