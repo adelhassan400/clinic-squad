@@ -105,7 +105,7 @@ export default function PatientsPage() {
           {/* Table */}
           <div className="rounded-xl border border-border bg-card overflow-hidden">
             <div className="grid grid-cols-[110px_1fr_1fr_auto_auto_auto] gap-4 px-6 py-3 border-b border-border bg-muted/30 text-xs font-medium text-muted-foreground uppercase tracking-wider">
-              <span>Code</span>
+              <span>ID</span>
               <span>Patient</span>
               <span>Phone</span>
               <span>Gender</span>
