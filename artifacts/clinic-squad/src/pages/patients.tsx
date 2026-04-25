@@ -94,7 +94,7 @@ export default function PatientsPage() {
           <div className="relative mb-6">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
             <Input
-              placeholder="Search patients by name or phone..."
+              placeholder="Search by code (PT-0001), name, or phone..."
               value={search}
               onChange={e => setSearch(e.target.value)}
               className="pl-10"
@@ -104,7 +104,8 @@ export default function PatientsPage() {
 
           {/* Table */}
           <div className="rounded-xl border border-border bg-card overflow-hidden">
-            <div className="grid grid-cols-[1fr_1fr_auto_auto_auto] gap-4 px-6 py-3 border-b border-border bg-muted/30 text-xs font-medium text-muted-foreground uppercase tracking-wider">
+            <div className="grid grid-cols-[110px_1fr_1fr_auto_auto_auto] gap-4 px-6 py-3 border-b border-border bg-muted/30 text-xs font-medium text-muted-foreground uppercase tracking-wider">
+              <span>Code</span>
               <span>Patient</span>
               <span>Phone</span>
               <span>Gender</span>
@@ -134,21 +135,20 @@ export default function PatientsPage() {
                 <div
                   key={patient.id}
                   data-testid={`patient-row-${patient.id}`}
-                  className="grid grid-cols-[1fr_1fr_auto_auto_auto] gap-4 items-center px-6 py-4 border-b border-border last:border-0 hover:bg-muted/30 transition-colors"
+                  className="grid grid-cols-[110px_1fr_1fr_auto_auto_auto] gap-4 items-center px-6 py-4 border-b border-border last:border-0 hover:bg-muted/30 transition-colors"
                 >
+                  <span
+                    className="text-sm font-mono font-semibold px-2.5 py-1 rounded bg-primary/10 text-primary border border-primary/20 text-center"
+                    data-testid={`patient-code-${patient.id}`}
+                  >
+                    {patient.code ?? "—"}
+                  </span>
                   <div className="flex items-center gap-3 min-w-0">
                     <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
                       <span className="text-xs font-bold text-primary">{patient.name.charAt(0)}</span>
                     </div>
                     <div className="min-w-0">
-                      <div className="flex items-center gap-2">
-                        <p className="text-sm font-medium truncate">{patient.name}</p>
-                        {patient.code && (
-                          <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-primary/10 text-primary border border-primary/20 shrink-0">
-                            {patient.code}
-                          </span>
-                        )}
-                      </div>
+                      <p className="text-sm font-medium truncate">{patient.name}</p>
                       {patient.bloodType && <p className="text-xs text-muted-foreground">Blood: {patient.bloodType}</p>}
                     </div>
                   </div>
