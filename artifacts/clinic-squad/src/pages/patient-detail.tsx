@@ -1,5 +1,6 @@
 import { useAuth } from "@/lib/auth";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
+import { PrescriptionsContent } from "@/pages/prescriptions";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { useGetPatient, useListAppointments, getGetPatientQueryKey, getListAppointmentsQueryKey } from "@workspace/api-client-react";
 import { formatDate } from "@/lib/utils";
@@ -108,6 +109,11 @@ export default function PatientDetailPage({ params }: Props) {
                     )}
                   </div>
                 )}
+              </div>
+
+              {/* Prescriptions */}
+              <div className="rounded-xl border border-border bg-card p-6">
+                <PrescriptionsContent initialPatientId={patient.id} embedded />
               </div>
 
               {/* Appointment history */}

@@ -67,6 +67,7 @@ const translations: Record<string, Record<Lang, string>> = {
   "sidebar.settings": { en: "Settings", ar: "الإعدادات" },
   "sidebar.admin": { en: "Admin Panel", ar: "لوحة الإدارة" },
   "sidebar.team": { en: "Team", ar: "الفريق" },
+  "sidebar.prescriptions": { en: "Prescriptions", ar: "الوصفات الطبية" },
   // Team management
   "team.title": { en: "Team Management", ar: "إدارة الفريق" },
   "team.subtitle": { en: "Invite secretaries and nurses to help run your clinic.", ar: "ادعُ السكرتارية والممرضين للمساعدة في تشغيل عيادتك." },

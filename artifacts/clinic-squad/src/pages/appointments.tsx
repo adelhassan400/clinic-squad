@@ -21,8 +21,9 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import {
   Plus, Calendar, Trash2, CheckCircle, XCircle, Loader2,
-  ChevronsUpDown, Check, Users, List, ChevronLeft, ChevronRight
+  ChevronsUpDown, Check, Users, List, ChevronLeft, ChevronRight, Pill
 } from "lucide-react";
+import { Link } from "wouter";
 import { cn } from "@/lib/utils";
 import { useCurrency } from "@/lib/currency";
 
@@ -622,6 +623,15 @@ export default function AppointmentsPage() {
                           </Button>
                         </>
                       )}
+                      <Link href={`/prescriptions?patientId=${appt.patientId}`}>
+                        <Button
+                          variant="ghost" size="icon" className="h-7 w-7 text-primary hover:bg-primary/10"
+                          title="Write prescription"
+                          data-testid={`prescribe-appt-${appt.id}`}
+                        >
+                          <Pill className="w-3.5 h-3.5" />
+                        </Button>
+                      </Link>
                       <Button
                         variant="ghost" size="icon" className="h-7 w-7 text-destructive hover:bg-destructive/10"
                         onClick={() => handleDelete(appt.id)}

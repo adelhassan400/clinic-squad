@@ -385,6 +385,43 @@ export interface DashboardSummary {
   trialDaysLeft?: number | null;
 }
 
+export interface PrescriptionItem {
+  drug: string;
+  dosage: string;
+  frequency: string;
+  duration: string;
+  notes?: string | null;
+}
+
+export interface Prescription {
+  id: string;
+  clinicId: string;
+  patientId: string;
+  patientName: string;
+  patientPhone: string;
+  doctorId: string;
+  doctorName: string;
+  date: string;
+  diagnosis?: string | null;
+  notes?: string | null;
+  items: PrescriptionItem[];
+  createdAt: string;
+}
+
+export interface CreatePrescriptionBody {
+  patientId: string;
+  date: string;
+  diagnosis?: string | null;
+  notes?: string | null;
+  /** @minItems 1 */
+  items: PrescriptionItem[];
+}
+
+export interface PrescriptionList {
+  data: Prescription[];
+  total: number;
+}
+
 export type ListPatientsParams = {
   search?: string;
   page?: number;
@@ -421,6 +458,11 @@ export const ListFinancesType = {
   income: "income",
   expense: "expense",
 } as const;
+
+export type ListPrescriptionsParams = {
+  patientId?: string;
+  search?: string;
+};
 
 export type GetFinanceSummaryParams = {
   year?: number;

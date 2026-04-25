@@ -8,7 +8,7 @@ import { getTrialDaysLeft, getTrialUrgency } from "@/lib/utils";
 import {
   LayoutDashboard, Users, Calendar, TrendingUp,
   Settings, LogOut, Menu, X, Sun, Moon,
-  AlertTriangle, Crown, ChevronRight, Shield, BarChart2, UserPlus
+  AlertTriangle, Crown, ChevronRight, Shield, BarChart2, UserPlus, Pill
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -33,6 +33,7 @@ export function DashboardLayout({ children }: Props) {
     { href: "/appointments", labelKey: "sidebar.appointments", icon: Calendar },
     ...(isAdmin
       ? [
+          { href: "/prescriptions", labelKey: "sidebar.prescriptions", icon: Pill },
           { href: "/insights", labelKey: "sidebar.insights", icon: BarChart2 },
           { href: "/finances", labelKey: "sidebar.finances", icon: TrendingUp },
         ]
@@ -108,8 +109,8 @@ export function DashboardLayout({ children }: Props) {
         {/* Nav */}
         <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
           {navItems.map(({ href, labelKey, icon: Icon }) => {
-            const isFinances = href === "/finances";
-            const isLocked = isFinances && clinic?.subscriptionStatus === "basic";
+            const isPremiumOnly = href === "/finances" || href === "/prescriptions";
+            const isLocked = isPremiumOnly && clinic?.subscriptionStatus !== "premium";
             const isActive = location.startsWith(href);
             return (
               <Link

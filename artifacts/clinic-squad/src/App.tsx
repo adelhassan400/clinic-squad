@@ -21,6 +21,7 @@ import SettingsPage from "@/pages/settings";
 import AdminPage from "@/pages/admin";
 import InsightsPage from "@/pages/insights";
 import TeamPage from "@/pages/team";
+import PrescriptionsPage from "@/pages/prescriptions";
 import AcceptInvitePage from "@/pages/accept-invite";
 import NotFound from "@/pages/not-found";
 
@@ -49,6 +50,7 @@ function Router() {
       <Route path="/settings" component={SettingsPage} />
       <Route path="/insights" component={InsightsPage} />
       <Route path="/team" component={TeamPage} />
+      <Route path="/prescriptions" component={PrescriptionsPage} />
       <Route path="/invite/:token" component={AcceptInvitePage} />
       <Route path="/admin" component={AdminPage} />
       <Route component={NotFound} />

@@ -28,6 +28,8 @@ tags:
     description: Team members and invitations
   - name: invitations
     description: Public invitation acceptance
+  - name: prescriptions
+    description: E-prescriptions (premium feature)
 paths:
   /healthz:
     get:
@@ -448,6 +450,108 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Finance"
+
+  /clinics/{clinicId}/prescriptions:
+    get:
+      operationId: listPrescriptions
+      tags: [prescriptions]
+      summary: List prescriptions for the clinic (premium only)
+      parameters:
+        - in: path
+          name: clinicId
+          required: true
+          schema:
+            type: string
+        - in: query
+          name: patientId
+          schema:
+            type: string
+        - in: query
+          name: search
+          schema:
+            type: string
+      responses:
+        "200":
+          description: List of prescriptions
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PrescriptionList"
+        "402":
+          description: Premium plan required
+    post:
+      operationId: createPrescription
+      tags: [prescriptions]
+      summary: Create a new prescription (premium only, admin only)
+      parameters:
+        - in: path
+          name: clinicId
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreatePrescriptionBody"
+      responses:
+        "201":
+          description: Prescription created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Prescription"
+        "402":
+          description: Premium plan required
+        "403":
+          description: Admin role required
+
+  /clinics/{clinicId}/prescriptions/{prescriptionId}:
+    get:
+      operationId: getPrescription
+      tags: [prescriptions]
+      summary: Get a prescription by id
+      parameters:
+        - in: path
+          name: clinicId
+          required: true
+          schema:
+            type: string
+        - in: path
+          name: prescriptionId
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Prescription
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Prescription"
+        "404":
+          description: Not found
+    delete:
+      operationId: deletePrescription
+      tags: [prescriptions]
+      summary: Delete a prescription (admin only)
+      parameters:
+        - in: path
+          name: clinicId
+          required: true
+          schema:
+            type: string
+        - in: path
+          name: prescriptionId
+          required: true
+          schema:
+            type: string
+      responses:
+        "204":
+          description: Deleted
+        "403":
+          description: Admin role required
 
   /clinics/{clinicId}/dashboard:
     get:
@@ -1236,3 +1340,86 @@ components:
           type: integer
           nullable: true
       required: [totalPatients, newPatientsThisMonth, todayAppointments, completedAppointments, monthlyRevenue, monthlyExpenses, upcomingAppointments, subscriptionStatus]
+
+    PrescriptionItem:
+      type: object
+      properties:
+        drug:
+          type: string
+        dosage:
+          type: string
+        frequency:
+          type: string
+        duration:
+          type: string
+        notes:
+          type: string
+          nullable: true
+      required: [drug, dosage, frequency, duration]
+
+    Prescription:
+      type: object
+      properties:
+        id:
+          type: string
+        clinicId:
+          type: string
+        patientId:
+          type: string
+        patientName:
+          type: string
+        patientPhone:
+          type: string
+        doctorId:
+          type: string
+        doctorName:
+          type: string
+        date:
+          type: string
+          format: date
+        diagnosis:
+          type: string
+          nullable: true
+        notes:
+          type: string
+          nullable: true
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/PrescriptionItem"
+        createdAt:
+          type: string
+          format: date-time
+      required: [id, clinicId, patientId, patientName, patientPhone, doctorId, doctorName, date, items, createdAt]
+
+    CreatePrescriptionBody:
+      type: object
+      properties:
+        patientId:
+          type: string
+        date:
+          type: string
+          format: date
+        diagnosis:
+          type: string
+          nullable: true
+        notes:
+          type: string
+          nullable: true
+        items:
+          type: array
+          minItems: 1
+          items:
+            $ref: "#/components/schemas/PrescriptionItem"
+      required: [patientId, date, items]
+
+    PrescriptionList:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/Prescription"
+        total:
+          type: integer
+      required: [data, total]

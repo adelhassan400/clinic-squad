@@ -5,6 +5,7 @@ import clinicsRouter from "./clinics";
 import patientsRouter from "./patients";
 import appointmentsRouter from "./appointments";
 import financesRouter from "./finances";
+import prescriptionsRouter from "./prescriptions";
 import adminRouter from "./admin";
 import teamRouter from "./team";
 import invitationsRouter from "./invitations";
@@ -19,6 +20,7 @@ router.use("/clinics", clinicsRouter);
 router.use("/clinics/:clinicId/patients", patientsRouter);
 router.use("/clinics/:clinicId/appointments", appointmentsRouter);
 router.use("/clinics/:clinicId/finances", financesRouter);
+router.use("/clinics/:clinicId/prescriptions", prescriptionsRouter);
 router.use("/admin", adminRouter);
 
 export default router;

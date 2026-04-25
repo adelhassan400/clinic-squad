@@ -375,6 +375,110 @@ export const CreateFinanceRecordBody = zod.object({
 });
 
 /**
+ * @summary List prescriptions for the clinic (premium only)
+ */
+export const ListPrescriptionsParams = zod.object({
+  clinicId: zod.coerce.string(),
+});
+
+export const ListPrescriptionsQueryParams = zod.object({
+  patientId: zod.coerce.string().optional(),
+  search: zod.coerce.string().optional(),
+});
+
+export const ListPrescriptionsResponse = zod.object({
+  data: zod.array(
+    zod.object({
+      id: zod.string(),
+      clinicId: zod.string(),
+      patientId: zod.string(),
+      patientName: zod.string(),
+      patientPhone: zod.string(),
+      doctorId: zod.string(),
+      doctorName: zod.string(),
+      date: zod.coerce.date(),
+      diagnosis: zod.string().nullish(),
+      notes: zod.string().nullish(),
+      items: zod.array(
+        zod.object({
+          drug: zod.string(),
+          dosage: zod.string(),
+          frequency: zod.string(),
+          duration: zod.string(),
+          notes: zod.string().nullish(),
+        }),
+      ),
+      createdAt: zod.coerce.date(),
+    }),
+  ),
+  total: zod.number(),
+});
+
+/**
+ * @summary Create a new prescription (premium only, admin only)
+ */
+export const CreatePrescriptionParams = zod.object({
+  clinicId: zod.coerce.string(),
+});
+
+export const CreatePrescriptionBody = zod.object({
+  patientId: zod.string(),
+  date: zod.coerce.date(),
+  diagnosis: zod.string().nullish(),
+  notes: zod.string().nullish(),
+  items: zod
+    .array(
+      zod.object({
+        drug: zod.string(),
+        dosage: zod.string(),
+        frequency: zod.string(),
+        duration: zod.string(),
+        notes: zod.string().nullish(),
+      }),
+    )
+    .min(1),
+});
+
+/**
+ * @summary Get a prescription by id
+ */
+export const GetPrescriptionParams = zod.object({
+  clinicId: zod.coerce.string(),
+  prescriptionId: zod.coerce.string(),
+});
+
+export const GetPrescriptionResponse = zod.object({
+  id: zod.string(),
+  clinicId: zod.string(),
+  patientId: zod.string(),
+  patientName: zod.string(),
+  patientPhone: zod.string(),
+  doctorId: zod.string(),
+  doctorName: zod.string(),
+  date: zod.coerce.date(),
+  diagnosis: zod.string().nullish(),
+  notes: zod.string().nullish(),
+  items: zod.array(
+    zod.object({
+      drug: zod.string(),
+      dosage: zod.string(),
+      frequency: zod.string(),
+      duration: zod.string(),
+      notes: zod.string().nullish(),
+    }),
+  ),
+  createdAt: zod.coerce.date(),
+});
+
+/**
+ * @summary Delete a prescription (admin only)
+ */
+export const DeletePrescriptionParams = zod.object({
+  clinicId: zod.coerce.string(),
+  prescriptionId: zod.coerce.string(),
+});
+
+/**
  * @summary Get dashboard summary stats
  */
 export const GetDashboardSummaryParams = zod.object({
