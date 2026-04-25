@@ -1,4 +1,4 @@
-import { ReactNode } from "react";
+import { ReactNode, useEffect } from "react";
 import { useLocation } from "wouter";
 import { useAuth } from "@/lib/auth";
 import { Loader2 } from "lucide-react";
@@ -14,6 +14,19 @@ export function ProtectedRoute({ children, requireRole }: Props) {
   const { isAuthenticated, isLoading, user, clinic } = useAuth();
   const [, setLocation] = useLocation();
 
+  const subscriptionExpired = clinic?.subscriptionStatus === "expired";
+
+  useEffect(() => {
+    if (isLoading) return;
+    if (!isAuthenticated) {
+      setLocation("/login");
+      return;
+    }
+    if (subscriptionExpired) {
+      setLocation("/subscription/expired");
+    }
+  }, [isLoading, isAuthenticated, subscriptionExpired, setLocation]);
+
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
@@ -23,7 +36,6 @@ export function ProtectedRoute({ children, requireRole }: Props) {
   }
 
   if (!isAuthenticated) {
-    setLocation("/login");
     return null;
   }
 
