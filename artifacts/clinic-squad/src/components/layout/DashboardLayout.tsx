@@ -109,7 +109,7 @@ export function DashboardLayout({ children }: Props) {
         {/* Nav */}
         <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
           {navItems.map(({ href, labelKey, icon: Icon }) => {
-            const isPremiumOnly = href === "/finances" || href === "/prescriptions";
+            const isPremiumOnly = href === "/insights" || href === "/prescriptions";
             const isLocked = isPremiumOnly && clinic?.subscriptionStatus !== "premium";
             const isActive = location.startsWith(href);
             return (

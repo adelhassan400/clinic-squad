@@ -13,7 +13,8 @@ ClinicSquad is a multi-tenant medical clinic management SaaS for Egyptian clinic
 - **Team Management** (admin-only): invite secretaries/nurses by email, copyable invite links, capacity meter — trial/basic = 2 members, premium = 10
 - **Patient Management**: CRUD with search, blood type, allergies, medical notes
 - **Appointment Scheduling**: Create/update/delete appointments, status tracking
-- **Finance Dashboard**: Premium-only, income/expense tracking, monthly charts (Recharts)
+- **Finance Dashboard**: Available on all paid plans (basic + premium), income/expense tracking, monthly charts (Recharts)
+- **Insights**: Premium-only analytics — performance dashboard, busy-day trends, status breakdown, revenue charts
 - **E-Prescriptions** (premium-only, admin-create): per-patient or global `/prescriptions` page, multi-medication form, printable A4 layout (window.print → save as PDF), and "Send to patient WhatsApp" via `wa.me` deep link. Entry points: sidebar nav (premium-locked), patient detail page, and per-row button on the appointments list.
 - **Superadmin Panel**: Activate/block clinics, confirm payments
 - **UI**: Dark-by-default, teal+amber theme, responsive
@@ -73,7 +74,8 @@ lib/
 ## Important Notes
 
 - Orval codegen: do NOT add `schemas: { path: ... }` — causes duplicate exports
-- Finance route is premium-only (locked for trial/basic)
+- Insights route (`/insights`) is premium-only (locked for trial/basic) — sidebar shows Crown lock for non-premium
+- Finances route (`/finances`) is available on all paid plans (basic + premium) and admin-only
 - Prescriptions route (`/prescriptions`) is premium-only and admin-only for create/delete; backend returns 402 when not premium and 403 when not admin. Print/WhatsApp helpers live in `artifacts/clinic-squad/src/lib/prescription.ts`.
 - Subscription expired → redirected to /subscription/expired
 - Generated API hooks require `queryKey` in query options for `enabled` to work

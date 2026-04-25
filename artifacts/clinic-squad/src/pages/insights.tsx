@@ -15,8 +15,10 @@ import {
 } from "recharts";
 import {
   Users, Calendar, TrendingUp, TrendingDown, CheckCircle,
-  Flame, Star, Activity, DollarSign, BarChart2
+  Flame, Star, Activity, DollarSign, BarChart2, Lock, Crown
 } from "lucide-react";
+import { Link } from "wouter";
+import { Button } from "@/components/ui/button";
 
 // ─── Helpers ───────────────────────────────────────────────────────────────
 
@@ -116,26 +118,27 @@ export default function InsightsPage() {
   const { symbol: currencySymbol } = useCurrency();
   const { clinic } = useAuth();
   const clinicId = clinic?.id ?? "";
+  const isPremium = clinic?.subscriptionStatus === "premium";
   const now = new Date();
   const currentYear = now.getFullYear();
   const [selectedYear, setSelectedYear] = useState(currentYear);
 
-  // ── Data fetching ──
+  // ── Data fetching (premium-gated) ──
   const { data: summary, isLoading: summaryLoading } = useGetDashboardSummary(clinicId, {
-    query: { enabled: !!clinicId, queryKey: getGetDashboardSummaryQueryKey(clinicId) },
+    query: { enabled: !!clinicId && isPremium, queryKey: getGetDashboardSummaryQueryKey(clinicId) },
   });
 
   const { data: financeSummary, isLoading: financeLoading } = useGetFinanceSummary(
     clinicId,
     { year: selectedYear },
-    { query: { enabled: !!clinicId, queryKey: getGetFinanceSummaryQueryKey(clinicId, { year: selectedYear }) } }
+    { query: { enabled: !!clinicId && isPremium, queryKey: getGetFinanceSummaryQueryKey(clinicId, { year: selectedYear }) } }
   );
 
   // Fetch all appointments (high limit) to compute busy-day and status charts
   const { data: allAppts, isLoading: apptsLoading } = useListAppointments(
     clinicId,
     { limit: 1000 } as Parameters<typeof useListAppointments>[1],
-    { query: { enabled: !!clinicId, queryKey: getListAppointmentsQueryKey(clinicId, { limit: 1000 } as Parameters<typeof useListAppointments>[1]) } }
+    { query: { enabled: !!clinicId && isPremium, queryKey: getListAppointmentsQueryKey(clinicId, { limit: 1000 } as Parameters<typeof useListAppointments>[1]) } }
   );
 
   // ── Derived: busiest days of the current month ──
@@ -213,6 +216,37 @@ export default function InsightsPage() {
   }, [allAppts]);
 
   const totalAppts = allAppts?.data.length ?? 0;
+
+  // Premium lock screen — placed after all hooks to respect rules of hooks
+  if (!isPremium) {
+    return (
+      <ProtectedRoute requireRole={["admin", "superadmin"]}>
+        <DashboardLayout>
+          <div className="p-6 max-w-4xl mx-auto">
+            <h1 className="text-2xl font-bold mb-2 flex items-center gap-2">
+              <BarChart2 className="w-6 h-6 text-primary" />
+              Insights
+            </h1>
+            <div className="mt-8 rounded-2xl border border-border bg-card p-12 text-center">
+              <div className="w-16 h-16 bg-accent/10 rounded-full flex items-center justify-center mx-auto mb-4">
+                <Lock className="w-8 h-8 text-accent" />
+              </div>
+              <h2 className="text-xl font-bold mb-2">Premium Feature</h2>
+              <p className="text-muted-foreground mb-6 max-w-sm mx-auto text-sm">
+                Insights and advanced analytics are available on the Premium plan. Upgrade to unlock performance dashboards, busy-day trends, and revenue charts.
+              </p>
+              <Link href="/subscription">
+                <Button>
+                  <Crown className="w-4 h-4 mr-2" />
+                  Upgrade to Premium
+                </Button>
+              </Link>
+            </div>
+          </div>
+        </DashboardLayout>
+      </ProtectedRoute>
+    );
+  }
 
   return (
     <ProtectedRoute requireRole={["admin", "superadmin"]}>

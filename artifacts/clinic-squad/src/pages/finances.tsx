@@ -19,8 +19,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Plus, TrendingUp, TrendingDown, Crown, Lock, Loader2 } from "lucide-react";
-import { Link } from "wouter";
+import { Plus, TrendingUp, TrendingDown, Loader2 } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from "recharts";
 
 const financeSchema = z.object({
@@ -43,16 +42,13 @@ export default function FinancesPage() {
   const currentYear = new Date().getFullYear();
   const { format: formatCurrency, currency } = useCurrency();
 
-  const isPremium = clinic?.subscriptionStatus === "premium";
-  const isExpired = clinic?.subscriptionStatus === "expired";
-
   const { data: finances, isLoading } = useListFinances(clinicId, {}, {
-    query: { enabled: !!clinicId && isPremium, queryKey: getListFinancesQueryKey(clinicId, {}) }
+    query: { enabled: !!clinicId, queryKey: getListFinancesQueryKey(clinicId, {}) }
   });
 
   const { data: summary } = useGetFinanceSummary(clinicId, { year: currentYear }, {
     query: {
-      enabled: !!clinicId && isPremium,
+      enabled: !!clinicId,
       queryKey: getGetFinanceSummaryQueryKey(clinicId, { year: currentYear })
     }
   });
@@ -76,34 +72,6 @@ export default function FinancesPage() {
       onError: () => toast({ title: "Failed to add record", variant: "destructive" }),
     });
   };
-
-  // Locked for non-premium users
-  if (!isPremium && !isExpired) {
-    return (
-      <ProtectedRoute requireRole={["admin", "superadmin"]}>
-        <DashboardLayout>
-          <div className="p-6 max-w-4xl mx-auto">
-            <h1 className="text-2xl font-bold mb-2">Finances</h1>
-            <div className="mt-8 rounded-2xl border border-border bg-card p-12 text-center">
-              <div className="w-16 h-16 bg-accent/10 rounded-full flex items-center justify-center mx-auto mb-4">
-                <Lock className="w-8 h-8 text-accent" />
-              </div>
-              <h2 className="text-xl font-bold mb-2">Premium Feature</h2>
-              <p className="text-muted-foreground mb-6 max-w-sm mx-auto text-sm">
-                The financial dashboard is available on the Premium plan. Upgrade to track income, expenses, and generate reports.
-              </p>
-              <Link href="/subscription">
-                <Button>
-                  <Crown className="w-4 h-4 mr-2" />
-                  Upgrade to Premium
-                </Button>
-              </Link>
-            </div>
-          </div>
-        </DashboardLayout>
-      </ProtectedRoute>
-    );
-  }
 
   const chartData = summary?.monthlyBreakdown.map(m => ({
     month: MONTH_NAMES[m.month - 1],
