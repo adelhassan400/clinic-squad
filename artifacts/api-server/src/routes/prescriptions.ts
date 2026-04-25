@@ -14,9 +14,6 @@ async function loadClinic(clinicId: string) {
   return rows[0] ?? null;
 }
 
-function isPremium(subscriptionStatus: string | null | undefined): boolean {
-  return subscriptionStatus === "premium";
-}
 
 async function serializePrescription(row: typeof prescriptionsTable.$inferSelect) {
   const patientRows = await db.select().from(patientsTable).where(eq(patientsTable.id, row.patientId)).limit(1);
@@ -44,9 +41,6 @@ router.get("/", async (req, res) => {
   }
   const clinic = await loadClinic(clinicId);
   if (!clinic) return res.status(404).json({ error: "Clinic not found" });
-  if (!isPremium(clinic.subscriptionStatus)) {
-    return res.status(402).json({ error: "Premium plan required" });
-  }
 
   const patientId = req.query.patientId as string | undefined;
   const search = ((req.query.search as string) ?? "").toLowerCase();
@@ -75,9 +69,6 @@ router.post("/", requireRole("admin", "superadmin"), async (req, res) => {
   }
   const clinic = await loadClinic(clinicId);
   if (!clinic) return res.status(404).json({ error: "Clinic not found" });
-  if (!isPremium(clinic.subscriptionStatus)) {
-    return res.status(402).json({ error: "Premium plan required" });
-  }
 
   const parsed = CreatePrescriptionBody.safeParse(req.body);
   if (!parsed.success) {

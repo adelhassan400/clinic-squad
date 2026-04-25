@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { useLocation, useSearch, Link } from "wouter";
+import { useLocation, useSearch } from "wouter";
 import { useAuth } from "@/lib/auth";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
@@ -38,7 +38,6 @@ import {
   Trash2,
   Printer,
   MessageCircle,
-  Crown,
   Search,
   Eye,
   X,
@@ -65,7 +64,6 @@ interface PrescriptionsContentProps {
 export function PrescriptionsContent({ initialPatientId, embedded }: PrescriptionsContentProps) {
   const { clinic, user } = useAuth();
   const clinicId = clinic?.id ?? "";
-  const isPremium = clinic?.subscriptionStatus === "premium";
   const isAdmin = user?.role === "admin" || user?.role === "superadmin";
   const queryClient = useQueryClient();
   const { toast } = useToast();
@@ -83,14 +81,14 @@ export function PrescriptionsContent({ initialPatientId, embedded }: Prescriptio
   const listParams = initialPatientId ? { patientId: initialPatientId } : undefined;
   const { data, isLoading, error } = useListPrescriptions(clinicId, listParams, {
     query: {
-      enabled: !!clinicId && isPremium,
+      enabled: !!clinicId,
       queryKey: getListPrescriptionsQueryKey(clinicId, listParams),
     },
   });
 
   const { data: patientsResp } = useListPatients(clinicId, { limit: 1000 }, {
     query: {
-      enabled: !!clinicId && isPremium && isAdmin,
+      enabled: !!clinicId && isAdmin,
       queryKey: getListPatientsQueryKey(clinicId, { limit: 1000 }),
     },
   });
@@ -180,34 +178,6 @@ export function PrescriptionsContent({ initialPatientId, embedded }: Prescriptio
     }
   }
 
-  if (!isPremium) {
-    return (
-      <div className={embedded ? "" : "p-6 max-w-4xl mx-auto"}>
-        {!embedded && (
-          <h1 className="text-2xl font-bold mb-2 flex items-center gap-2">
-            <Pill className="w-6 h-6 text-primary" />
-            Prescriptions
-          </h1>
-        )}
-        <div className="rounded-2xl border border-border bg-card p-10 text-center">
-          <div className="w-16 h-16 bg-accent/10 rounded-full flex items-center justify-center mx-auto mb-4">
-            <Crown className="w-8 h-8 text-accent" />
-          </div>
-          <h2 className="text-lg font-semibold mb-2">Premium Feature</h2>
-          <p className="text-sm text-muted-foreground mb-6 max-w-md mx-auto">
-            E-prescriptions with print and WhatsApp delivery are part of the Premium plan.
-          </p>
-          <Link href="/subscription">
-            <Button>
-              <Crown className="w-4 h-4 mr-2" />
-              Upgrade to Premium
-            </Button>
-          </Link>
-        </div>
-      </div>
-    );
-  }
-
   const patientList = patientsResp?.data ?? [];
 
   return (
@@ -218,13 +188,13 @@ export function PrescriptionsContent({ initialPatientId, embedded }: Prescriptio
           {!embedded && (
             <h1 className="text-2xl font-bold flex items-center gap-2">
               <Pill className="w-6 h-6 text-primary" />
-              Prescriptions
+              ePrescription
             </h1>
           )}
           {embedded && (
             <h2 className="text-lg font-semibold flex items-center gap-2">
               <Pill className="w-5 h-5 text-primary" />
-              Prescriptions ({filtered.length})
+              ePrescription ({filtered.length})
             </h2>
           )}
           {!embedded && (
