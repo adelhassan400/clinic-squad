@@ -149,6 +149,27 @@ paths:
         "401":
           description: Unauthorized or current password incorrect
 
+  /admin/clinics/{clinicId}/detail:
+    get:
+      operationId: adminGetClinicDetail
+      tags: [admin]
+      summary: Get full detail for a single clinic (superadmin)
+      parameters:
+        - in: path
+          name: clinicId
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Clinic detail with owner, members, counts, subscriptions
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminClinicDetail"
+        "404":
+          description: Clinic not found
+
   /auth/events:
     get:
       operationId: listAuthEvents
@@ -1160,6 +1181,78 @@ components:
         message:
           type: string
       required: [message]
+
+    AdminClinicDetail:
+      type: object
+      properties:
+        clinic:
+          type: object
+          properties:
+            id: { type: string }
+            name: { type: string }
+            ownerId: { type: string }
+            status: { type: string }
+            subscriptionStatus: { type: string }
+            subscriptionPlan: { type: string, nullable: true }
+            trialEndDate: { type: string, format: date-time }
+            createdAt: { type: string, format: date-time }
+          required: [id, name, ownerId, status, subscriptionStatus, trialEndDate, createdAt]
+        owner:
+          nullable: true
+          type: object
+          properties:
+            id: { type: string }
+            name: { type: string }
+            email: { type: string }
+            role: { type: string }
+            specialty: { type: string, nullable: true }
+            phone: { type: string, nullable: true }
+            isBlocked: { type: boolean }
+            createdAt: { type: string, format: date-time }
+          required: [id, name, email, role, isBlocked, createdAt]
+        counts:
+          type: object
+          properties:
+            members: { type: integer }
+            patients: { type: integer }
+            appointments: { type: integer }
+            membersByRole:
+              type: object
+              additionalProperties: { type: integer }
+          required: [members, patients, appointments, membersByRole]
+        members:
+          type: array
+          items:
+            type: object
+            properties:
+              id: { type: string }
+              name: { type: string }
+              email: { type: string }
+              role: { type: string }
+              isBlocked: { type: boolean }
+              createdAt: { type: string, format: date-time }
+            required: [id, name, email, role, isBlocked, createdAt]
+        subscriptions:
+          type: array
+          items:
+            type: object
+            properties:
+              id: { type: string }
+              planType: { type: string }
+              paymentStatus: { type: string }
+              amount: { type: number }
+              startDate: { type: string, format: date-time }
+              endDate: { type: string, format: date-time }
+              createdAt: { type: string, format: date-time }
+            required: [id, planType, paymentStatus, amount, startDate, endDate, createdAt]
+        revenue:
+          type: object
+          properties:
+            totalConfirmed: { type: number }
+            lastConfirmedPayment: { type: string, format: date-time, nullable: true }
+            pendingPaymentId: { type: string, nullable: true }
+          required: [totalConfirmed]
+      required: [clinic, counts, members, subscriptions, revenue]
 
     AuthEvent:
       type: object

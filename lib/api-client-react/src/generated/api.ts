@@ -18,6 +18,7 @@ import type {
 
 import type {
   AcceptInvitationBody,
+  AdminClinicDetail,
   Appointment,
   AppointmentList,
   AuthEvent,
@@ -573,6 +574,95 @@ export const useChangePassword = <
 > => {
   return useMutation(getChangePasswordMutationOptions(options));
 };
+
+/**
+ * @summary Get full detail for a single clinic (superadmin)
+ */
+export const getAdminGetClinicDetailUrl = (clinicId: string) => {
+  return `/api/admin/clinics/${clinicId}/detail`;
+};
+
+export const adminGetClinicDetail = async (
+  clinicId: string,
+  options?: RequestInit,
+): Promise<AdminClinicDetail> => {
+  return customFetch<AdminClinicDetail>(getAdminGetClinicDetailUrl(clinicId), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getAdminGetClinicDetailQueryKey = (clinicId: string) => {
+  return [`/api/admin/clinics/${clinicId}/detail`] as const;
+};
+
+export const getAdminGetClinicDetailQueryOptions = <
+  TData = Awaited<ReturnType<typeof adminGetClinicDetail>>,
+  TError = ErrorType<void>,
+>(
+  clinicId: string,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof adminGetClinicDetail>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getAdminGetClinicDetailQueryKey(clinicId);
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof adminGetClinicDetail>>
+  > = ({ signal }) =>
+    adminGetClinicDetail(clinicId, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: !!clinicId,
+    ...queryOptions,
+  } as UseQueryOptions<
+    Awaited<ReturnType<typeof adminGetClinicDetail>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type AdminGetClinicDetailQueryResult = NonNullable<
+  Awaited<ReturnType<typeof adminGetClinicDetail>>
+>;
+export type AdminGetClinicDetailQueryError = ErrorType<void>;
+
+/**
+ * @summary Get full detail for a single clinic (superadmin)
+ */
+
+export function useAdminGetClinicDetail<
+  TData = Awaited<ReturnType<typeof adminGetClinicDetail>>,
+  TError = ErrorType<void>,
+>(
+  clinicId: string,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof adminGetClinicDetail>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getAdminGetClinicDetailQueryOptions(clinicId, options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
 
 /**
  * @summary List recent sign-in and security events for the current user

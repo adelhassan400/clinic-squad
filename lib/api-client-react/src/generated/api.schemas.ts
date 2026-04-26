@@ -207,6 +207,71 @@ export interface ChangePasswordResponse {
   message: string;
 }
 
+export type AdminClinicDetailClinic = {
+  id: string;
+  name: string;
+  ownerId: string;
+  status: string;
+  subscriptionStatus: string;
+  subscriptionPlan?: string | null;
+  trialEndDate: string;
+  createdAt: string;
+};
+
+export type AdminClinicDetailOwner = {
+  id: string;
+  name: string;
+  email: string;
+  role: string;
+  specialty?: string | null;
+  phone?: string | null;
+  isBlocked: boolean;
+  createdAt: string;
+} | null;
+
+export type AdminClinicDetailCountsMembersByRole = { [key: string]: number };
+
+export type AdminClinicDetailCounts = {
+  members: number;
+  patients: number;
+  appointments: number;
+  membersByRole: AdminClinicDetailCountsMembersByRole;
+};
+
+export type AdminClinicDetailMembersItem = {
+  id: string;
+  name: string;
+  email: string;
+  role: string;
+  isBlocked: boolean;
+  createdAt: string;
+};
+
+export type AdminClinicDetailSubscriptionsItem = {
+  id: string;
+  planType: string;
+  paymentStatus: string;
+  amount: number;
+  startDate: string;
+  endDate: string;
+  createdAt: string;
+};
+
+export type AdminClinicDetailRevenue = {
+  totalConfirmed: number;
+  lastConfirmedPayment?: string | null;
+  pendingPaymentId?: string | null;
+};
+
+export interface AdminClinicDetail {
+  clinic: AdminClinicDetailClinic;
+  owner?: AdminClinicDetailOwner;
+  counts: AdminClinicDetailCounts;
+  members: AdminClinicDetailMembersItem[];
+  subscriptions: AdminClinicDetailSubscriptionsItem[];
+  revenue: AdminClinicDetailRevenue;
+}
+
 export type AuthEventType = (typeof AuthEventType)[keyof typeof AuthEventType];
 
 export const AuthEventType = {

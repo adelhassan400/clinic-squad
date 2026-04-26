@@ -109,6 +109,70 @@ export const ChangePasswordResponse = zod.object({
 });
 
 /**
+ * @summary Get full detail for a single clinic (superadmin)
+ */
+export const AdminGetClinicDetailParams = zod.object({
+  clinicId: zod.coerce.string(),
+});
+
+export const AdminGetClinicDetailResponse = zod.object({
+  clinic: zod.object({
+    id: zod.string(),
+    name: zod.string(),
+    ownerId: zod.string(),
+    status: zod.string(),
+    subscriptionStatus: zod.string(),
+    subscriptionPlan: zod.string().nullish(),
+    trialEndDate: zod.coerce.date(),
+    createdAt: zod.coerce.date(),
+  }),
+  owner: zod
+    .object({
+      id: zod.string(),
+      name: zod.string(),
+      email: zod.string(),
+      role: zod.string(),
+      specialty: zod.string().nullish(),
+      phone: zod.string().nullish(),
+      isBlocked: zod.boolean(),
+      createdAt: zod.coerce.date(),
+    })
+    .nullish(),
+  counts: zod.object({
+    members: zod.number(),
+    patients: zod.number(),
+    appointments: zod.number(),
+    membersByRole: zod.record(zod.string(), zod.number()),
+  }),
+  members: zod.array(
+    zod.object({
+      id: zod.string(),
+      name: zod.string(),
+      email: zod.string(),
+      role: zod.string(),
+      isBlocked: zod.boolean(),
+      createdAt: zod.coerce.date(),
+    }),
+  ),
+  subscriptions: zod.array(
+    zod.object({
+      id: zod.string(),
+      planType: zod.string(),
+      paymentStatus: zod.string(),
+      amount: zod.number(),
+      startDate: zod.coerce.date(),
+      endDate: zod.coerce.date(),
+      createdAt: zod.coerce.date(),
+    }),
+  ),
+  revenue: zod.object({
+    totalConfirmed: zod.number(),
+    lastConfirmedPayment: zod.coerce.date().nullish(),
+    pendingPaymentId: zod.string().nullish(),
+  }),
+});
+
+/**
  * @summary List recent sign-in and security events for the current user
  */
 export const ListAuthEventsResponseItem = zod.object({
