@@ -8,6 +8,7 @@ export const usersTable = pgTable("users", {
   passwordHash: text("password_hash").notNull(),
   name: text("name").notNull(),
   specialty: text("specialty"),
+  whatsappNumber: text("whatsapp_number"),
   role: text("role").notNull().default("admin"),
   clinicId: text("clinic_id").notNull(),
   isBlocked: boolean("is_blocked").notNull().default(false),

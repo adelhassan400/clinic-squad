@@ -111,6 +111,16 @@ export interface RegisterBody {
   password: string;
   clinicName: string;
   ownerName: string;
+  /**
+   * Doctor's medical specialty (e.g., Cardiology, Dermatology).
+   * @minLength 2
+   */
+  specialty: string;
+  /**
+   * WhatsApp number to contact the doctor for activation.
+   * @minLength 6
+   */
+  whatsappNumber: string;
 }
 
 export interface LoginBody {
@@ -134,6 +144,7 @@ export interface User {
   clinicId: string;
   name: string;
   specialty?: string | null;
+  whatsappNumber?: string | null;
   isBlocked: boolean;
   emailVerifiedAt?: string | null;
 }
@@ -142,6 +153,7 @@ export type ClinicStatus = (typeof ClinicStatus)[keyof typeof ClinicStatus];
 
 export const ClinicStatus = {
   pending: "pending",
+  pending_approval: "pending_approval",
   active: "active",
   blocked: "blocked",
   deleted: "deleted",
@@ -178,11 +190,8 @@ export interface RegisterResponse {
   message: string;
   user: User;
   clinic: Clinic;
-  /** Plain verification token. Returned in dev/no-email mode so the user can copy the verification link directly. Will be null when email delivery is configured. */
-  verifyToken?: string | null;
-  /** Convenience URL containing the token, suitable for sharing. */
-  verifyUrl?: string | null;
-  expiresAt?: string | null;
+  /** Auth token. The user is logged in immediately on registration and routed to the Pending Activation page until an admin activates the clinic. */
+  token: string;
 }
 
 export interface VerifyEmailBody {

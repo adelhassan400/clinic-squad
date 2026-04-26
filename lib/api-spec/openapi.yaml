@@ -1137,7 +1137,15 @@ components:
           type: string
         ownerName:
           type: string
-      required: [email, password, clinicName, ownerName]
+        specialty:
+          type: string
+          minLength: 2
+          description: Doctor's medical specialty (e.g., Cardiology, Dermatology).
+        whatsappNumber:
+          type: string
+          minLength: 6
+          description: WhatsApp number to contact the doctor for activation.
+      required: [email, password, clinicName, ownerName, specialty, whatsappNumber]
 
     LoginBody:
       type: object
@@ -1169,19 +1177,10 @@ components:
           $ref: "#/components/schemas/User"
         clinic:
           $ref: "#/components/schemas/Clinic"
-        verifyToken:
+        token:
           type: string
-          nullable: true
-          description: Plain verification token. Returned in dev/no-email mode so the user can copy the verification link directly. Will be null when email delivery is configured.
-        verifyUrl:
-          type: string
-          nullable: true
-          description: Convenience URL containing the token, suitable for sharing.
-        expiresAt:
-          type: string
-          format: date-time
-          nullable: true
-      required: [message, user, clinic]
+          description: Auth token. The user is logged in immediately on registration and routed to the Pending Activation page until an admin activates the clinic.
+      required: [message, user, clinic, token]
 
     VerifyEmailBody:
       type: object
@@ -1385,6 +1384,9 @@ components:
         specialty:
           type: string
           nullable: true
+        whatsappNumber:
+          type: string
+          nullable: true
         isBlocked:
           type: boolean
         emailVerifiedAt:
@@ -1413,7 +1415,7 @@ components:
           type: string
         status:
           type: string
-          enum: [pending, active, blocked, deleted]
+          enum: [pending, pending_approval, active, blocked, deleted]
         subscriptionStatus:
           type: string
           enum: [trial, basic, premium, expired]

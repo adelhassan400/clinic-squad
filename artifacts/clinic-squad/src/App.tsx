@@ -14,6 +14,7 @@ import ForgotPasswordPage from "@/pages/forgot-password";
 import ResetPasswordPage from "@/pages/reset-password";
 import VerifyEmailPage from "@/pages/verify-email";
 import ResendVerificationPage from "@/pages/resend-verification";
+import PendingActivationPage from "@/pages/pending-activation";
 import DashboardPage from "@/pages/dashboard";
 import PatientsPage from "@/pages/patients";
 import PatientDetailPage from "@/pages/patient-detail";
@@ -48,6 +49,7 @@ function Router() {
       <Route path="/reset-password" component={ResetPasswordPage} />
       <Route path="/verify-email" component={VerifyEmailPage} />
       <Route path="/resend-verification" component={ResendVerificationPage} />
+      <Route path="/pending-activation" component={PendingActivationPage} />
       <Route path="/dashboard" component={DashboardPage} />
       <Route path="/patients" component={PatientsPage} />
       <Route path="/patients/:id" component={PatientDetailPage} />

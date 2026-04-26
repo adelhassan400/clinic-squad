@@ -19,11 +19,23 @@ export const HealthCheckResponse = zod.object({
  */
 export const registerUserBodyPasswordMin = 6;
 
+export const registerUserBodySpecialtyMin = 2;
+
+export const registerUserBodyWhatsappNumberMin = 6;
+
 export const RegisterUserBody = zod.object({
   email: zod.string().email(),
   password: zod.string().min(registerUserBodyPasswordMin),
   clinicName: zod.string(),
   ownerName: zod.string(),
+  specialty: zod
+    .string()
+    .min(registerUserBodySpecialtyMin)
+    .describe("Doctor's medical specialty (e.g., Cardiology, Dermatology)."),
+  whatsappNumber: zod
+    .string()
+    .min(registerUserBodyWhatsappNumberMin)
+    .describe("WhatsApp number to contact the doctor for activation."),
 });
 
 /**
@@ -41,6 +53,7 @@ export const VerifyEmailResponse = zod.object({
     clinicId: zod.string(),
     name: zod.string(),
     specialty: zod.string().nullish(),
+    whatsappNumber: zod.string().nullish(),
     isBlocked: zod.boolean(),
     emailVerifiedAt: zod.coerce.date().nullish(),
   }),
@@ -48,7 +61,13 @@ export const VerifyEmailResponse = zod.object({
     id: zod.string(),
     name: zod.string(),
     ownerId: zod.string(),
-    status: zod.enum(["pending", "active", "blocked", "deleted"]),
+    status: zod.enum([
+      "pending",
+      "pending_approval",
+      "active",
+      "blocked",
+      "deleted",
+    ]),
     subscriptionStatus: zod.enum(["trial", "basic", "premium", "expired"]),
     trialEndDate: zod.coerce.date(),
     subscriptionPlan: zod.string().nullish(),
@@ -87,6 +106,7 @@ export const LoginUserResponse = zod.object({
     clinicId: zod.string(),
     name: zod.string(),
     specialty: zod.string().nullish(),
+    whatsappNumber: zod.string().nullish(),
     isBlocked: zod.boolean(),
     emailVerifiedAt: zod.coerce.date().nullish(),
   }),
@@ -94,7 +114,13 @@ export const LoginUserResponse = zod.object({
     id: zod.string(),
     name: zod.string(),
     ownerId: zod.string(),
-    status: zod.enum(["pending", "active", "blocked", "deleted"]),
+    status: zod.enum([
+      "pending",
+      "pending_approval",
+      "active",
+      "blocked",
+      "deleted",
+    ]),
     subscriptionStatus: zod.enum(["trial", "basic", "premium", "expired"]),
     trialEndDate: zod.coerce.date(),
     subscriptionPlan: zod.string().nullish(),
@@ -245,6 +271,7 @@ export const GetCurrentUserResponse = zod.object({
   clinicId: zod.string(),
   name: zod.string(),
   specialty: zod.string().nullish(),
+  whatsappNumber: zod.string().nullish(),
   isBlocked: zod.boolean(),
   emailVerifiedAt: zod.coerce.date().nullish(),
 });
@@ -264,6 +291,7 @@ export const UpdateProfileResponse = zod.object({
   clinicId: zod.string(),
   name: zod.string(),
   specialty: zod.string().nullish(),
+  whatsappNumber: zod.string().nullish(),
   isBlocked: zod.boolean(),
   emailVerifiedAt: zod.coerce.date().nullish(),
 });
@@ -279,7 +307,13 @@ export const GetClinicResponse = zod.object({
   id: zod.string(),
   name: zod.string(),
   ownerId: zod.string(),
-  status: zod.enum(["pending", "active", "blocked", "deleted"]),
+  status: zod.enum([
+    "pending",
+    "pending_approval",
+    "active",
+    "blocked",
+    "deleted",
+  ]),
   subscriptionStatus: zod.enum(["trial", "basic", "premium", "expired"]),
   trialEndDate: zod.coerce.date(),
   subscriptionPlan: zod.string().nullish(),
@@ -759,7 +793,13 @@ export const AdminListClinicsResponseItem = zod.object({
   id: zod.string(),
   name: zod.string(),
   ownerId: zod.string(),
-  status: zod.enum(["pending", "active", "blocked", "deleted"]),
+  status: zod.enum([
+    "pending",
+    "pending_approval",
+    "active",
+    "blocked",
+    "deleted",
+  ]),
   subscriptionStatus: zod.enum(["trial", "basic", "premium", "expired"]),
   trialEndDate: zod.coerce.date(),
   subscriptionPlan: zod.string().nullish(),
@@ -778,7 +818,13 @@ export const AdminActivateClinicResponse = zod.object({
   id: zod.string(),
   name: zod.string(),
   ownerId: zod.string(),
-  status: zod.enum(["pending", "active", "blocked", "deleted"]),
+  status: zod.enum([
+    "pending",
+    "pending_approval",
+    "active",
+    "blocked",
+    "deleted",
+  ]),
   subscriptionStatus: zod.enum(["trial", "basic", "premium", "expired"]),
   trialEndDate: zod.coerce.date(),
   subscriptionPlan: zod.string().nullish(),
@@ -796,7 +842,13 @@ export const AdminBlockClinicResponse = zod.object({
   id: zod.string(),
   name: zod.string(),
   ownerId: zod.string(),
-  status: zod.enum(["pending", "active", "blocked", "deleted"]),
+  status: zod.enum([
+    "pending",
+    "pending_approval",
+    "active",
+    "blocked",
+    "deleted",
+  ]),
   subscriptionStatus: zod.enum(["trial", "basic", "premium", "expired"]),
   trialEndDate: zod.coerce.date(),
   subscriptionPlan: zod.string().nullish(),
@@ -915,6 +967,7 @@ export const AcceptInvitationResponse = zod.object({
     clinicId: zod.string(),
     name: zod.string(),
     specialty: zod.string().nullish(),
+    whatsappNumber: zod.string().nullish(),
     isBlocked: zod.boolean(),
     emailVerifiedAt: zod.coerce.date().nullish(),
   }),
@@ -922,7 +975,13 @@ export const AcceptInvitationResponse = zod.object({
     id: zod.string(),
     name: zod.string(),
     ownerId: zod.string(),
-    status: zod.enum(["pending", "active", "blocked", "deleted"]),
+    status: zod.enum([
+      "pending",
+      "pending_approval",
+      "active",
+      "blocked",
+      "deleted",
+    ]),
     subscriptionStatus: zod.enum(["trial", "basic", "premium", "expired"]),
     trialEndDate: zod.coerce.date(),
     subscriptionPlan: zod.string().nullish(),

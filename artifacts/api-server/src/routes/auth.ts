@@ -91,7 +91,7 @@ router.post("/register", async (req, res) => {
   if (!parsed.success) {
     return res.status(400).json({ error: "Invalid input", details: parsed.error.issues });
   }
-  const { email, password, clinicName, ownerName } = parsed.data;
+  const { email, password, clinicName, ownerName, specialty, whatsappNumber } = parsed.data;
 
   const existing = await db.select().from(usersTable).where(eq(usersTable.email, email)).limit(1);
   if (existing.length > 0) {
@@ -102,12 +102,17 @@ router.post("/register", async (req, res) => {
   const userId = randomUUID();
   const trialEndDate = new Date();
   trialEndDate.setDate(trialEndDate.getDate() + 15);
+  const now = new Date();
 
+  // Hybrid trial flow: every new clinic starts in pending_approval until an
+  // admin manually flips clinics.status to "active" in the database. The user
+  // is logged in immediately so the frontend can route them to the
+  // /pending-activation page.
   await db.insert(clinicsTable).values({
     id: clinicId,
     name: clinicName,
     ownerId: userId,
-    status: "active",
+    status: "pending_approval",
     subscriptionStatus: "trial",
     trialEndDate,
     subscriptionPlan: null,
@@ -118,16 +123,13 @@ router.post("/register", async (req, res) => {
     email,
     passwordHash: hashPassword(password),
     name: ownerName,
+    specialty: specialty.trim(),
+    whatsappNumber: whatsappNumber.trim(),
     role: "admin",
     clinicId,
     isBlocked: false,
-    emailVerifiedAt: null,
+    emailVerifiedAt: now,
   });
-
-  const { verifyToken, verifyUrl, expiresAt } = await issueVerificationToken(
-    userId,
-    originForRequest(req),
-  );
 
   const user = {
     id: userId,
@@ -135,29 +137,30 @@ router.post("/register", async (req, res) => {
     role: "admin",
     clinicId,
     name: ownerName,
-    specialty: null,
+    specialty: specialty.trim(),
+    whatsappNumber: whatsappNumber.trim(),
     isBlocked: false,
-    emailVerifiedAt: null,
+    emailVerifiedAt: now.toISOString(),
   };
   const clinic = {
     id: clinicId,
     name: clinicName,
     ownerId: userId,
-    status: "active",
+    status: "pending_approval",
     subscriptionStatus: "trial",
     trialEndDate: trialEndDate.toISOString(),
     subscriptionPlan: null,
-    createdAt: new Date().toISOString(),
+    createdAt: now.toISOString(),
   };
+
+  await recordAuthEvent(req, userId, "login_success");
 
   return res.status(201).json({
     message:
-      "Account created. Please verify your email using the link below to start your trial.",
+      "Account created. Your request is pending approval — please contact support via WhatsApp to activate your 15-day free trial.",
     user,
     clinic,
-    verifyToken,
-    verifyUrl,
-    expiresAt: expiresAt.toISOString(),
+    token: generateToken(userId),
   });
 });
 
@@ -218,6 +221,7 @@ router.post("/verify-email", async (req, res) => {
     clinicId: user.clinicId,
     name: user.name,
     specialty: user.specialty,
+    whatsappNumber: user.whatsappNumber,
     isBlocked: user.isBlocked,
     emailVerifiedAt: user.emailVerifiedAt?.toISOString() ?? null,
   };
@@ -310,7 +314,7 @@ router.post("/login", async (req, res) => {
     clinic.subscriptionStatus = "expired";
   }
 
-  const userObj = { id: user.id, email: user.email, role: user.role, clinicId: user.clinicId, name: user.name, specialty: user.specialty, isBlocked: user.isBlocked, emailVerifiedAt: user.emailVerifiedAt?.toISOString() ?? null };
+  const userObj = { id: user.id, email: user.email, role: user.role, clinicId: user.clinicId, name: user.name, specialty: user.specialty, whatsappNumber: user.whatsappNumber, isBlocked: user.isBlocked, emailVerifiedAt: user.emailVerifiedAt?.toISOString() ?? null };
   const clinicObj = {
     id: clinic.id,
     name: clinic.name,
@@ -471,7 +475,7 @@ router.get("/me", async (req, res) => {
     return res.status(401).json({ error: "Invalid token" });
   }
 
-  return res.json({ id: user.id, email: user.email, role: user.role, clinicId: user.clinicId, name: user.name, specialty: user.specialty, isBlocked: user.isBlocked, emailVerifiedAt: user.emailVerifiedAt?.toISOString() ?? null });
+  return res.json({ id: user.id, email: user.email, role: user.role, clinicId: user.clinicId, name: user.name, specialty: user.specialty, whatsappNumber: user.whatsappNumber, isBlocked: user.isBlocked, emailVerifiedAt: user.emailVerifiedAt?.toISOString() ?? null });
 });
 
 router.patch("/me", async (req, res) => {
@@ -479,10 +483,13 @@ router.patch("/me", async (req, res) => {
   if (!userId) return res.status(401).json({ error: "Unauthorized" });
 
   const body = req.body ?? {};
-  const updates: { name?: string; specialty?: string | null } = {};
+  const updates: { name?: string; specialty?: string | null; whatsappNumber?: string | null } = {};
   if (typeof body.name === "string" && body.name.trim()) updates.name = body.name.trim();
   if (body.specialty === null || typeof body.specialty === "string") {
     updates.specialty = body.specialty === null ? null : (body.specialty as string).trim() || null;
+  }
+  if (body.whatsappNumber === null || typeof body.whatsappNumber === "string") {
+    updates.whatsappNumber = body.whatsappNumber === null ? null : (body.whatsappNumber as string).trim() || null;
   }
   if (Object.keys(updates).length === 0) {
     return res.status(400).json({ error: "No valid fields to update" });
@@ -493,7 +500,7 @@ router.patch("/me", async (req, res) => {
   const user = users[0];
   if (!user) return res.status(404).json({ error: "User not found" });
 
-  return res.json({ id: user.id, email: user.email, role: user.role, clinicId: user.clinicId, name: user.name, specialty: user.specialty, isBlocked: user.isBlocked, emailVerifiedAt: user.emailVerifiedAt?.toISOString() ?? null });
+  return res.json({ id: user.id, email: user.email, role: user.role, clinicId: user.clinicId, name: user.name, specialty: user.specialty, whatsappNumber: user.whatsappNumber, isBlocked: user.isBlocked, emailVerifiedAt: user.emailVerifiedAt?.toISOString() ?? null });
 });
 
 export default router;

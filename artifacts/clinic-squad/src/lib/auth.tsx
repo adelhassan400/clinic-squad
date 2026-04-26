@@ -7,6 +7,7 @@ export interface AuthUser {
   clinicId: string;
   name: string;
   specialty?: string | null;
+  whatsappNumber?: string | null;
   isBlocked: boolean;
   emailVerifiedAt?: string | null;
 }
@@ -15,7 +16,7 @@ export interface AuthClinic {
   id: string;
   name: string;
   ownerId: string;
-  status: "pending" | "active" | "blocked" | "deleted";
+  status: "pending" | "pending_approval" | "active" | "blocked" | "deleted";
   subscriptionStatus: "trial" | "basic" | "premium" | "expired";
   trialEndDate: string;
   subscriptionPlan: string | null;

@@ -23,6 +23,7 @@ export function ProtectedRoute({ children, requireRole }: Props) {
   const subscriptionExpired = clinic?.subscriptionStatus === "expired";
   const isSuperAdmin = user?.role === "superadmin";
   const onClinicOnlyPage = CLINIC_ONLY_PREFIXES.some(p => location.startsWith(p));
+  const isPendingApproval = clinic?.status === "pending_approval";
 
   useEffect(() => {
     if (isLoading) return;
@@ -34,10 +35,14 @@ export function ProtectedRoute({ children, requireRole }: Props) {
       setLocation("/admin");
       return;
     }
+    if (!isSuperAdmin && isPendingApproval) {
+      setLocation("/pending-activation");
+      return;
+    }
     if (!isSuperAdmin && subscriptionExpired) {
       setLocation("/subscription/expired");
     }
-  }, [isLoading, isAuthenticated, isSuperAdmin, onClinicOnlyPage, subscriptionExpired, setLocation]);
+  }, [isLoading, isAuthenticated, isSuperAdmin, onClinicOnlyPage, isPendingApproval, subscriptionExpired, setLocation]);
 
   if (isLoading) {
     return (
@@ -66,6 +71,10 @@ export function ProtectedRoute({ children, requireRole }: Props) {
         </div>
       </div>
     );
+  }
+
+  if (clinic?.status === "pending_approval" && !isSuperAdmin) {
+    return null;
   }
 
   if (clinic?.status === "blocked") {
