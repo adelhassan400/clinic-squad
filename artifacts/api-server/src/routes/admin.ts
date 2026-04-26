@@ -20,7 +20,7 @@ router.get("/clinics", async (_req, res) => {
   })));
 });
 
-router.get("/stats", async (_req, res) => {
+router.get("/stats", async (req, res) => {
   const [clinics, users, subs, patients] = await Promise.all([
     db.select().from(clinicsTable),
     db.select().from(usersTable),
@@ -53,37 +53,62 @@ router.get("/stats", async (_req, res) => {
     0,
   );
 
-  // Build last 12 months window (oldest -> newest), keyed by YYYY-MM
+  // Determine which months to bucket: rolling 12 (default) or a specific year.
+  const yearParam = typeof req.query.year === "string" ? Number(req.query.year) : NaN;
+  const isSpecificYear = Number.isInteger(yearParam) && yearParam >= 2000 && yearParam <= 2100;
+
   const months: { key: string; year: number; month: number }[] = [];
-  for (let i = 11; i >= 0; i -= 1) {
-    const d = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - i, 1));
-    months.push({
-      key: `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}`,
-      year: d.getUTCFullYear(),
-      month: d.getUTCMonth() + 1,
-    });
+  if (isSpecificYear) {
+    for (let m = 0; m < 12; m += 1) {
+      const d = new Date(Date.UTC(yearParam, m, 1));
+      months.push({
+        key: `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}`,
+        year: d.getUTCFullYear(),
+        month: d.getUTCMonth() + 1,
+      });
+    }
+  } else {
+    for (let i = 11; i >= 0; i -= 1) {
+      const d = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - i, 1));
+      months.push({
+        key: `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}`,
+        year: d.getUTCFullYear(),
+        month: d.getUTCMonth() + 1,
+      });
+    }
   }
+
   const monthBuckets = new Map<string, { amount: number; count: number }>();
   for (const m of months) monthBuckets.set(m.key, { amount: 0, count: 0 });
 
+  // Always compute current-month total (regardless of selected year).
+  const currentMonthKey = `${now.getUTCFullYear()}-${String(now.getUTCMonth() + 1).padStart(2, "0")}`;
+  let currentMonthRevenue = 0;
+
+  // Track years that have any confirmed payment so the UI can populate a year selector.
+  const availableYears = new Set<number>();
+
   for (const s of confirmedSubs) {
     const d = s.createdAt;
+    const amount = parseFloat(s.amount ?? "0");
     const key = `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}`;
+    availableYears.add(d.getUTCFullYear());
+    if (key === currentMonthKey) currentMonthRevenue += amount;
     const bucket = monthBuckets.get(key);
     if (bucket) {
-      bucket.amount += parseFloat(s.amount ?? "0");
+      bucket.amount += amount;
       bucket.count += 1;
     }
   }
+
+  // Always include the current year so the user can switch to it even with no payments yet.
+  availableYears.add(now.getUTCFullYear());
 
   const revenueByMonth = months.map((m) => ({
     month: m.key,
     amount: monthBuckets.get(m.key)!.amount,
     count: monthBuckets.get(m.key)!.count,
   }));
-
-  const currentMonthKey = `${now.getUTCFullYear()}-${String(now.getUTCMonth() + 1).padStart(2, "0")}`;
-  const currentMonthRevenue = monthBuckets.get(currentMonthKey)?.amount ?? 0;
 
   return res.json({
     totalClinics: clinics.length,
@@ -96,6 +121,10 @@ router.get("/stats", async (_req, res) => {
     confirmedRevenue,
     currentMonthRevenue,
     revenueByMonth,
+    revenueRange: isSpecificYear
+      ? { mode: "year" as const, year: yearParam }
+      : { mode: "rolling12" as const },
+    availableYears: Array.from(availableYears).sort((a, b) => b - a),
   });
 });
 

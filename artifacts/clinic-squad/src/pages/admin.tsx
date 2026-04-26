@@ -45,6 +45,8 @@ interface AdminStats {
   confirmedRevenue: number;
   currentMonthRevenue: number;
   revenueByMonth: MonthlyRevenue[];
+  revenueRange: { mode: "rolling12" } | { mode: "year"; year: number };
+  availableYears: number[];
 }
 interface AdminSubscription {
   id: string; clinicId: string; clinicName: string; planType: string;
@@ -123,14 +125,20 @@ export default function AdminPage() {
   const [tab, setTab] = useState<FilterTab>("all");
   const [planView, setPlanView] = useState<PlanKey | null>(null);
   const [selectedClinicId, setSelectedClinicId] = useState<string | null>(null);
+  const [revenueYear, setRevenueYear] = useState<number | "rolling12">("rolling12");
 
   // Existing data + new endpoints (raw fetch)
   const { data: clinics, isLoading: clinicsLoading } = useAdminListClinics({
     query: { queryKey: getAdminListClinicsQueryKey() },
   });
   const statsQ = useQuery<AdminStats>({
-    queryKey: ["/api/admin/stats"],
-    queryFn: () => customFetch<AdminStats>("/api/admin/stats"),
+    queryKey: ["/api/admin/stats", revenueYear],
+    queryFn: () =>
+      customFetch<AdminStats>(
+        revenueYear === "rolling12"
+          ? "/api/admin/stats"
+          : `/api/admin/stats?year=${revenueYear}`,
+      ),
   });
   const subsQ = useQuery<AdminSubscription[]>({
     queryKey: ["/api/admin/subscriptions"],
@@ -143,7 +151,7 @@ export default function AdminPage() {
 
   function refetchAll() {
     qc.invalidateQueries({ queryKey: getAdminListClinicsQueryKey() });
-    qc.invalidateQueries({ queryKey: ["/api/admin/stats"] });
+    qc.invalidateQueries({ queryKey: ["/api/admin/stats"], exact: false });
     qc.invalidateQueries({ queryKey: ["/api/admin/subscriptions"] });
   }
 
@@ -242,6 +250,10 @@ export default function AdminPage() {
             currentMonthRevenue={stats?.currentMonthRevenue ?? 0}
             currencyCode={currencyCode}
             isLoading={statsQ.isLoading}
+            mode={stats?.revenueRange?.mode ?? "rolling12"}
+            selectedYear={revenueYear}
+            availableYears={stats?.availableYears ?? []}
+            onChangeYear={setRevenueYear}
           />
 
           {/* Subscribers by Plan */}
@@ -784,22 +796,37 @@ function MonthlyRevenuePanel({
   currentMonthRevenue,
   currencyCode,
   isLoading,
+  mode,
+  selectedYear,
+  availableYears,
+  onChangeYear,
 }: {
   data: MonthlyRevenue[];
   currentMonthRevenue: number;
   currencyCode: string;
   isLoading: boolean;
+  mode: "rolling12" | "year";
+  selectedYear: number | "rolling12";
+  availableYears: number[];
+  onChangeYear: (v: number | "rolling12") => void;
 }) {
+  const nowKey = (() => {
+    const d = new Date();
+    return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}`;
+  })();
+
   const chartData = useMemo(
-    () => data.map((d, idx) => ({
+    () => data.map((d) => ({
       ...d,
       label: formatMonthLabel(d.month, { short: true }),
-      isCurrent: idx === data.length - 1,
+      isCurrent: d.month === nowKey,
     })),
-    [data],
+    [data, nowKey],
   );
+
+  const totalForRange = data.reduce((sum, d) => sum + d.amount, 0);
+  const totalCount = data.reduce((sum, d) => sum + d.count, 0);
   const last3 = data.slice(-3).reduce((sum, d) => sum + d.amount, 0);
-  const last12 = data.reduce((sum, d) => sum + d.amount, 0);
   const bestMonth = data.reduce<MonthlyRevenue | null>(
     (best, d) => (best === null || d.amount > best.amount ? d : best),
     null,
@@ -807,18 +834,45 @@ function MonthlyRevenuePanel({
   const fmt = (n: number) =>
     `${Math.round(n).toLocaleString()} ${currencyCode}`;
 
-  const currentMonthLabel = data.length
-    ? formatMonthLabel(data[data.length - 1]!.month)
-    : "This month";
+  const currentInRange = data.find((d) => d.month === nowKey);
+  const currentMonthLabel = currentInRange
+    ? formatMonthLabel(currentInRange.month)
+    : mode === "year" && typeof selectedYear === "number"
+      ? `Year ${selectedYear}`
+      : "This month";
+
+  const rangeLabel =
+    mode === "year" && typeof selectedYear === "number"
+      ? `${selectedYear} total`
+      : "12-month total";
 
   return (
     <div className="rounded-xl border border-border bg-card overflow-hidden">
       <div className="px-5 py-3 border-b border-border bg-muted/30 flex items-center gap-2 flex-wrap">
         <BarChart3 className="w-4 h-4 text-primary" />
         <h2 className="text-sm font-semibold">Monthly Revenue</h2>
-        <span className="text-xs text-muted-foreground ms-auto">
-          Confirmed payments · last 12 months
+        <span className="text-xs text-muted-foreground hidden sm:inline">
+          Confirmed payments only
         </span>
+        <div className="ms-auto flex items-center gap-2">
+          <label htmlFor="revenue-year" className="text-xs text-muted-foreground">
+            Showing
+          </label>
+          <select
+            id="revenue-year"
+            value={selectedYear === "rolling12" ? "rolling12" : String(selectedYear)}
+            onChange={(e) =>
+              onChangeYear(e.target.value === "rolling12" ? "rolling12" : Number(e.target.value))
+            }
+            className="text-xs h-8 px-2 rounded-md border border-border bg-background focus:outline-none focus:ring-1 focus:ring-primary/40"
+            data-testid="select-revenue-year"
+          >
+            <option value="rolling12">Last 12 months</option>
+            {availableYears.map((y) => (
+              <option key={y} value={y}>{y}</option>
+            ))}
+          </select>
+        </div>
       </div>
 
       {isLoading ? (
@@ -834,16 +888,22 @@ function MonthlyRevenuePanel({
                 {fmt(currentMonthRevenue)}
               </p>
               <p className="text-xs text-muted-foreground mt-0.5">
-                {data[data.length - 1]?.count ?? 0} payment(s) this month
+                Current month (always live)
               </p>
             </div>
             <div className="p-5">
               <p className="text-xs uppercase tracking-wider text-muted-foreground font-medium">
-                Last 3 months
+                {mode === "year" ? "Range avg" : "Last 3 months"}
               </p>
-              <p className="text-2xl font-bold mt-1">{fmt(last3)}</p>
+              <p className="text-2xl font-bold mt-1">
+                {mode === "year"
+                  ? fmt(totalForRange / 12)
+                  : fmt(last3)}
+              </p>
               <p className="text-xs text-muted-foreground mt-0.5">
-                Avg {fmt(last3 / 3)} / month
+                {mode === "year"
+                  ? `Avg per month across ${selectedYear}`
+                  : `Avg ${fmt(last3 / 3)} / month`}
               </p>
             </div>
             <div className="p-5">
@@ -856,15 +916,17 @@ function MonthlyRevenuePanel({
               <p className="text-xs text-muted-foreground mt-0.5">
                 {bestMonth && bestMonth.amount > 0
                   ? formatMonthLabel(bestMonth.month)
-                  : "No revenue yet"}
+                  : "No revenue in range"}
               </p>
             </div>
           </div>
 
           <div className="p-5">
-            {last12 === 0 ? (
+            {totalForRange === 0 ? (
               <div className="py-12 text-center text-sm text-muted-foreground">
-                No confirmed payments yet — charts will populate once subscriptions are confirmed.
+                {mode === "year" && typeof selectedYear === "number"
+                  ? `No confirmed payments in ${selectedYear}.`
+                  : "No confirmed payments yet — charts will populate once subscriptions are confirmed."}
               </div>
             ) : (
               <>
@@ -925,32 +987,33 @@ function MonthlyRevenuePanel({
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-border">
-                      {[...data].reverse().map((row, idx) => (
-                        <tr
-                          key={row.month}
-                          className={cn(idx === 0 && "bg-primary/5")}
-                          data-testid={`revenue-row-${row.month}`}
-                        >
-                          <td className="py-2 font-medium">
-                            {formatMonthLabel(row.month)}
-                            {idx === 0 && (
-                              <span className="ms-2 text-[10px] uppercase font-semibold text-primary">
-                                current
-                              </span>
-                            )}
-                          </td>
-                          <td className="py-2 text-end text-muted-foreground">{row.count}</td>
-                          <td className="py-2 text-end font-mono">{fmt(row.amount)}</td>
-                        </tr>
-                      ))}
+                      {[...data].reverse().map((row) => {
+                        const isCurrent = row.month === nowKey;
+                        return (
+                          <tr
+                            key={row.month}
+                            className={cn(isCurrent && "bg-primary/5")}
+                            data-testid={`revenue-row-${row.month}`}
+                          >
+                            <td className="py-2 font-medium">
+                              {formatMonthLabel(row.month)}
+                              {isCurrent && (
+                                <span className="ms-2 text-[10px] uppercase font-semibold text-primary">
+                                  current
+                                </span>
+                              )}
+                            </td>
+                            <td className="py-2 text-end text-muted-foreground">{row.count}</td>
+                            <td className="py-2 text-end font-mono">{fmt(row.amount)}</td>
+                          </tr>
+                        );
+                      })}
                     </tbody>
                     <tfoot>
                       <tr className="border-t-2 border-border">
-                        <td className="py-2 font-semibold text-sm">12-month total</td>
-                        <td className="py-2 text-end text-muted-foreground">
-                          {data.reduce((sum, d) => sum + d.count, 0)}
-                        </td>
-                        <td className="py-2 text-end font-mono font-semibold">{fmt(last12)}</td>
+                        <td className="py-2 font-semibold text-sm">{rangeLabel}</td>
+                        <td className="py-2 text-end text-muted-foreground">{totalCount}</td>
+                        <td className="py-2 text-end font-mono font-semibold">{fmt(totalForRange)}</td>
                       </tr>
                     </tfoot>
                   </table>
