@@ -20,6 +20,7 @@ import type {
   AcceptInvitationBody,
   Appointment,
   AppointmentList,
+  AuthEvent,
   AuthResponse,
   ChangePasswordBody,
   ChangePasswordResponse,
@@ -572,6 +573,81 @@ export const useChangePassword = <
 > => {
   return useMutation(getChangePasswordMutationOptions(options));
 };
+
+/**
+ * @summary List recent sign-in and security events for the current user
+ */
+export const getListAuthEventsUrl = () => {
+  return `/api/auth/events`;
+};
+
+export const listAuthEvents = async (
+  options?: RequestInit,
+): Promise<AuthEvent[]> => {
+  return customFetch<AuthEvent[]>(getListAuthEventsUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getListAuthEventsQueryKey = () => {
+  return [`/api/auth/events`] as const;
+};
+
+export const getListAuthEventsQueryOptions = <
+  TData = Awaited<ReturnType<typeof listAuthEvents>>,
+  TError = ErrorType<void>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof listAuthEvents>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getListAuthEventsQueryKey();
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof listAuthEvents>>> = ({
+    signal,
+  }) => listAuthEvents({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof listAuthEvents>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type ListAuthEventsQueryResult = NonNullable<
+  Awaited<ReturnType<typeof listAuthEvents>>
+>;
+export type ListAuthEventsQueryError = ErrorType<void>;
+
+/**
+ * @summary List recent sign-in and security events for the current user
+ */
+
+export function useListAuthEvents<
+  TData = Awaited<ReturnType<typeof listAuthEvents>>,
+  TError = ErrorType<void>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof listAuthEvents>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getListAuthEventsQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
 
 /**
  * @summary Get current user

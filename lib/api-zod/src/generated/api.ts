@@ -109,6 +109,23 @@ export const ChangePasswordResponse = zod.object({
 });
 
 /**
+ * @summary List recent sign-in and security events for the current user
+ */
+export const ListAuthEventsResponseItem = zod.object({
+  id: zod.string(),
+  type: zod.enum([
+    "login_success",
+    "login_failed",
+    "password_changed",
+    "password_reset",
+  ]),
+  ip: zod.string().nullish(),
+  userAgent: zod.string().nullish(),
+  createdAt: zod.coerce.date(),
+});
+export const ListAuthEventsResponse = zod.array(ListAuthEventsResponseItem);
+
+/**
  * @summary Get current user
  */
 export const GetCurrentUserResponse = zod.object({

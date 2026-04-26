@@ -149,6 +149,23 @@ paths:
         "401":
           description: Unauthorized or current password incorrect
 
+  /auth/events:
+    get:
+      operationId: listAuthEvents
+      tags: [auth]
+      summary: List recent sign-in and security events for the current user
+      responses:
+        "200":
+          description: Recent events (most recent first, capped at 20)
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/AuthEvent"
+        "401":
+          description: Unauthorized
+
   /auth/me:
     get:
       operationId: getCurrentUser
@@ -1143,6 +1160,25 @@ components:
         message:
           type: string
       required: [message]
+
+    AuthEvent:
+      type: object
+      properties:
+        id:
+          type: string
+        type:
+          type: string
+          enum: [login_success, login_failed, password_changed, password_reset]
+        ip:
+          type: string
+          nullable: true
+        userAgent:
+          type: string
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+      required: [id, type, createdAt]
 
     User:
       type: object

@@ -9,10 +9,26 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Crown, Sun, Moon, Shield, AlertTriangle, Coins, Stethoscope, KeyRound, Eye, EyeOff, Loader2 } from "lucide-react";
+import {
+  Crown,
+  Sun,
+  Moon,
+  Shield,
+  AlertTriangle,
+  Coins,
+  Stethoscope,
+  KeyRound,
+  Eye,
+  EyeOff,
+  Loader2,
+  Activity,
+  CheckCircle2,
+  XCircle,
+  RefreshCw,
+} from "lucide-react";
 import { Link } from "wouter";
 import { formatDate, getTrialDaysLeft } from "@/lib/utils";
-import { useUpdateProfile, useChangePassword } from "@workspace/api-client-react";
+import { useUpdateProfile, useChangePassword, useListAuthEvents } from "@workspace/api-client-react";
 import { useToast } from "@/hooks/use-toast";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -34,6 +50,47 @@ const passwordSchema = z
   });
 type PasswordFormData = z.infer<typeof passwordSchema>;
 
+function eventMeta(type: string): {
+  label: string;
+  Icon: typeof CheckCircle2;
+  fg: string;
+  bg: string;
+} {
+  switch (type) {
+    case "login_success":
+      return { label: "Successful sign-in", Icon: CheckCircle2, fg: "text-primary", bg: "bg-primary/10" };
+    case "login_failed":
+      return { label: "Failed sign-in attempt", Icon: XCircle, fg: "text-destructive", bg: "bg-destructive/10" };
+    case "password_changed":
+      return { label: "Password changed", Icon: KeyRound, fg: "text-accent", bg: "bg-accent/10" };
+    case "password_reset":
+      return { label: "Password reset via link", Icon: KeyRound, fg: "text-accent", bg: "bg-accent/10" };
+    default:
+      return { label: type, Icon: Activity, fg: "text-muted-foreground", bg: "bg-muted" };
+  }
+}
+
+function formatEventTime(iso: string): string {
+  const d = new Date(iso);
+  const diffMs = Date.now() - d.getTime();
+  const mins = Math.floor(diffMs / 60_000);
+  if (mins < 1) return "just now";
+  if (mins < 60) return `${mins}m ago`;
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return `${hrs}h ago`;
+  const days = Math.floor(hrs / 24);
+  if (days < 7) return `${days}d ago`;
+  return d.toLocaleString();
+}
+
+function shortUA(ua: string): string {
+  if (/Edg\//.test(ua)) return "Edge";
+  if (/Chrome\//.test(ua) && !/Chromium/.test(ua)) return "Chrome";
+  if (/Firefox\//.test(ua)) return "Firefox";
+  if (/Safari\//.test(ua) && !/Chrome\//.test(ua)) return "Safari";
+  return ua.length > 40 ? ua.slice(0, 40) + "…" : ua;
+}
+
 export default function SettingsPage() {
   const { user, clinic, updateUser } = useAuth();
   const { theme, toggleTheme } = useTheme();
@@ -46,6 +103,7 @@ export default function SettingsPage() {
 
   const [showPw, setShowPw] = useState(false);
   const changePassword = useChangePassword();
+  const authEvents = useListAuthEvents({ query: { staleTime: 30_000 } });
   const passwordForm = useForm<PasswordFormData>({
     resolver: zodResolver(passwordSchema),
     defaultValues: { currentPassword: "", newPassword: "", confirmPassword: "" },
@@ -67,6 +125,7 @@ export default function SettingsPage() {
         data: { currentPassword: data.currentPassword, newPassword: data.newPassword },
       });
       passwordForm.reset();
+      authEvents.refetch();
       toast({ title: "Password changed", description: "Use your new password next time you sign in." });
     } catch (err: any) {
       const status = err?.status;
@@ -331,6 +390,72 @@ export default function SettingsPage() {
                   </Button>
                 </div>
               </form>
+            </div>
+
+            {/* Account activity */}
+            <div className="rounded-xl border border-border bg-card p-6">
+              <div className="flex items-center justify-between mb-1">
+                <h2 className="font-semibold flex items-center gap-2">
+                  <Activity className="w-4 h-4" /> Account Activity
+                </h2>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => authEvents.refetch()}
+                  disabled={authEvents.isFetching}
+                  data-testid="button-refresh-events"
+                >
+                  <RefreshCw
+                    className={`w-3.5 h-3.5 mr-1.5 ${authEvents.isFetching ? "animate-spin" : ""}`}
+                  />
+                  Refresh
+                </Button>
+              </div>
+              <p className="text-xs text-muted-foreground mb-4">
+                Your last 20 sign-in and security events. Spot anything you don't recognize? Change your password.
+              </p>
+
+              {authEvents.isLoading ? (
+                <div className="flex items-center gap-2 text-sm text-muted-foreground py-4">
+                  <Loader2 className="w-4 h-4 animate-spin" /> Loading…
+                </div>
+              ) : authEvents.isError ? (
+                <p className="text-sm text-destructive">Couldn't load activity. Try again.</p>
+              ) : (authEvents.data?.length ?? 0) === 0 ? (
+                <p className="text-sm text-muted-foreground py-2">No activity recorded yet.</p>
+              ) : (
+                <ul className="divide-y divide-border" data-testid="list-auth-events">
+                  {authEvents.data!.map((evt) => {
+                    const meta = eventMeta(evt.type);
+                    return (
+                      <li
+                        key={evt.id}
+                        className="py-3 flex items-start gap-3"
+                        data-testid={`event-${evt.type}`}
+                      >
+                        <div
+                          className={`mt-0.5 w-7 h-7 rounded-full flex items-center justify-center shrink-0 ${meta.bg}`}
+                        >
+                          <meta.Icon className={`w-3.5 h-3.5 ${meta.fg}`} />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-baseline gap-2 flex-wrap">
+                            <p className="text-sm font-medium">{meta.label}</p>
+                            <p className="text-xs text-muted-foreground">
+                              {formatEventTime(evt.createdAt as unknown as string)}
+                            </p>
+                          </div>
+                          <p className="text-xs text-muted-foreground truncate">
+                            {evt.ip ?? "Unknown IP"}
+                            {evt.userAgent ? ` · ${shortUA(evt.userAgent)}` : ""}
+                          </p>
+                        </div>
+                      </li>
+                    );
+                  })}
+                </ul>
+              )}
             </div>
 
             {/* Security */}

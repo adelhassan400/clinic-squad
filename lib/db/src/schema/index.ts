@@ -7,3 +7,4 @@ export * from "./finances";
 export * from "./invitations";
 export * from "./prescriptions";
 export * from "./password-reset-tokens";
+export * from "./auth-events";

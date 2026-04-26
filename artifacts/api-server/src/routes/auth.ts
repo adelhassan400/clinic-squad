@@ -1,6 +1,7 @@
+import type { Request } from "express";
 import { Router } from "express";
-import { and, eq, gt, isNull } from "drizzle-orm";
-import { db, usersTable, clinicsTable, passwordResetTokensTable } from "@workspace/db";
+import { and, desc, eq, gt, isNull } from "drizzle-orm";
+import { db, usersTable, clinicsTable, passwordResetTokensTable, authEventsTable } from "@workspace/db";
 import {
   RegisterUserBody,
   LoginUserBody,
@@ -22,6 +23,42 @@ function hashToken(token: string): string {
 }
 
 const RESET_TOKEN_TTL_MS = 60 * 60 * 1000;
+
+type AuthEventType =
+  | "login_success"
+  | "login_failed"
+  | "password_changed"
+  | "password_reset";
+
+function clientIp(req: Request): string | null {
+  const fwd = req.headers["x-forwarded-for"];
+  if (typeof fwd === "string" && fwd.length > 0) return fwd.split(",")[0]!.trim();
+  if (Array.isArray(fwd) && fwd.length > 0) return fwd[0] ?? null;
+  return req.ip ?? null;
+}
+
+function userAgent(req: Request): string | null {
+  const ua = req.headers["user-agent"];
+  return typeof ua === "string" ? ua.slice(0, 500) : null;
+}
+
+async function recordAuthEvent(
+  req: Request,
+  userId: string,
+  type: AuthEventType,
+): Promise<void> {
+  try {
+    await db.insert(authEventsTable).values({
+      id: randomUUID(),
+      userId,
+      type,
+      ip: clientIp(req),
+      userAgent: userAgent(req),
+    });
+  } catch {
+    // Auth event logging is best-effort and must never break the auth flow.
+  }
+}
 
 function generateToken(userId: string): string {
   return Buffer.from(`${userId}:${Date.now()}`).toString("base64");
@@ -89,10 +126,12 @@ router.post("/login", async (req, res) => {
   const users = await db.select().from(usersTable).where(eq(usersTable.email, email)).limit(1);
   const user = users[0];
   if (!user || user.passwordHash !== hashPassword(password)) {
+    if (user) await recordAuthEvent(req, user.id, "login_failed");
     return res.status(401).json({ error: "Invalid credentials" });
   }
 
   if (user.isBlocked) {
+    await recordAuthEvent(req, user.id, "login_failed");
     return res.status(403).json({ error: "Account is blocked" });
   }
 
@@ -120,6 +159,7 @@ router.post("/login", async (req, res) => {
     createdAt: clinic.createdAt.toISOString(),
   };
 
+  await recordAuthEvent(req, user.id, "login_success");
   return res.json({ user: userObj, clinic: clinicObj, token: generateToken(user.id) });
 });
 
@@ -196,6 +236,7 @@ router.post("/reset-password", async (req, res) => {
     .set({ usedAt: new Date() })
     .where(eq(passwordResetTokensTable.id, record.id));
 
+  await recordAuthEvent(req, record.userId, "password_reset");
   return res.json({ message: "Password updated successfully. You can now sign in." });
 });
 
@@ -223,7 +264,30 @@ router.post("/change-password", async (req, res) => {
 
   await db.update(usersTable).set({ passwordHash: hashPassword(newPassword) }).where(eq(usersTable.id, userId));
 
+  await recordAuthEvent(req, userId, "password_changed");
   return res.json({ message: "Password changed successfully." });
+});
+
+router.get("/events", async (req, res) => {
+  const userId = userIdFromAuth(req);
+  if (!userId) return res.status(401).json({ error: "Unauthorized" });
+
+  const events = await db
+    .select()
+    .from(authEventsTable)
+    .where(eq(authEventsTable.userId, userId))
+    .orderBy(desc(authEventsTable.createdAt))
+    .limit(20);
+
+  return res.json(
+    events.map((e) => ({
+      id: e.id,
+      type: e.type,
+      ip: e.ip,
+      userAgent: e.userAgent,
+      createdAt: e.createdAt.toISOString(),
+    })),
+  );
 });
 
 function userIdFromAuth(req: any): string | null {

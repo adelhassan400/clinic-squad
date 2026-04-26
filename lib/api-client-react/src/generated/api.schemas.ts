@@ -207,6 +207,23 @@ export interface ChangePasswordResponse {
   message: string;
 }
 
+export type AuthEventType = (typeof AuthEventType)[keyof typeof AuthEventType];
+
+export const AuthEventType = {
+  login_success: "login_success",
+  login_failed: "login_failed",
+  password_changed: "password_changed",
+  password_reset: "password_reset",
+} as const;
+
+export interface AuthEvent {
+  id: string;
+  type: AuthEventType;
+  ip?: string | null;
+  userAgent?: string | null;
+  createdAt: string;
+}
+
 export interface UpdateProfileBody {
   name?: string;
   specialty?: string | null;
