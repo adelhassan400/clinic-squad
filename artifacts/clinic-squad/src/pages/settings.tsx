@@ -25,7 +25,12 @@ import {
   CheckCircle2,
   XCircle,
   RefreshCw,
+  Tag,
+  RotateCcw,
 } from "lucide-react";
+import { VISIT_TYPES, getVisitTypeStyle } from "@/lib/visit-types";
+import { useVisitTypePrices } from "@/lib/visit-prices";
+import { cn } from "@/lib/utils";
 import { Link } from "wouter";
 import { formatDate, getTrialDaysLeft } from "@/lib/utils";
 import { useUpdateProfile, useChangePassword, useListAuthEvents } from "@workspace/api-client-react";
@@ -95,6 +100,8 @@ export default function SettingsPage() {
   const { user, clinic, updateUser } = useAuth();
   const { theme, toggleTheme } = useTheme();
   const { currency, setCurrencyCode, options: currencyOptions, format: formatMoney } = useCurrency();
+  const { prices: visitPrices, updatePrice: updateVisitPrice, resetPrices: resetVisitPrices } =
+    useVisitTypePrices(clinic?.id);
   const { toast } = useToast();
   const [specialty, setSpecialty] = useState(user?.specialty ?? "");
   useEffect(() => { setSpecialty(user?.specialty ?? ""); }, [user?.specialty]);
@@ -295,6 +302,72 @@ export default function SettingsPage() {
                 </Select>
               </div>
             </div>
+
+            {/* Visit type pricing */}
+            {isDoctor && (
+              <div className="rounded-xl border border-border bg-card p-6">
+                <div className="flex items-start justify-between gap-4 mb-1">
+                  <h2 className="font-semibold flex items-center gap-2">
+                    <Tag className="w-4 h-4" /> Visit Type Pricing
+                  </h2>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      resetVisitPrices();
+                      toast({ title: "Visit prices reset to defaults" });
+                    }}
+                    data-testid="button-reset-visit-prices"
+                  >
+                    <RotateCcw className="w-3.5 h-3.5 mr-1.5" />
+                    Reset
+                  </Button>
+                </div>
+                <p className="text-xs text-muted-foreground mb-4">
+                  Default prices auto-fill the "Amount to Pay" field when scheduling an
+                  appointment. The price can still be edited manually for each visit. Saved
+                  on this device.
+                </p>
+                <div className="grid sm:grid-cols-2 gap-3">
+                  {VISIT_TYPES.map((vt) => {
+                    const style = getVisitTypeStyle(vt);
+                    return (
+                      <div
+                        key={vt}
+                        className="flex items-center gap-3 rounded-lg border border-border/60 bg-background/40 px-3 py-2"
+                      >
+                        <span className={cn("w-2.5 h-2.5 rounded-full shrink-0", style.dot)} />
+                        <Label
+                          htmlFor={`visit-price-${vt}`}
+                          className="text-sm flex-1 min-w-0 truncate"
+                        >
+                          {vt}
+                        </Label>
+                        <div className="flex items-center gap-1.5 shrink-0">
+                          <Input
+                            id={`visit-price-${vt}`}
+                            type="number"
+                            min={0}
+                            step="any"
+                            inputMode="decimal"
+                            className="w-24 h-8 text-right text-sm"
+                            value={visitPrices[vt]}
+                            onChange={(e) => {
+                              const v = parseFloat(e.target.value);
+                              updateVisitPrice(vt, Number.isFinite(v) && v >= 0 ? v : 0);
+                            }}
+                            data-testid={`input-visit-price-${vt}`}
+                          />
+                          <span className="text-xs text-muted-foreground w-10">
+                            {currency.code}
+                          </span>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
 
             {/* Change password */}
             <div className="rounded-xl border border-border bg-card p-6">

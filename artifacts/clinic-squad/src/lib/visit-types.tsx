@@ -3,17 +3,25 @@ import { cn } from "@/lib/utils";
 export type VisitType =
   | "New Consultation"
   | "Follow-up"
+  | "Re-exam"
   | "Emergency"
-  | "Procedure"
-  | "Session";
+  | "Procedure";
 
 export const VISIT_TYPES: VisitType[] = [
   "New Consultation",
   "Follow-up",
+  "Re-exam",
   "Emergency",
   "Procedure",
-  "Session",
 ];
+
+export const DEFAULT_VISIT_TYPE_PRICES: Record<VisitType, number> = {
+  "New Consultation": 300,
+  "Follow-up": 150,
+  "Re-exam": 100,
+  Emergency: 500,
+  Procedure: 800,
+};
 
 interface VisitTypeStyle {
   badge: string;
@@ -46,7 +54,7 @@ const VISIT_TYPE_STYLES: Record<VisitType, VisitTypeStyle> = {
     dot: "bg-purple-500",
     bar: "bg-purple-500",
   },
-  Session: {
+  "Re-exam": {
     badge:
       "bg-amber-500/10 text-amber-700 border-amber-500/30 dark:text-amber-400",
     dot: "bg-amber-500",

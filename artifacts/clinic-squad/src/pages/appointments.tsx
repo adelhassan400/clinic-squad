@@ -27,7 +27,8 @@ import { Link } from "wouter";
 import { cn } from "@/lib/utils";
 import { useCurrency } from "@/lib/currency";
 import { openWhatsApp, whatsappAppointmentReminder } from "@/lib/whatsapp";
-import { VISIT_TYPES, VisitTypeBadge, getVisitTypeStyle } from "@/lib/visit-types";
+import { VISIT_TYPES, VisitTypeBadge, getVisitTypeStyle, type VisitType } from "@/lib/visit-types";
+import { useVisitTypePrices } from "@/lib/visit-prices";
 
 const apptSchema = z.object({
   patientId: z.string().min(1, "Select a patient"),
@@ -434,6 +435,8 @@ export default function AppointmentsPage() {
   const updateMutation = useUpdateAppointment();
   const deleteMutation = useDeleteAppointment();
 
+  const { prices: visitPrices } = useVisitTypePrices(clinicId);
+
   const form = useForm<ApptForm>({
     resolver: zodResolver(apptSchema),
     defaultValues: { patientId: "", date: todayStr, time: "", type: "" },
@@ -734,7 +737,16 @@ export default function AppointmentsPage() {
                   control={form.control}
                   name="type"
                   render={({ field }) => (
-                    <Select value={field.value || ""} onValueChange={field.onChange}>
+                    <Select
+                      value={field.value || ""}
+                      onValueChange={(val) => {
+                        field.onChange(val);
+                        const price = visitPrices[val as VisitType];
+                        if (typeof price === "number") {
+                          form.setValue("fee", price, { shouldDirty: true, shouldValidate: false });
+                        }
+                      }}
+                    >
                       <SelectTrigger className="mt-1" data-testid="select-visit-type">
                         <SelectValue placeholder="Select visit type" />
                       </SelectTrigger>
@@ -746,6 +758,9 @@ export default function AppointmentsPage() {
                               <span className="inline-flex items-center gap-2">
                                 <span className={cn("w-2 h-2 rounded-full", style.dot)} />
                                 {vt}
+                                <span className="text-xs text-muted-foreground ml-1">
+                                  · {visitPrices[vt]} {currencyCode}
+                                </span>
                               </span>
                             </SelectItem>
                           );
@@ -759,8 +774,17 @@ export default function AppointmentsPage() {
                 )}
               </div>
               <div>
-                <Label>Fee ({currencyCode})</Label>
-                <Input {...form.register("fee")} type="number" placeholder="150" className="mt-1" />
+                <Label>Amount to Pay ({currencyCode})</Label>
+                <Input
+                  {...form.register("fee")}
+                  type="number"
+                  placeholder="Auto-filled from visit type"
+                  className="mt-1"
+                  data-testid="input-fee"
+                />
+                <p className="text-xs text-muted-foreground mt-1">
+                  Auto-filled from the selected visit type. You can override it.
+                </p>
               </div>
               <div>
                 <Label>Notes</Label>
