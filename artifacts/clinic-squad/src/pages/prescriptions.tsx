@@ -628,12 +628,40 @@ interface LivePreviewProps {
   items: ItemForm[];
 }
 
+function CaduceusWatermark() {
+  return (
+    <svg viewBox="0 0 100 140" xmlns="http://www.w3.org/2000/svg" aria-hidden className="w-full h-full">
+      <g fill="currentColor" stroke="currentColor">
+        <path d="M50 18 Q22 12 8 28 Q14 30 24 28 Q38 26 50 24 Z" stroke="none" />
+        <path d="M50 18 Q78 12 92 28 Q86 30 76 28 Q62 26 50 24 Z" stroke="none" />
+        <circle cx="50" cy="16" r="5" stroke="none" />
+        <line x1="50" y1="22" x2="50" y2="132" strokeWidth="3" strokeLinecap="round" />
+        <path
+          d="M50 36 C36 44 36 56 50 60 C64 64 64 76 50 80 C36 84 36 96 50 100 C64 104 64 116 50 120"
+          fill="none"
+          strokeWidth="2.5"
+          strokeLinecap="round"
+        />
+        <path
+          d="M50 36 C64 44 64 56 50 60 C36 64 36 76 50 80 C64 84 64 96 50 100 C36 104 36 116 50 120"
+          fill="none"
+          strokeWidth="2.5"
+          strokeLinecap="round"
+        />
+        <circle cx="38" cy="42" r="2" stroke="none" />
+        <circle cx="62" cy="42" r="2" stroke="none" />
+        <path d="M50 130 L46 138 L54 138 Z" stroke="none" />
+      </g>
+    </svg>
+  );
+}
+
 function LivePreview({ clinicName, doctorName, doctorSpecialty, patient, date, diagnosis, notes, items }: LivePreviewProps) {
   const filledItems = items.filter((i) => i.drug.trim());
   const formattedDate = date
     ? new Date(date + "T00:00:00").toLocaleDateString(undefined, {
         year: "numeric",
-        month: "short",
+        month: "long",
         day: "numeric",
       })
     : "—";
@@ -642,142 +670,143 @@ function LivePreview({ clinicName, doctorName, doctorSpecialty, patient, date, d
     <div className="lg:sticky lg:top-4 self-start space-y-2">
       {/* Header strip outside the paper */}
       <div className="flex items-center gap-2 text-xs">
-        <Eye className="w-3.5 h-3.5 text-primary" />
-        <span className="font-semibold uppercase tracking-wider text-primary">Live preview</span>
+        <Eye className="w-3.5 h-3.5 text-teal-500" />
+        <span className="font-semibold uppercase tracking-wider text-teal-500">Live preview</span>
         <span className="ms-auto text-muted-foreground hidden sm:inline">A4 · what your patient receives</span>
       </div>
 
-      {/* Paper sheet — always white-ish so it reads as a real Rx, even in dark mode */}
-      <div className="relative rounded-lg shadow-xl ring-1 ring-zinc-200 bg-white text-zinc-900 overflow-hidden">
-        {/* Top accent bar */}
-        <div className="h-1.5 bg-gradient-to-r from-primary via-primary/70 to-primary/30" />
-
-        {/* Draft watermark stamp (top-right) */}
-        <div className="absolute top-3 right-3 text-[9px] font-mono text-zinc-400 tracking-[0.2em] uppercase">
-          Rx · Draft
-        </div>
-
-        <div className="px-6 pt-5 pb-6 space-y-5">
-          {/* Header: ℞ mark + clinic */}
-          <div className="flex items-center gap-3 border-b border-zinc-200 pb-4">
+      {/* Outer surround mimicking the colored backdrop */}
+      <div className="rounded-xl bg-gradient-to-br from-teal-300 to-teal-500 p-3 shadow-2xl">
+        {/* Paper sheet — always white so it reads as a real Rx, even in dark mode */}
+        <div className="relative rounded-md bg-white text-zinc-900 overflow-hidden shadow-lg">
+          {/* ===== Header banner ===== */}
+          <div className="relative h-[92px] overflow-hidden">
+            {/* Decorative angled stripes */}
             <div
-              aria-hidden
-              className="w-12 h-12 rounded-lg bg-primary/10 border border-primary/30 flex items-center justify-center text-primary text-3xl font-serif font-bold leading-none select-none"
+              className="absolute inset-y-0 left-[60%] w-[60px] bg-gradient-to-br from-teal-400/55 to-teal-600/35"
+              style={{ clipPath: "polygon(0 0, 100% 0, calc(100% - 50px) 100%, 0 100%)" }}
+            />
+            <div
+              className="absolute inset-y-0 left-[68%] w-[40px] bg-gradient-to-br from-teal-400/30 to-teal-600/15"
+              style={{ clipPath: "polygon(0 0, 100% 0, calc(100% - 40px) 100%, 0 100%)" }}
+            />
+            {/* Main banner */}
+            <div
+              className="absolute inset-y-0 left-0 w-[70%] bg-gradient-to-br from-teal-500 to-teal-600 text-white flex items-center px-7"
+              style={{ clipPath: "polygon(0 0, 100% 0, calc(100% - 60px) 100%, 0 100%)" }}
             >
-              ℞
-            </div>
-            <div className="min-w-0">
-              <p className="text-lg font-bold text-zinc-900 leading-tight tracking-tight truncate">
-                {clinicName || "Clinic name"}
-              </p>
-              <p className="text-[10px] uppercase tracking-[0.2em] text-zinc-500 mt-0.5">
-                Medical Prescription
-              </p>
-            </div>
-          </div>
-
-          {/* Doctor + Patient blocks */}
-          <div className="grid grid-cols-2 gap-4 text-xs">
-            <div className="space-y-0.5">
-              <p className="text-[9px] uppercase tracking-wider text-zinc-500 flex items-center gap-1">
-                <Stethoscope className="w-2.5 h-2.5" /> Prescribed by
-              </p>
-              <p className="font-bold text-sm text-zinc-900">Dr. {doctorName || "—"}</p>
-              <p className="text-[11px] text-zinc-500 italic">
-                {doctorSpecialty || (
-                  <span className="text-amber-700 not-italic">Set specialty in Settings</span>
-                )}
-              </p>
-            </div>
-            <div className="space-y-0.5">
-              <p className="text-[9px] uppercase tracking-wider text-zinc-500 flex items-center gap-1">
-                <UserIcon className="w-2.5 h-2.5" /> Patient
-              </p>
-              <p className="font-bold text-sm text-zinc-900">
-                {patient?.name || <span className="text-zinc-400 font-normal">No patient selected</span>}
-              </p>
-              {patient && (
-                <div className="flex items-center gap-1.5 flex-wrap">
-                  {patient.code && (
-                    <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-primary/10 text-primary border border-primary/20">
-                      {patient.code}
-                    </span>
-                  )}
-                  <span className="text-[11px] text-zinc-500">{patient.phone}</span>
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Date + diagnosis row */}
-          <div className="flex flex-wrap items-center gap-x-5 gap-y-1 text-xs border-y border-zinc-200 py-2.5">
-            <div className="flex items-center gap-1.5">
-              <CalendarDays className="w-3 h-3 text-zinc-400" />
-              <span className="text-[9px] uppercase tracking-wider text-zinc-500">Date</span>
-              <span className="font-medium text-zinc-900">{formattedDate}</span>
-            </div>
-            {diagnosis && (
-              <div className="flex items-center gap-1.5 flex-1 min-w-0">
-                <ClipboardList className="w-3 h-3 text-zinc-400 shrink-0" />
-                <span className="text-[9px] uppercase tracking-wider text-zinc-500 shrink-0">Dx</span>
-                <span className="font-medium text-zinc-900 truncate">{diagnosis}</span>
+              <div className="min-w-0">
+                <p className="text-xl leading-tight tracking-tight truncate">
+                  <span className="font-extrabold">Dr.</span>{" "}
+                  <span className="font-extrabold">{doctorName || "Doctor Name"}</span>
+                </p>
+                <p className="text-[9px] uppercase tracking-[0.32em] text-white/90 mt-1 font-medium truncate">
+                  {doctorSpecialty || "Medical Practitioner"}
+                </p>
               </div>
-            )}
+            </div>
+            {/* Stamp */}
+            <div className="absolute top-2 right-[110px] text-[8px] font-mono text-zinc-400 tracking-[0.2em] uppercase">
+              Rx · Draft
+            </div>
+            {/* Stethoscope disk */}
+            <div className="absolute right-7 top-1/2 -translate-y-1/2 w-[58px] h-[58px] rounded-full bg-gradient-to-br from-teal-500 to-teal-600 text-white flex items-center justify-center border-[3px] border-white shadow-lg shadow-teal-500/30">
+              <Stethoscope className="w-7 h-7" strokeWidth={2} />
+            </div>
           </div>
 
-          {/* Medications */}
-          <div>
-            <div className="flex items-center gap-2 mb-3">
-              <span className="text-primary font-serif text-base leading-none">℞</span>
-              <span className="text-[10px] uppercase tracking-[0.18em] text-zinc-500 font-semibold">
-                Medications
+          {/* ===== Patient info form ===== */}
+          <div className="px-7 pt-5 pb-3 grid grid-cols-2 gap-x-7 gap-y-3 text-[12px]">
+            <div className="flex items-baseline gap-2 border-b border-slate-300 pb-1 min-h-[22px]">
+              <span className="text-slate-600 font-medium shrink-0">Patient Name:</span>
+              <span className="text-slate-900 font-semibold flex-1 truncate">
+                {patient?.name || <span className="text-slate-400 font-normal italic">—</span>}
+                {patient?.code && (
+                  <span className="ml-1.5 text-[10px] font-mono px-1.5 py-0.5 rounded bg-teal-500/10 text-teal-600 border border-teal-500/30 font-semibold">
+                    {patient.code}
+                  </span>
+                )}
               </span>
-              <span className="flex-1 h-px bg-zinc-200" />
-              <span className="text-[10px] text-zinc-400 font-mono">{filledItems.length}</span>
+            </div>
+            <div className="flex items-baseline gap-2 border-b border-slate-300 pb-1 min-h-[22px]">
+              <span className="text-slate-600 font-medium shrink-0">Date:</span>
+              <span className="text-slate-900 font-semibold flex-1">{formattedDate}</span>
+            </div>
+            <div className="flex items-baseline gap-2 border-b border-slate-300 pb-1 min-h-[22px]">
+              <span className="text-slate-600 font-medium shrink-0">Phone:</span>
+              <span className="text-slate-900 font-semibold flex-1 truncate">
+                {patient?.phone || <span className="text-slate-400 font-normal italic">—</span>}
+              </span>
+            </div>
+            <div className="flex items-baseline gap-2 border-b border-slate-300 pb-1 min-h-[22px]">
+              <span className="text-slate-600 font-medium shrink-0">Clinic:</span>
+              <span className="text-slate-900 font-semibold flex-1 truncate">
+                {clinicName || <span className="text-slate-400 font-normal italic">—</span>}
+              </span>
+            </div>
+            <div className="col-span-2 flex items-baseline gap-2 border-b border-slate-300 pb-1 min-h-[22px]">
+              <span className="text-slate-600 font-medium shrink-0">Diagnosis:</span>
+              <span className="text-slate-900 font-semibold flex-1 truncate">
+                {diagnosis || <span className="text-slate-400 font-normal italic">—</span>}
+              </span>
+            </div>
+          </div>
+
+          {/* ===== Body / meds ===== */}
+          <div className="relative px-7 pt-3 pb-5 min-h-[280px]">
+            {/* Watermark caduceus */}
+            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-[45%] w-[260px] h-[340px] text-teal-500 opacity-[0.05] pointer-events-none z-0">
+              <CaduceusWatermark />
+            </div>
+
+            {/* Big Rx mark */}
+            <div className="relative z-10 mb-3 leading-[0.8]">
+              <span className="font-serif text-[52px] font-bold text-slate-900">R</span>
+              <span className="font-serif italic text-[52px] font-bold text-teal-600 -ml-2">x</span>
             </div>
 
             {filledItems.length === 0 ? (
-              <div className="rounded-md border border-dashed border-zinc-300 py-5 text-center text-xs text-zinc-400 italic">
+              <div className="relative z-10 rounded-md border border-dashed border-zinc-300 py-5 text-center text-xs text-zinc-400 italic">
                 Start typing a drug name to preview…
               </div>
             ) : (
-              <ol className="space-y-2.5">
+              <ol className="relative z-10 space-y-2">
                 {filledItems.map((it, i) => {
                   const dose = it.dosage.trim();
                   const freq = it.frequency.trim();
                   const dur = it.duration.trim();
                   const itemNotes = it.notes.trim();
                   return (
-                    <li key={i} className="flex gap-3">
+                    <li key={i} className="flex gap-3 py-2 border-b border-dashed border-slate-200 last:border-b-0">
                       <span
-                        className="shrink-0 w-6 h-6 rounded-full bg-primary text-white text-[11px] font-bold flex items-center justify-center"
+                        className="shrink-0 w-6 h-6 rounded-full bg-gradient-to-br from-teal-500 to-teal-600 text-white text-[11px] font-bold flex items-center justify-center shadow-sm shadow-teal-500/30"
                         aria-hidden
                       >
                         {i + 1}
                       </span>
                       <div className="flex-1 min-w-0">
-                        <p className="font-bold text-sm text-zinc-900 leading-tight">{it.drug}</p>
+                        <p className="font-bold text-sm text-slate-900 leading-tight">{it.drug}</p>
                         {(dose || freq || dur) && (
                           <div className="flex flex-wrap gap-1.5 mt-1.5">
                             {dose && (
-                              <span className="inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded bg-zinc-100 text-zinc-700 border border-zinc-200">
+                              <span className="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full bg-teal-500/10 text-teal-600 border border-teal-500/30 font-medium">
                                 <Pill className="w-2.5 h-2.5" /> {dose}
                               </span>
                             )}
                             {freq && (
-                              <span className="inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded bg-zinc-100 text-zinc-700 border border-zinc-200">
+                              <span className="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full bg-teal-500/10 text-teal-600 border border-teal-500/30 font-medium">
                                 <Clock className="w-2.5 h-2.5" /> {freq}
                               </span>
                             )}
                             {dur && (
-                              <span className="inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded bg-zinc-100 text-zinc-700 border border-zinc-200">
+                              <span className="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full bg-teal-500/10 text-teal-600 border border-teal-500/30 font-medium">
                                 <CalendarDays className="w-2.5 h-2.5" /> {dur}
                               </span>
                             )}
                           </div>
                         )}
                         {itemNotes && (
-                          <p className="text-[11px] text-zinc-600 italic mt-1.5">↳ {itemNotes}</p>
+                          <p className="text-[11px] text-slate-600 italic mt-1.5">↳ {itemNotes}</p>
                         )}
                       </div>
                     </li>
@@ -785,36 +814,54 @@ function LivePreview({ clinicName, doctorName, doctorSpecialty, patient, date, d
                 })}
               </ol>
             )}
+
+            {notes && (
+              <div className="relative z-10 mt-4 border-l-[3px] border-teal-500 bg-teal-500/5 rounded p-3">
+                <p className="text-[9px] uppercase tracking-[0.18em] text-teal-700 font-bold">
+                  Notes for the patient
+                </p>
+                <p className="text-xs text-slate-800 mt-1 whitespace-pre-wrap">{notes}</p>
+              </div>
+            )}
           </div>
 
-          {notes && (
-            <div className="rounded-md bg-amber-50 border border-amber-200 p-3">
-              <p className="text-[9px] uppercase tracking-wider text-amber-800 font-semibold">
-                Notes for the patient
+          {/* ===== Signature ===== */}
+          <div className="px-7 pb-3 flex justify-end">
+            <div className="text-center min-w-[200px]">
+              <p
+                className="text-[18px] text-slate-900 pb-1 italic"
+                style={{ fontFamily: '"Brush Script MT", "Lucida Handwriting", "Segoe Script", cursive' }}
+              >
+                Dr. {doctorName || "—"}
               </p>
-              <p className="text-xs text-amber-900 mt-1 whitespace-pre-wrap">{notes}</p>
+              <div className="border-t border-slate-900 mx-auto w-44" />
+              <p className="text-[9px] text-slate-600 mt-1 uppercase tracking-[0.15em]">Signature</p>
             </div>
-          )}
+          </div>
 
-          {/* Signature */}
-          <div className="pt-4 flex justify-end">
-            <div className="text-end">
-              <p className="font-serif italic text-zinc-700 text-sm pb-1.5 px-3">
-                Dr. {doctorName || ""}
-              </p>
-              <div className="border-t border-zinc-700 w-40 ms-auto" />
-              <p className="text-[10px] text-zinc-500 mt-1">
-                {doctorSpecialty || "Signature"}
-              </p>
+          {/* ===== Footer ===== */}
+          <footer className="px-7 py-3 bg-gradient-to-r from-slate-50 to-slate-100 border-t border-slate-200 flex items-center justify-between gap-3 flex-wrap text-[11px]">
+            <div className="font-bold uppercase tracking-[0.15em] text-slate-900 text-[11px] truncate max-w-[180px]">
+              {clinicName || "Clinic"}
             </div>
-          </div>
-
-          {/* Footer ribbon */}
-          <div className="text-center pt-1">
-            <p className="text-[9px] uppercase tracking-[0.25em] text-zinc-300">
-              Issued via ClinicSquad
-            </p>
-          </div>
+            <div className="inline-flex items-center gap-1.5 text-slate-600">
+              <span className="text-teal-600">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" width="11" height="11">
+                  <path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z" />
+                  <circle cx="12" cy="10" r="3" />
+                </svg>
+              </span>
+              <span className="truncate max-w-[160px]">{doctorSpecialty || "Medical Practice"}</span>
+            </div>
+            <div className="inline-flex items-center gap-1.5 text-slate-600">
+              <span className="text-teal-600">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" width="11" height="11">
+                  <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92Z" />
+                </svg>
+              </span>
+              <span className="truncate max-w-[140px]">{patient?.phone || "—"}</span>
+            </div>
+          </footer>
         </div>
       </div>
     </div>
