@@ -20,11 +20,19 @@ import {
   Shield, CheckCircle, XCircle, CreditCard, Users, Building2,
   AlertTriangle, TrendingUp, Clock, Sparkles, Search, ChevronRight,
   Crown, Sparkle, Hourglass, Mail, Phone, Stethoscope, Loader2,
-  CalendarDays, UserCog,
+  CalendarDays, UserCog, BarChart3,
 } from "lucide-react";
+import {
+  ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid, Cell,
+} from "recharts";
 import { cn } from "@/lib/utils";
 
 // ---------- Types ----------
+interface MonthlyRevenue {
+  month: string; // "YYYY-MM"
+  amount: number;
+  count: number;
+}
 interface AdminStats {
   totalClinics: number;
   totalUsers: number;
@@ -35,6 +43,8 @@ interface AdminStats {
   newSignupsWeek: number;
   pendingPayments: number;
   confirmedRevenue: number;
+  currentMonthRevenue: number;
+  revenueByMonth: MonthlyRevenue[];
 }
 interface AdminSubscription {
   id: string; clinicId: string; clinicName: string; planType: string;
@@ -225,6 +235,14 @@ export default function AdminPage() {
               value={stats ? `${Math.round(stats.confirmedRevenue).toLocaleString()}` : "—"}
               sub={currencyCode} tone="success" />
           </div>
+
+          {/* Monthly revenue */}
+          <MonthlyRevenuePanel
+            data={stats?.revenueByMonth ?? []}
+            currentMonthRevenue={stats?.currentMonthRevenue ?? 0}
+            currencyCode={currencyCode}
+            isLoading={statsQ.isLoading}
+          />
 
           {/* Subscribers by Plan */}
           <div className="space-y-3">
@@ -748,6 +766,201 @@ function ClinicDetailDialog({
         </div>
       </DialogContent>
     </Dialog>
+  );
+}
+
+function formatMonthLabel(month: string, opts: { short?: boolean } = {}): string {
+  const [yearStr, monthStr] = month.split("-");
+  const d = new Date(Date.UTC(Number(yearStr), Number(monthStr) - 1, 1));
+  return d.toLocaleString(undefined, {
+    month: opts.short ? "short" : "long",
+    year: "numeric",
+    timeZone: "UTC",
+  });
+}
+
+function MonthlyRevenuePanel({
+  data,
+  currentMonthRevenue,
+  currencyCode,
+  isLoading,
+}: {
+  data: MonthlyRevenue[];
+  currentMonthRevenue: number;
+  currencyCode: string;
+  isLoading: boolean;
+}) {
+  const chartData = useMemo(
+    () => data.map((d, idx) => ({
+      ...d,
+      label: formatMonthLabel(d.month, { short: true }),
+      isCurrent: idx === data.length - 1,
+    })),
+    [data],
+  );
+  const last3 = data.slice(-3).reduce((sum, d) => sum + d.amount, 0);
+  const last12 = data.reduce((sum, d) => sum + d.amount, 0);
+  const bestMonth = data.reduce<MonthlyRevenue | null>(
+    (best, d) => (best === null || d.amount > best.amount ? d : best),
+    null,
+  );
+  const fmt = (n: number) =>
+    `${Math.round(n).toLocaleString()} ${currencyCode}`;
+
+  const currentMonthLabel = data.length
+    ? formatMonthLabel(data[data.length - 1]!.month)
+    : "This month";
+
+  return (
+    <div className="rounded-xl border border-border bg-card overflow-hidden">
+      <div className="px-5 py-3 border-b border-border bg-muted/30 flex items-center gap-2 flex-wrap">
+        <BarChart3 className="w-4 h-4 text-primary" />
+        <h2 className="text-sm font-semibold">Monthly Revenue</h2>
+        <span className="text-xs text-muted-foreground ms-auto">
+          Confirmed payments · last 12 months
+        </span>
+      </div>
+
+      {isLoading ? (
+        <div className="p-5"><Skeleton className="h-48 w-full" /></div>
+      ) : (
+        <>
+          <div className="grid sm:grid-cols-3 divide-y sm:divide-y-0 sm:divide-x divide-border border-b border-border">
+            <div className="p-5">
+              <p className="text-xs uppercase tracking-wider text-muted-foreground font-medium">
+                {currentMonthLabel}
+              </p>
+              <p className="text-2xl font-bold mt-1 text-primary">
+                {fmt(currentMonthRevenue)}
+              </p>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                {data[data.length - 1]?.count ?? 0} payment(s) this month
+              </p>
+            </div>
+            <div className="p-5">
+              <p className="text-xs uppercase tracking-wider text-muted-foreground font-medium">
+                Last 3 months
+              </p>
+              <p className="text-2xl font-bold mt-1">{fmt(last3)}</p>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                Avg {fmt(last3 / 3)} / month
+              </p>
+            </div>
+            <div className="p-5">
+              <p className="text-xs uppercase tracking-wider text-muted-foreground font-medium">
+                Best month
+              </p>
+              <p className="text-2xl font-bold mt-1">
+                {bestMonth && bestMonth.amount > 0 ? fmt(bestMonth.amount) : "—"}
+              </p>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                {bestMonth && bestMonth.amount > 0
+                  ? formatMonthLabel(bestMonth.month)
+                  : "No revenue yet"}
+              </p>
+            </div>
+          </div>
+
+          <div className="p-5">
+            {last12 === 0 ? (
+              <div className="py-12 text-center text-sm text-muted-foreground">
+                No confirmed payments yet — charts will populate once subscriptions are confirmed.
+              </div>
+            ) : (
+              <>
+                <div className="h-56 -ms-2" data-testid="chart-monthly-revenue">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={chartData} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
+                      <XAxis
+                        dataKey="label"
+                        stroke="hsl(var(--muted-foreground))"
+                        fontSize={11}
+                        tickLine={false}
+                        axisLine={false}
+                      />
+                      <YAxis
+                        stroke="hsl(var(--muted-foreground))"
+                        fontSize={11}
+                        tickLine={false}
+                        axisLine={false}
+                        tickFormatter={(v) => (v >= 1000 ? `${Math.round(v / 1000)}k` : `${v}`)}
+                        width={48}
+                      />
+                      <Tooltip
+                        cursor={{ fill: "hsl(var(--muted))", opacity: 0.4 }}
+                        contentStyle={{
+                          background: "hsl(var(--card))",
+                          border: "1px solid hsl(var(--border))",
+                          borderRadius: 8,
+                          fontSize: 12,
+                        }}
+                        formatter={(value: number, _name, ctx) => [
+                          `${fmt(value)} (${ctx.payload.count} payment${ctx.payload.count === 1 ? "" : "s"})`,
+                          "Revenue",
+                        ]}
+                        labelFormatter={(_l, items) =>
+                          items?.[0]?.payload ? formatMonthLabel(items[0].payload.month) : ""
+                        }
+                      />
+                      <Bar dataKey="amount" radius={[4, 4, 0, 0]}>
+                        {chartData.map((entry) => (
+                          <Cell
+                            key={entry.month}
+                            fill={entry.isCurrent ? "hsl(var(--primary))" : "hsl(var(--primary) / 0.45)"}
+                          />
+                        ))}
+                      </Bar>
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+
+                <div className="mt-4 overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="text-xs uppercase tracking-wider text-muted-foreground">
+                        <th className="text-start font-medium py-2">Month</th>
+                        <th className="text-end font-medium py-2">Payments</th>
+                        <th className="text-end font-medium py-2">Revenue</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-border">
+                      {[...data].reverse().map((row, idx) => (
+                        <tr
+                          key={row.month}
+                          className={cn(idx === 0 && "bg-primary/5")}
+                          data-testid={`revenue-row-${row.month}`}
+                        >
+                          <td className="py-2 font-medium">
+                            {formatMonthLabel(row.month)}
+                            {idx === 0 && (
+                              <span className="ms-2 text-[10px] uppercase font-semibold text-primary">
+                                current
+                              </span>
+                            )}
+                          </td>
+                          <td className="py-2 text-end text-muted-foreground">{row.count}</td>
+                          <td className="py-2 text-end font-mono">{fmt(row.amount)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                    <tfoot>
+                      <tr className="border-t-2 border-border">
+                        <td className="py-2 font-semibold text-sm">12-month total</td>
+                        <td className="py-2 text-end text-muted-foreground">
+                          {data.reduce((sum, d) => sum + d.count, 0)}
+                        </td>
+                        <td className="py-2 text-end font-mono font-semibold">{fmt(last12)}</td>
+                      </tr>
+                    </tfoot>
+                  </table>
+                </div>
+              </>
+            )}
+          </div>
+        </>
+      )}
+    </div>
   );
 }
 

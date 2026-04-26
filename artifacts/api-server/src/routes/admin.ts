@@ -47,9 +47,43 @@ router.get("/stats", async (_req, res) => {
   }
 
   const pendingPayments = subs.filter(s => s.paymentStatus === "pending").length;
-  const confirmedRevenue = subs
-    .filter(s => s.paymentStatus === "confirmed")
-    .reduce((sum, s) => sum + parseFloat(s.amount ?? "0"), 0);
+  const confirmedSubs = subs.filter(s => s.paymentStatus === "confirmed");
+  const confirmedRevenue = confirmedSubs.reduce(
+    (sum, s) => sum + parseFloat(s.amount ?? "0"),
+    0,
+  );
+
+  // Build last 12 months window (oldest -> newest), keyed by YYYY-MM
+  const months: { key: string; year: number; month: number }[] = [];
+  for (let i = 11; i >= 0; i -= 1) {
+    const d = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - i, 1));
+    months.push({
+      key: `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}`,
+      year: d.getUTCFullYear(),
+      month: d.getUTCMonth() + 1,
+    });
+  }
+  const monthBuckets = new Map<string, { amount: number; count: number }>();
+  for (const m of months) monthBuckets.set(m.key, { amount: 0, count: 0 });
+
+  for (const s of confirmedSubs) {
+    const d = s.createdAt;
+    const key = `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}`;
+    const bucket = monthBuckets.get(key);
+    if (bucket) {
+      bucket.amount += parseFloat(s.amount ?? "0");
+      bucket.count += 1;
+    }
+  }
+
+  const revenueByMonth = months.map((m) => ({
+    month: m.key,
+    amount: monthBuckets.get(m.key)!.amount,
+    count: monthBuckets.get(m.key)!.count,
+  }));
+
+  const currentMonthKey = `${now.getUTCFullYear()}-${String(now.getUTCMonth() + 1).padStart(2, "0")}`;
+  const currentMonthRevenue = monthBuckets.get(currentMonthKey)?.amount ?? 0;
 
   return res.json({
     totalClinics: clinics.length,
@@ -60,6 +94,8 @@ router.get("/stats", async (_req, res) => {
     newSignupsWeek,
     pendingPayments,
     confirmedRevenue,
+    currentMonthRevenue,
+    revenueByMonth,
   });
 });
 
