@@ -157,21 +157,6 @@ export function DashboardLayout({ children }: Props) {
             </Link>
           )}
 
-          {user?.role === "superadmin" && (
-            <Link
-              href="/admin"
-              data-testid="nav-admin"
-              className={cn(
-                "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all",
-                location.startsWith("/admin")
-                  ? "bg-sidebar-primary text-sidebar-primary-foreground"
-                  : "text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-foreground"
-              )}
-            >
-              <Shield className="w-4 h-4" />
-              <span className="flex-1">{t("sidebar.admin")}</span>
-            </Link>
-          )}
         </nav>
 
         {/* Trial warning banner */}

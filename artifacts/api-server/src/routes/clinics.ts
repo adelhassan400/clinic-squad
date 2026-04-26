@@ -146,6 +146,33 @@ router.get("/:clinicId/appointments/today", async (req, res) => {
   })));
 });
 
+// Tomorrow's scheduled appointments — for WhatsApp reminder workflow.
+// Includes patient phone (joined client-side here for simplicity) so the UI
+// can deep-link to wa.me without a second round-trip.
+router.get("/:clinicId/appointments/tomorrow", async (req, res) => {
+  const { clinicId } = req.params;
+  const tomorrowDate = new Date();
+  tomorrowDate.setDate(tomorrowDate.getDate() + 1);
+  const tomorrow = tomorrowDate.toISOString().split("T")[0];
+
+  const [appointments, patients] = await Promise.all([
+    db.select().from(appointmentsTable).where(eq(appointmentsTable.clinicId, clinicId)),
+    db.select().from(patientsTable).where(eq(patientsTable.clinicId, clinicId)),
+  ]);
+
+  const phoneById = new Map(patients.map(p => [p.id, p.phone]));
+  const list = appointments
+    .filter(a => a.date === tomorrow && a.status === "scheduled")
+    .sort((a, b) => a.time.localeCompare(b.time))
+    .map(a => ({
+      id: a.id, clinicId: a.clinicId, patientId: a.patientId,
+      patientName: a.patientName, patientPhone: phoneById.get(a.patientId) ?? null,
+      date: a.date, time: a.time, status: a.status, type: a.type,
+    }));
+
+  return res.json(list);
+});
+
 router.get("/:clinicId/finances/summary", async (req, res) => {
   const { clinicId } = req.params;
   const year = parseInt(req.query.year as string) || new Date().getFullYear();

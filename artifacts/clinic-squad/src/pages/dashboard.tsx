@@ -1,12 +1,13 @@
 import { useAuth } from "@/lib/auth";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
-import { useGetDashboardSummary, useGetTodayAppointments, useUpdateAppointment, getGetDashboardSummaryQueryKey, getGetTodayAppointmentsQueryKey, getListAppointmentsQueryKey } from "@workspace/api-client-react";
-import { useQueryClient } from "@tanstack/react-query";
+import { useGetDashboardSummary, useGetTodayAppointments, useUpdateAppointment, getGetDashboardSummaryQueryKey, getGetTodayAppointmentsQueryKey, getListAppointmentsQueryKey, customFetch } from "@workspace/api-client-react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { formatDate, getTrialDaysLeft, getTrialUrgency } from "@/lib/utils";
 import { cn } from "@/lib/utils";
 import { useCurrency } from "@/lib/currency";
-import { Users, Calendar, TrendingUp, Clock, CheckCircle, AlertTriangle, Crown, ArrowRight } from "lucide-react";
+import { openWhatsApp, whatsappAppointmentReminder } from "@/lib/whatsapp";
+import { Users, Calendar, TrendingUp, Clock, CheckCircle, AlertTriangle, Crown, ArrowRight, MessageCircle, PhoneOff } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Link } from "wouter";
@@ -58,6 +59,33 @@ export default function DashboardPage() {
   const { data: todayAppts, isLoading: apptLoading } = useGetTodayAppointments(clinicId, {
     query: { enabled: !!clinicId, queryKey: getGetTodayAppointmentsQueryKey(clinicId) }
   });
+
+  // Tomorrow's reminders — uses raw fetch (endpoint isn't in the generated client yet).
+  type TomorrowAppt = {
+    id: string; patientId: string; patientName: string;
+    patientPhone: string | null; date: string; time: string;
+    type: string | null; status: string;
+  };
+  const { data: tomorrowAppts, isLoading: tomorrowLoading } = useQuery<TomorrowAppt[]>({
+    queryKey: ["tomorrow-appts", clinicId],
+    queryFn: () => customFetch<TomorrowAppt[]>(`/api/clinics/${clinicId}/appointments/tomorrow`),
+    enabled: !!clinicId,
+  });
+
+  const handleSendReminder = (a: TomorrowAppt) => {
+    if (!a.patientPhone) {
+      toast({ title: "No phone number on file", variant: "destructive" });
+      return;
+    }
+    const message = whatsappAppointmentReminder({
+      patientName: a.patientName,
+      clinicName: clinic?.name ?? "the clinic",
+      date: formatDate(a.date),
+      time: a.time,
+      type: a.type,
+    });
+    openWhatsApp(a.patientPhone, message);
+  };
 
   const updateAppointment = useUpdateAppointment();
 
@@ -189,6 +217,84 @@ export default function DashboardPage() {
                         </Button>
                       )}
                     </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Tomorrow's WhatsApp reminders */}
+          <div className="rounded-xl border border-border bg-card p-6 mt-6">
+            <div className="flex items-center justify-between mb-5">
+              <div>
+                <h2 className="font-semibold flex items-center gap-2">
+                  <MessageCircle className="w-4 h-4 text-green-600" />
+                  Tomorrow's Reminders
+                </h2>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  One-click WhatsApp reminders to reduce no-shows
+                </p>
+              </div>
+              {!!tomorrowAppts?.length && (
+                <Badge variant="secondary" className="text-xs">
+                  {tomorrowAppts.length} scheduled
+                </Badge>
+              )}
+            </div>
+
+            {tomorrowLoading ? (
+              <div className="space-y-3">
+                {[1, 2].map(i => <Skeleton key={i} className="h-16 rounded-lg" />)}
+              </div>
+            ) : !tomorrowAppts?.length ? (
+              <div className="text-center py-8 text-muted-foreground">
+                <Calendar className="w-8 h-8 mx-auto mb-3 opacity-40" />
+                <p className="text-sm font-medium">No appointments tomorrow</p>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {tomorrowAppts.map(a => (
+                  <div
+                    key={a.id}
+                    data-testid={`tomorrow-row-${a.id}`}
+                    className="flex items-center gap-4 p-3 rounded-lg hover:bg-muted/50 transition-colors"
+                  >
+                    <div className="w-10 h-10 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center shrink-0">
+                      <span className="text-xs font-bold text-green-700 dark:text-green-400">
+                        {a.patientName.charAt(0)}
+                      </span>
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium truncate">{a.patientName}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {a.type ?? "Appointment"} · {a.time}
+                      </p>
+                    </div>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className={cn(
+                        "h-7 px-2 text-xs",
+                        a.patientPhone
+                          ? "text-green-700 border-green-600/30 hover:bg-green-50 dark:hover:bg-green-900/20"
+                          : "text-muted-foreground"
+                      )}
+                      onClick={() => handleSendReminder(a)}
+                      disabled={!a.patientPhone}
+                      data-testid={`reminder-${a.id}`}
+                    >
+                      {a.patientPhone ? (
+                        <>
+                          <MessageCircle className="w-3.5 h-3.5 mr-1" />
+                          Send reminder
+                        </>
+                      ) : (
+                        <>
+                          <PhoneOff className="w-3.5 h-3.5 mr-1" />
+                          No phone
+                        </>
+                      )}
+                    </Button>
                   </div>
                 ))}
               </div>
