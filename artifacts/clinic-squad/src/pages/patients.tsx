@@ -27,8 +27,7 @@ import { cn } from "@/lib/utils";
 const patientSchema = z.object({
   name: z.string().min(2, "Name required"),
   phone: z.string().min(6, "Phone required"),
-  gender: z.enum(["male", "female", "other"]),
-  visitType: z.enum(PATIENT_VISIT_TYPES as [string, ...string[]], {
+  visitType: z.enum(PATIENT_VISIT_TYPES, {
     message: "Visit type is required",
   }),
   dateOfBirth: z.string().optional(),
@@ -37,6 +36,17 @@ const patientSchema = z.object({
   notes: z.string().optional(),
 });
 type PatientForm = z.infer<typeof patientSchema>;
+
+function ageFromDob(dob: string | null | undefined): string {
+  if (!dob) return "—";
+  const d = new Date(dob);
+  if (isNaN(d.getTime())) return "—";
+  const now = new Date();
+  let age = now.getFullYear() - d.getFullYear();
+  const m = now.getMonth() - d.getMonth();
+  if (m < 0 || (m === 0 && now.getDate() < d.getDate())) age--;
+  return age >= 0 && age < 150 ? `${age}` : "—";
+}
 
 export default function PatientsPage() {
   const { clinic } = useAuth();
@@ -55,16 +65,16 @@ export default function PatientsPage() {
 
   const form = useForm<PatientForm>({
     resolver: zodResolver(patientSchema),
-    defaultValues: { name: "", phone: "", gender: "male", visitType: "New Consultation" },
+    defaultValues: { name: "", phone: "", visitType: "New Consultation" },
   });
 
   const onSubmit = (values: PatientForm) => {
     createMutation.mutate({ clinicId, data: values }, {
       onSuccess: () => {
-        toast({ title: "Patient added successfully" });
+        toast({ title: "Patient added — sent to Doctor's Waiting List" });
         qc.invalidateQueries({ queryKey: getListPatientsQueryKey(clinicId) });
         setAddOpen(false);
-        form.reset();
+        form.reset({ name: "", phone: "", visitType: "New Consultation" });
       },
       onError: () => toast({ title: "Failed to add patient", variant: "destructive" }),
     });
@@ -108,13 +118,13 @@ export default function PatientsPage() {
             />
           </div>
 
-          {/* Table */}
+          {/* Table — Name, Age, Phone, Visit Type */}
           <div className="rounded-xl border border-border bg-card overflow-hidden">
-            <div className="grid grid-cols-[110px_1fr_1fr_auto_auto_auto_auto] gap-4 px-6 py-3 border-b border-border bg-muted/30 text-xs font-medium text-muted-foreground uppercase tracking-wider">
+            <div className="grid grid-cols-[110px_1fr_70px_1fr_auto_auto_auto] gap-4 px-6 py-3 border-b border-border bg-muted/30 text-xs font-medium text-muted-foreground uppercase tracking-wider">
               <span>ID</span>
-              <span>Patient</span>
+              <span>Name</span>
+              <span>Age</span>
               <span>Phone</span>
-              <span>Gender</span>
               <span>Visit Type</span>
               <span>Date Added</span>
               <span>Actions</span>
@@ -142,7 +152,7 @@ export default function PatientsPage() {
                 <div
                   key={patient.id}
                   data-testid={`patient-row-${patient.id}`}
-                  className="grid grid-cols-[110px_1fr_1fr_auto_auto_auto_auto] gap-4 items-center px-6 py-4 border-b border-border last:border-0 hover:bg-muted/30 transition-colors"
+                  className="grid grid-cols-[110px_1fr_70px_1fr_auto_auto_auto] gap-4 items-center px-6 py-4 border-b border-border last:border-0 hover:bg-muted/30 transition-colors"
                 >
                   <span
                     className="text-sm font-mono font-semibold px-2.5 py-1 rounded bg-primary/10 text-primary border border-primary/20 text-center"
@@ -159,12 +169,12 @@ export default function PatientsPage() {
                       {patient.bloodType && <p className="text-xs text-muted-foreground">Blood: {patient.bloodType}</p>}
                     </div>
                   </div>
+                  <span className="text-sm font-mono text-muted-foreground" data-testid={`patient-age-${patient.id}`}>
+                    {ageFromDob(patient.dateOfBirth)}
+                  </span>
                   <span className="text-sm text-muted-foreground font-mono">{patient.phone}</span>
-                  <span className="text-xs capitalize px-2 py-1 rounded bg-muted text-muted-foreground">{patient.gender}</span>
                   <span data-testid={`patient-visit-type-${patient.id}`}>
-                    {patient.visitType
-                      ? <VisitTypeBadge type={patient.visitType} />
-                      : <span className="text-xs text-muted-foreground">—</span>}
+                    <VisitTypeBadge type={patient.visitType} />
                   </span>
                   <span className="text-xs text-muted-foreground">{formatDate(patient.createdAt)}</span>
                   <div className="flex items-center gap-1">
@@ -211,7 +221,7 @@ export default function PatientsPage() {
         <Dialog open={addOpen} onOpenChange={setAddOpen}>
           <DialogContent className="max-w-lg">
             <DialogHeader>
-              <DialogTitle>Add New Patient</DialogTitle>
+              <DialogTitle>Patient Entry</DialogTitle>
             </DialogHeader>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
@@ -224,25 +234,6 @@ export default function PatientsPage() {
                   <Label>Phone *</Label>
                   <Input {...form.register("phone")} placeholder="01012345678" className="mt-1" />
                   {form.formState.errors.phone && <p className="text-xs text-destructive mt-1">{form.formState.errors.phone.message}</p>}
-                </div>
-                <div>
-                  <Label>Gender *</Label>
-                  <Controller
-                    control={form.control}
-                    name="gender"
-                    render={({ field }) => (
-                      <Select value={field.value} onValueChange={field.onChange}>
-                        <SelectTrigger className="mt-1">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="male">Male</SelectItem>
-                          <SelectItem value="female">Female</SelectItem>
-                          <SelectItem value="other">Other</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    )}
-                  />
                 </div>
                 <div>
                   <Label>Visit Type *</Label>
@@ -297,6 +288,9 @@ export default function PatientsPage() {
                   <Input {...form.register("notes")} placeholder="Additional medical notes..." className="mt-1" />
                 </div>
               </div>
+              <p className="text-xs text-muted-foreground -mt-1">
+                On save, the patient will automatically be placed on the Doctor's Waiting List.
+              </p>
               <div className="flex gap-3 justify-end pt-2">
                 <Button type="button" variant="outline" onClick={() => setAddOpen(false)}>Cancel</Button>
                 <Button type="submit" disabled={createMutation.isPending} data-testid="button-save-patient">

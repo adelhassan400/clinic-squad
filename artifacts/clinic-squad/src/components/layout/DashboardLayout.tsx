@@ -9,7 +9,8 @@ import { getTrialDaysLeft, getTrialUrgency } from "@/lib/utils";
 import {
   LayoutDashboard, Users, Calendar, TrendingUp,
   Settings, LogOut, Menu, X, Sun, Moon,
-  AlertTriangle, Crown, ChevronRight, Shield, BarChart2, UserPlus, Pill
+  AlertTriangle, Crown, ChevronRight, Shield, BarChart2, UserPlus, Pill,
+  Stethoscope, Receipt
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -38,6 +39,8 @@ export function DashboardLayout({ children }: Props) {
     : [
         { href: "/dashboard", labelKey: "sidebar.dashboard", icon: LayoutDashboard },
         { href: "/patients", labelKey: "sidebar.patients", icon: Users },
+        { href: "/waiting-list", labelKey: "sidebar.waitingList", icon: Stethoscope },
+        { href: "/checkout", labelKey: "sidebar.checkout", icon: Receipt },
         { href: "/appointments", labelKey: "sidebar.appointments", icon: Calendar },
         ...(isAdmin
           ? [

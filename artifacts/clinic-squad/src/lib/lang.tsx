@@ -74,6 +74,8 @@ const translations: Record<string, Record<Lang, string>> = {
   "sidebar.dashboard": { en: "Dashboard", ar: "لوحة التحكم" },
   "sidebar.patients": { en: "Patients", ar: "المرضى" },
   "sidebar.appointments": { en: "Appointments", ar: "المواعيد" },
+  "sidebar.waitingList": { en: "Waiting List", ar: "قائمة الانتظار" },
+  "sidebar.checkout": { en: "Checkout", ar: "الحساب" },
   "sidebar.insights": { en: "Insights", ar: "التحليلات" },
   "sidebar.finances": { en: "Finances", ar: "المالية" },
   "sidebar.settings": { en: "Settings", ar: "الإعدادات" },

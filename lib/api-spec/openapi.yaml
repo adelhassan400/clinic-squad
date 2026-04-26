@@ -425,6 +425,34 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Patient"
+    patch:
+      operationId: patchPatient
+      tags: [patients]
+      summary: Partial update of a patient (status, diagnosis, autosave fields, etc.)
+      parameters:
+        - in: path
+          name: clinicId
+          required: true
+          schema:
+            type: string
+        - in: path
+          name: patientId
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdatePatientBody"
+      responses:
+        "200":
+          description: Updated patient
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Patient"
     delete:
       operationId: deletePatient
       tags: [patients]
@@ -1526,9 +1554,6 @@ components:
         dateOfBirth:
           type: string
           format: date
-        gender:
-          type: string
-          enum: [male, female, other]
         bloodType:
           type: string
           nullable: true
@@ -1540,11 +1565,20 @@ components:
           nullable: true
         visitType:
           type: string
+          enum: [New Consultation, Follow-up, Re-exam, Emergency]
+        status:
+          type: string
+          enum: [waiting, in-progress, completed]
+        diagnosis:
+          type: string
+          nullable: true
+        clinicalNotes:
+          type: string
           nullable: true
         createdAt:
           type: string
           format: date-time
-      required: [id, clinicId, name, phone, gender, createdAt]
+      required: [id, clinicId, name, phone, visitType, status, createdAt]
 
     CreatePatientBody:
       type: object
@@ -1556,9 +1590,6 @@ components:
         dateOfBirth:
           type: string
           format: date
-        gender:
-          type: string
-          enum: [male, female, other]
         bloodType:
           type: string
           nullable: true
@@ -1570,8 +1601,42 @@ components:
           nullable: true
         visitType:
           type: string
+          enum: [New Consultation, Follow-up, Re-exam, Emergency]
+      required: [name, phone, visitType]
+
+    UpdatePatientBody:
+      type: object
+      description: Partial update — any subset of mutable patient fields.
+      properties:
+        name:
+          type: string
+        phone:
+          type: string
+        dateOfBirth:
+          type: string
+          format: date
           nullable: true
-      required: [name, phone, gender]
+        bloodType:
+          type: string
+          nullable: true
+        allergies:
+          type: string
+          nullable: true
+        notes:
+          type: string
+          nullable: true
+        visitType:
+          type: string
+          enum: [New Consultation, Follow-up, Re-exam, Emergency]
+        status:
+          type: string
+          enum: [waiting, in-progress, completed]
+        diagnosis:
+          type: string
+          nullable: true
+        clinicalNotes:
+          type: string
+          nullable: true
 
     PatientList:
       type: object

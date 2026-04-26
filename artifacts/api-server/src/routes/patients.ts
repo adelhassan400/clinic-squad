@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { eq, and } from "drizzle-orm";
 import { db, patientsTable } from "@workspace/db";
-import { CreatePatientBody } from "@workspace/api-zod";
+import { CreatePatientBody, PatchPatientBody } from "@workspace/api-zod";
 import { randomUUID } from "crypto";
 
 const router = Router({ mergeParams: true });
@@ -14,11 +14,13 @@ function serialize(p: typeof patientsTable.$inferSelect) {
     name: p.name,
     phone: p.phone,
     dateOfBirth: p.dateOfBirth,
-    gender: p.gender,
     bloodType: p.bloodType,
     allergies: p.allergies,
     notes: p.notes,
     visitType: p.visitType,
+    status: p.status,
+    diagnosis: p.diagnosis,
+    clinicalNotes: p.clinicalNotes,
     createdAt: p.createdAt.toISOString(),
   };
 }
@@ -42,6 +44,7 @@ async function nextPatientCode(clinicId: string): Promise<string> {
 router.get("/", async (req, res) => {
   const { clinicId } = req.params;
   const search = (req.query.search as string) ?? "";
+  const status = (req.query.status as string) ?? "";
   const page = parseInt(req.query.page as string) || 1;
   const limit = parseInt(req.query.limit as string) || 20;
   const offset = (page - 1) * limit;
@@ -55,6 +58,9 @@ router.get("/", async (req, res) => {
         p.phone.includes(search) ||
         (p.code ?? "").toLowerCase().includes(s),
     );
+  }
+  if (status) {
+    patients = patients.filter((p) => p.status === status);
   }
 
   const total = patients.length;
@@ -73,18 +79,19 @@ router.post("/", async (req, res) => {
   const parsed = CreatePatientBody.safeParse(req.body);
   if (!parsed.success) return res.status(400).json({ error: "Invalid input", details: parsed.error.issues });
 
-  const { name, phone, dateOfBirth, gender, bloodType, allergies, notes, visitType } = parsed.data;
+  const { name, phone, dateOfBirth, bloodType, allergies, notes, visitType } = parsed.data;
   const id = randomUUID();
   const code = await nextPatientCode(clinicId);
 
+  // Every new patient is automatically placed on the doctor's waiting list.
   await db.insert(patientsTable).values({
     id, clinicId, code, name, phone,
     dateOfBirth: dateOfBirth ?? null,
-    gender,
     bloodType: bloodType ?? null,
     allergies: allergies ?? null,
     notes: notes ?? null,
-    visitType: visitType ?? null,
+    visitType,
+    status: "waiting",
   });
 
   const patient = (await db.select().from(patientsTable).where(eq(patientsTable.id, id)).limit(1))[0];
@@ -106,21 +113,49 @@ router.put("/:patientId", async (req, res) => {
   const parsed = CreatePatientBody.safeParse(req.body);
   if (!parsed.success) return res.status(400).json({ error: "Invalid input" });
 
-  const { name, phone, dateOfBirth, gender, bloodType, allergies, notes, visitType } = parsed.data;
+  const { name, phone, dateOfBirth, bloodType, allergies, notes, visitType } = parsed.data;
   await db.update(patientsTable)
     .set({
       name,
       phone,
       dateOfBirth: dateOfBirth ?? null,
-      gender,
       bloodType: bloodType ?? null,
       allergies: allergies ?? null,
       notes: notes ?? null,
-      visitType: visitType ?? null,
+      visitType,
     })
     .where(and(eq(patientsTable.id, patientId), eq(patientsTable.clinicId, clinicId)));
 
   const p = (await db.select().from(patientsTable).where(eq(patientsTable.id, patientId)).limit(1))[0];
+  return res.json(serialize(p));
+});
+
+router.patch("/:patientId", async (req, res) => {
+  const { clinicId, patientId } = req.params;
+  const parsed = PatchPatientBody.safeParse(req.body);
+  if (!parsed.success) return res.status(400).json({ error: "Invalid input", details: parsed.error.issues });
+
+  const data = parsed.data;
+  const update: Record<string, unknown> = {};
+  if (data.name !== undefined) update.name = data.name;
+  if (data.phone !== undefined) update.phone = data.phone;
+  if (data.dateOfBirth !== undefined) update.dateOfBirth = data.dateOfBirth ?? null;
+  if (data.bloodType !== undefined) update.bloodType = data.bloodType ?? null;
+  if (data.allergies !== undefined) update.allergies = data.allergies ?? null;
+  if (data.notes !== undefined) update.notes = data.notes ?? null;
+  if (data.visitType !== undefined) update.visitType = data.visitType;
+  if (data.status !== undefined) update.status = data.status;
+  if (data.diagnosis !== undefined) update.diagnosis = data.diagnosis ?? null;
+  if (data.clinicalNotes !== undefined) update.clinicalNotes = data.clinicalNotes ?? null;
+
+  if (Object.keys(update).length > 0) {
+    await db.update(patientsTable)
+      .set(update)
+      .where(and(eq(patientsTable.id, patientId), eq(patientsTable.clinicId, clinicId)));
+  }
+
+  const p = (await db.select().from(patientsTable).where(eq(patientsTable.id, patientId)).limit(1))[0];
+  if (!p) return res.status(404).json({ error: "Patient not found" });
   return res.json(serialize(p));
 });
 

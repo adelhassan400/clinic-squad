@@ -384,12 +384,22 @@ export interface CreateSubscriptionBody {
   paymentProof?: string;
 }
 
-export type PatientGender = (typeof PatientGender)[keyof typeof PatientGender];
+export type PatientVisitType =
+  (typeof PatientVisitType)[keyof typeof PatientVisitType];
 
-export const PatientGender = {
-  male: "male",
-  female: "female",
-  other: "other",
+export const PatientVisitType = {
+  New_Consultation: "New Consultation",
+  "Follow-up": "Follow-up",
+  "Re-exam": "Re-exam",
+  Emergency: "Emergency",
+} as const;
+
+export type PatientStatus = (typeof PatientStatus)[keyof typeof PatientStatus];
+
+export const PatientStatus = {
+  waiting: "waiting",
+  "in-progress": "in-progress",
+  completed: "completed",
 } as const;
 
 export interface Patient {
@@ -399,32 +409,69 @@ export interface Patient {
   name: string;
   phone: string;
   dateOfBirth?: string;
-  gender: PatientGender;
   bloodType?: string | null;
   allergies?: string | null;
   notes?: string | null;
-  visitType?: string | null;
+  visitType: PatientVisitType;
+  status: PatientStatus;
+  diagnosis?: string | null;
+  clinicalNotes?: string | null;
   createdAt: string;
 }
 
-export type CreatePatientBodyGender =
-  (typeof CreatePatientBodyGender)[keyof typeof CreatePatientBodyGender];
+export type CreatePatientBodyVisitType =
+  (typeof CreatePatientBodyVisitType)[keyof typeof CreatePatientBodyVisitType];
 
-export const CreatePatientBodyGender = {
-  male: "male",
-  female: "female",
-  other: "other",
+export const CreatePatientBodyVisitType = {
+  New_Consultation: "New Consultation",
+  "Follow-up": "Follow-up",
+  "Re-exam": "Re-exam",
+  Emergency: "Emergency",
 } as const;
 
 export interface CreatePatientBody {
   name: string;
   phone: string;
   dateOfBirth?: string;
-  gender: CreatePatientBodyGender;
   bloodType?: string | null;
   allergies?: string | null;
   notes?: string | null;
-  visitType?: string | null;
+  visitType: CreatePatientBodyVisitType;
+}
+
+export type UpdatePatientBodyVisitType =
+  (typeof UpdatePatientBodyVisitType)[keyof typeof UpdatePatientBodyVisitType];
+
+export const UpdatePatientBodyVisitType = {
+  New_Consultation: "New Consultation",
+  "Follow-up": "Follow-up",
+  "Re-exam": "Re-exam",
+  Emergency: "Emergency",
+} as const;
+
+export type UpdatePatientBodyStatus =
+  (typeof UpdatePatientBodyStatus)[keyof typeof UpdatePatientBodyStatus];
+
+export const UpdatePatientBodyStatus = {
+  waiting: "waiting",
+  "in-progress": "in-progress",
+  completed: "completed",
+} as const;
+
+/**
+ * Partial update — any subset of mutable patient fields.
+ */
+export interface UpdatePatientBody {
+  name?: string;
+  phone?: string;
+  dateOfBirth?: string | null;
+  bloodType?: string | null;
+  allergies?: string | null;
+  notes?: string | null;
+  visitType?: UpdatePatientBodyVisitType;
+  status?: UpdatePatientBodyStatus;
+  diagnosis?: string | null;
+  clinicalNotes?: string | null;
 }
 
 export interface PatientList {

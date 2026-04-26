@@ -31,8 +31,8 @@ export const APPOINTMENT_VISIT_TYPES: VisitType[] = [
 export const PATIENT_VISIT_TYPES: VisitType[] = [
   "New Consultation",
   "Follow-up",
+  "Re-exam",
   "Emergency",
-  "Session",
 ];
 
 // Backwards-compat alias used by the appointments form & pricing UI.

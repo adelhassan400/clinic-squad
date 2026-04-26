@@ -61,6 +61,7 @@ import type {
   Subscription,
   TeamOverview,
   UpdateAppointmentBody,
+  UpdatePatientBody,
   UpdateProfileBody,
   User,
   VerifyEmailBody,
@@ -1711,6 +1712,94 @@ export const useUpdatePatient = <
   TContext
 > => {
   return useMutation(getUpdatePatientMutationOptions(options));
+};
+
+/**
+ * @summary Partial update of a patient (status, diagnosis, autosave fields, etc.)
+ */
+export const getPatchPatientUrl = (clinicId: string, patientId: string) => {
+  return `/api/clinics/${clinicId}/patients/${patientId}`;
+};
+
+export const patchPatient = async (
+  clinicId: string,
+  patientId: string,
+  updatePatientBody: UpdatePatientBody,
+  options?: RequestInit,
+): Promise<Patient> => {
+  return customFetch<Patient>(getPatchPatientUrl(clinicId, patientId), {
+    ...options,
+    method: "PATCH",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(updatePatientBody),
+  });
+};
+
+export const getPatchPatientMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof patchPatient>>,
+    TError,
+    { clinicId: string; patientId: string; data: BodyType<UpdatePatientBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof patchPatient>>,
+  TError,
+  { clinicId: string; patientId: string; data: BodyType<UpdatePatientBody> },
+  TContext
+> => {
+  const mutationKey = ["patchPatient"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof patchPatient>>,
+    { clinicId: string; patientId: string; data: BodyType<UpdatePatientBody> }
+  > = (props) => {
+    const { clinicId, patientId, data } = props ?? {};
+
+    return patchPatient(clinicId, patientId, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type PatchPatientMutationResult = NonNullable<
+  Awaited<ReturnType<typeof patchPatient>>
+>;
+export type PatchPatientMutationBody = BodyType<UpdatePatientBody>;
+export type PatchPatientMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Partial update of a patient (status, diagnosis, autosave fields, etc.)
+ */
+export const usePatchPatient = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof patchPatient>>,
+    TError,
+    { clinicId: string; patientId: string; data: BodyType<UpdatePatientBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof patchPatient>>,
+  TError,
+  { clinicId: string; patientId: string; data: BodyType<UpdatePatientBody> },
+  TContext
+> => {
+  return useMutation(getPatchPatientMutationOptions(options));
 };
 
 /**

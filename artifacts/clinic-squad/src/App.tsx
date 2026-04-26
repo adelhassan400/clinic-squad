@@ -18,6 +18,8 @@ import PendingActivationPage from "@/pages/pending-activation";
 import DashboardPage from "@/pages/dashboard";
 import PatientsPage from "@/pages/patients";
 import PatientDetailPage from "@/pages/patient-detail";
+import WaitingListPage from "@/pages/waiting-list";
+import CheckoutPage from "@/pages/checkout";
 import AppointmentsPage from "@/pages/appointments";
 import FinancesPage from "@/pages/finances";
 import SubscriptionPage from "@/pages/subscription";
@@ -53,6 +55,8 @@ function Router() {
       <Route path="/dashboard" component={DashboardPage} />
       <Route path="/patients" component={PatientsPage} />
       <Route path="/patients/:id" component={PatientDetailPage} />
+      <Route path="/waiting-list" component={WaitingListPage} />
+      <Route path="/checkout" component={CheckoutPage} />
       <Route path="/appointments" component={AppointmentsPage} />
       <Route path="/finances" component={FinancesPage} />
       <Route path="/subscription/expired" component={SubscriptionExpiredPage} />

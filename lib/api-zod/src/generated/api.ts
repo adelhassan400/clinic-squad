@@ -378,11 +378,18 @@ export const ListPatientsResponse = zod.object({
       name: zod.string(),
       phone: zod.string(),
       dateOfBirth: zod.coerce.date().optional(),
-      gender: zod.enum(["male", "female", "other"]),
       bloodType: zod.string().nullish(),
       allergies: zod.string().nullish(),
       notes: zod.string().nullish(),
-      visitType: zod.string().nullish(),
+      visitType: zod.enum([
+        "New Consultation",
+        "Follow-up",
+        "Re-exam",
+        "Emergency",
+      ]),
+      status: zod.enum(["waiting", "in-progress", "completed"]),
+      diagnosis: zod.string().nullish(),
+      clinicalNotes: zod.string().nullish(),
       createdAt: zod.coerce.date(),
     }),
   ),
@@ -402,11 +409,15 @@ export const CreatePatientBody = zod.object({
   name: zod.string(),
   phone: zod.string(),
   dateOfBirth: zod.coerce.date().optional(),
-  gender: zod.enum(["male", "female", "other"]),
   bloodType: zod.string().nullish(),
   allergies: zod.string().nullish(),
   notes: zod.string().nullish(),
-  visitType: zod.string().nullish(),
+  visitType: zod.enum([
+    "New Consultation",
+    "Follow-up",
+    "Re-exam",
+    "Emergency",
+  ]),
 });
 
 /**
@@ -424,11 +435,18 @@ export const GetPatientResponse = zod.object({
   name: zod.string(),
   phone: zod.string(),
   dateOfBirth: zod.coerce.date().optional(),
-  gender: zod.enum(["male", "female", "other"]),
   bloodType: zod.string().nullish(),
   allergies: zod.string().nullish(),
   notes: zod.string().nullish(),
-  visitType: zod.string().nullish(),
+  visitType: zod.enum([
+    "New Consultation",
+    "Follow-up",
+    "Re-exam",
+    "Emergency",
+  ]),
+  status: zod.enum(["waiting", "in-progress", "completed"]),
+  diagnosis: zod.string().nullish(),
+  clinicalNotes: zod.string().nullish(),
   createdAt: zod.coerce.date(),
 });
 
@@ -444,11 +462,15 @@ export const UpdatePatientBody = zod.object({
   name: zod.string(),
   phone: zod.string(),
   dateOfBirth: zod.coerce.date().optional(),
-  gender: zod.enum(["male", "female", "other"]),
   bloodType: zod.string().nullish(),
   allergies: zod.string().nullish(),
   notes: zod.string().nullish(),
-  visitType: zod.string().nullish(),
+  visitType: zod.enum([
+    "New Consultation",
+    "Follow-up",
+    "Re-exam",
+    "Emergency",
+  ]),
 });
 
 export const UpdatePatientResponse = zod.object({
@@ -458,11 +480,65 @@ export const UpdatePatientResponse = zod.object({
   name: zod.string(),
   phone: zod.string(),
   dateOfBirth: zod.coerce.date().optional(),
-  gender: zod.enum(["male", "female", "other"]),
   bloodType: zod.string().nullish(),
   allergies: zod.string().nullish(),
   notes: zod.string().nullish(),
-  visitType: zod.string().nullish(),
+  visitType: zod.enum([
+    "New Consultation",
+    "Follow-up",
+    "Re-exam",
+    "Emergency",
+  ]),
+  status: zod.enum(["waiting", "in-progress", "completed"]),
+  diagnosis: zod.string().nullish(),
+  clinicalNotes: zod.string().nullish(),
+  createdAt: zod.coerce.date(),
+});
+
+/**
+ * @summary Partial update of a patient (status, diagnosis, autosave fields, etc.)
+ */
+export const PatchPatientParams = zod.object({
+  clinicId: zod.coerce.string(),
+  patientId: zod.coerce.string(),
+});
+
+export const PatchPatientBody = zod
+  .object({
+    name: zod.string().optional(),
+    phone: zod.string().optional(),
+    dateOfBirth: zod.coerce.date().nullish(),
+    bloodType: zod.string().nullish(),
+    allergies: zod.string().nullish(),
+    notes: zod.string().nullish(),
+    visitType: zod
+      .enum(["New Consultation", "Follow-up", "Re-exam", "Emergency"])
+      .optional(),
+    status: zod.enum(["waiting", "in-progress", "completed"]).optional(),
+    diagnosis: zod.string().nullish(),
+    clinicalNotes: zod.string().nullish(),
+  })
+  .describe("Partial update — any subset of mutable patient fields.");
+
+export const PatchPatientResponse = zod.object({
+  id: zod.string(),
+  clinicId: zod.string(),
+  code: zod.string().nullish(),
+  name: zod.string(),
+  phone: zod.string(),
+  dateOfBirth: zod.coerce.date().optional(),
+  bloodType: zod.string().nullish(),
+  allergies: zod.string().nullish(),
+  notes: zod.string().nullish(),
+  visitType: zod.enum([
+    "New Consultation",
+    "Follow-up",
+    "Re-exam",
+    "Emergency",
+  ]),
+  status: zod.enum(["waiting", "in-progress", "completed"]),
+  diagnosis: zod.string().nullish(),
+  clinicalNotes: zod.string().nullish(),
   createdAt: zod.coerce.date(),
 });
 
