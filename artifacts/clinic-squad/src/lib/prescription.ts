@@ -11,21 +11,38 @@ function escapeHtml(value: string): string {
 
 function buildPrintHtml(p: Prescription, clinicName: string): string {
   const itemRows = p.items
-    .map(
-      (it, i) => `
-        <tr>
-          <td class="num">${i + 1}</td>
-          <td>
-            <div class="drug">${escapeHtml(it.drug)}</div>
-            ${it.notes ? `<div class="item-notes">${escapeHtml(it.notes)}</div>` : ""}
-          </td>
-          <td>${escapeHtml(it.dosage || "—")}</td>
-          <td>${escapeHtml(it.frequency || "—")}</td>
-          <td>${escapeHtml(it.duration || "—")}</td>
-        </tr>
-      `,
-    )
+    .map((it, i) => {
+      const dose = (it.dosage || "").trim();
+      const freq = (it.frequency || "").trim();
+      const dur = (it.duration || "").trim();
+      const chips: string[] = [];
+      if (dose) chips.push(`<span class="chip">${escapeHtml(dose)}</span>`);
+      if (freq) chips.push(`<span class="chip">${escapeHtml(freq)}</span>`);
+      if (dur) chips.push(`<span class="chip">${escapeHtml(dur)}</span>`);
+      return `
+        <li class="med">
+          <span class="med-num">${i + 1}</span>
+          <div class="med-body">
+            <div class="med-drug">${escapeHtml(it.drug)}</div>
+            ${chips.length ? `<div class="chips">${chips.join("")}</div>` : ""}
+            ${it.notes ? `<div class="med-notes">↳ ${escapeHtml(it.notes)}</div>` : ""}
+          </div>
+        </li>
+      `;
+    })
     .join("");
+
+  const formattedDate = (() => {
+    try {
+      return new Date(p.date + "T00:00:00").toLocaleDateString(undefined, {
+        year: "numeric",
+        month: "long",
+        day: "numeric",
+      });
+    } catch {
+      return p.date;
+    }
+  })();
 
   return `<!doctype html>
 <html lang="en">
@@ -36,111 +53,235 @@ function buildPrintHtml(p: Prescription, clinicName: string): string {
   * { box-sizing: border-box; }
   body {
     font-family: -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-    color: #111;
+    color: #18181b;
     margin: 0;
     padding: 32px;
-    background: #fff;
+    background: #f4f4f5;
   }
   .sheet {
-    max-width: 720px;
+    max-width: 760px;
     margin: 0 auto;
+    background: #fff;
+    border-radius: 10px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.08);
+    overflow: hidden;
   }
+  .accent-bar {
+    height: 6px;
+    background: linear-gradient(90deg, #0d9488 0%, rgba(13,148,136,0.7) 60%, rgba(13,148,136,0.3) 100%);
+  }
+  .padded { padding: 32px 40px; }
   header {
     display: flex;
     align-items: center;
-    justify-content: space-between;
-    border-bottom: 2px solid #0d9488;
-    padding-bottom: 16px;
+    gap: 14px;
+    border-bottom: 1px solid #e4e4e7;
+    padding-bottom: 18px;
     margin-bottom: 20px;
+    position: relative;
   }
-  .clinic { font-size: 22px; font-weight: 700; color: #0d9488; }
-  .title { font-size: 14px; text-transform: uppercase; letter-spacing: .14em; color: #666; }
+  .rx-mark {
+    width: 56px;
+    height: 56px;
+    border-radius: 10px;
+    background: rgba(13,148,136,0.08);
+    border: 1px solid rgba(13,148,136,0.3);
+    color: #0d9488;
+    font-family: "Times New Roman", Times, Georgia, serif;
+    font-size: 38px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 1;
+  }
+  .clinic-name {
+    font-size: 22px;
+    font-weight: 700;
+    color: #18181b;
+    letter-spacing: -0.01em;
+  }
+  .clinic-tag {
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.22em;
+    color: #71717a;
+    margin-top: 2px;
+  }
+  .rx-stamp {
+    position: absolute;
+    top: 0;
+    right: 0;
+    font-family: ui-monospace, Menlo, monospace;
+    font-size: 10px;
+    color: #a1a1aa;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+  }
   .meta {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 16px 32px;
-    margin-bottom: 18px;
-    font-size: 13px;
-  }
-  .meta .label {
-    text-transform: uppercase;
-    font-size: 10px;
-    letter-spacing: .1em;
-    color: #888;
-    margin-bottom: 2px;
-  }
-  .meta .value { font-weight: 600; }
-  .dx {
-    border: 1px solid #e5e7eb;
-    border-radius: 8px;
-    padding: 10px 14px;
+    gap: 14px 32px;
     margin-bottom: 16px;
     font-size: 13px;
   }
-  .dx-label {
+  .label {
     text-transform: uppercase;
-    font-size: 10px;
-    letter-spacing: .1em;
-    color: #888;
-    margin-bottom: 4px;
+    font-size: 9px;
+    letter-spacing: 0.12em;
+    color: #71717a;
+    margin-bottom: 3px;
   }
-  table {
-    width: 100%;
-    border-collapse: collapse;
-    font-size: 13px;
-    margin-bottom: 16px;
-  }
-  th, td {
-    text-align: left;
-    padding: 10px 12px;
-    border-bottom: 1px solid #e5e7eb;
-    vertical-align: top;
-  }
-  thead th {
-    background: #f8fafc;
+  .value { font-weight: 600; color: #18181b; }
+  .small { color: #71717a; font-size: 11px; }
+  .pcode {
+    display: inline-block;
+    font-family: ui-monospace, Menlo, monospace;
     font-size: 11px;
-    text-transform: uppercase;
-    letter-spacing: .08em;
-    color: #666;
-    border-bottom: 2px solid #0d9488;
+    padding: 1px 6px;
+    border-radius: 4px;
+    background: rgba(13,148,136,0.1);
+    color: #0d9488;
+    border: 1px solid rgba(13,148,136,0.25);
+    margin-left: 6px;
+    vertical-align: middle;
   }
-  td.num { width: 30px; color: #888; }
-  .drug { font-weight: 600; }
-  .item-notes { color: #666; font-size: 12px; margin-top: 2px; }
+  .meta-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 24px;
+    border-top: 1px solid #e4e4e7;
+    border-bottom: 1px solid #e4e4e7;
+    padding: 10px 0;
+    margin-bottom: 18px;
+    font-size: 12px;
+  }
+  .meta-row span.k { color: #71717a; text-transform: uppercase; font-size: 9px; letter-spacing: 0.12em; margin-right: 6px; }
+  .meta-row span.v { font-weight: 600; }
+  .meds-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 14px;
+  }
+  .meds-header .rx-glyph {
+    color: #0d9488;
+    font-family: "Times New Roman", Times, Georgia, serif;
+    font-size: 22px;
+    font-weight: 700;
+    line-height: 1;
+  }
+  .meds-header .meds-title {
+    text-transform: uppercase;
+    font-size: 10px;
+    letter-spacing: 0.18em;
+    color: #71717a;
+    font-weight: 600;
+  }
+  .meds-header .rule {
+    flex: 1;
+    height: 1px;
+    background: #e4e4e7;
+  }
+  .meds-header .count {
+    font-family: ui-monospace, Menlo, monospace;
+    font-size: 11px;
+    color: #a1a1aa;
+  }
+  ol.meds {
+    list-style: none;
+    padding: 0;
+    margin: 0 0 22px;
+  }
+  li.med {
+    display: flex;
+    gap: 12px;
+    padding: 10px 0;
+    border-bottom: 1px dashed #e4e4e7;
+  }
+  li.med:last-child { border-bottom: 0; }
+  .med-num {
+    flex-shrink: 0;
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    background: #0d9488;
+    color: #fff;
+    font-size: 12px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .med-body { flex: 1; min-width: 0; }
+  .med-drug { font-weight: 700; font-size: 14px; color: #18181b; }
+  .chips { margin-top: 6px; display: flex; flex-wrap: wrap; gap: 6px; }
+  .chip {
+    display: inline-block;
+    font-size: 11px;
+    padding: 2px 8px;
+    border-radius: 999px;
+    background: #f4f4f5;
+    color: #3f3f46;
+    border: 1px solid #e4e4e7;
+  }
+  .med-notes {
+    margin-top: 6px;
+    color: #52525b;
+    font-style: italic;
+    font-size: 12px;
+  }
   .notes {
-    border: 1px solid #e5e7eb;
+    border: 1px solid #fde68a;
+    background: #fffbeb;
     border-radius: 8px;
     padding: 12px 14px;
-    font-size: 13px;
-    margin-bottom: 24px;
-    background: #fffbea;
+    font-size: 12px;
+    margin-bottom: 28px;
   }
   .notes-label {
     text-transform: uppercase;
     font-size: 10px;
-    letter-spacing: .1em;
+    letter-spacing: 0.12em;
     color: #b45309;
     margin-bottom: 4px;
+    font-weight: 700;
   }
   footer {
     display: flex;
     justify-content: space-between;
     align-items: flex-end;
-    margin-top: 40px;
-    font-size: 12px;
+    margin-top: 36px;
+    padding-top: 14px;
+    border-top: 1px solid #e4e4e7;
+    font-size: 11px;
+    color: #71717a;
   }
-  .signature {
-    text-align: right;
+  .signature { text-align: right; }
+  .signature .sig-name {
+    font-family: "Brush Script MT", "Lucida Handwriting", cursive;
+    font-style: italic;
+    font-size: 18px;
+    color: #18181b;
+    padding: 0 14px 6px;
   }
   .signature .line {
-    border-top: 1px solid #333;
+    border-top: 1px solid #18181b;
     width: 220px;
-    margin-bottom: 4px;
+    margin: 0 0 4px auto;
   }
-  .signature .name { font-weight: 700; }
-  .small { color: #666; font-size: 11px; }
+  .signature .name { font-weight: 700; color: #18181b; }
+  .ribbon {
+    text-align: center;
+    margin-top: 20px;
+    font-size: 9px;
+    text-transform: uppercase;
+    letter-spacing: 0.3em;
+    color: #d4d4d8;
+  }
   @media print {
-    body { padding: 0; }
+    body { padding: 0; background: #fff; }
+    .sheet { box-shadow: none; border-radius: 0; }
     .no-print { display: none !important; }
   }
   .toolbar {
@@ -151,88 +292,80 @@ function buildPrintHtml(p: Prescription, clinicName: string): string {
     background: #0d9488;
     color: #fff;
     border: 0;
-    padding: 8px 16px;
+    padding: 9px 18px;
     border-radius: 6px;
     font-size: 13px;
     cursor: pointer;
     margin: 0 4px;
+    font-weight: 600;
   }
+  .toolbar button.secondary { background: #64748b; }
 </style>
 </head>
 <body>
   <div class="toolbar no-print">
     <button onclick="window.print()">Print / Save as PDF</button>
-    <button onclick="window.close()" style="background:#64748b">Close</button>
+    <button class="secondary" onclick="window.close()">Close</button>
   </div>
   <div class="sheet">
-    <header>
-      <div>
-        <div class="clinic">${escapeHtml(clinicName || "Clinic")}</div>
-        <div class="small">E-Prescription</div>
-      </div>
-      <div class="title">Rx</div>
-    </header>
+    <div class="accent-bar"></div>
+    <div class="padded">
+      <header>
+        <div class="rx-mark">℞</div>
+        <div>
+          <div class="clinic-name">${escapeHtml(clinicName || "Clinic")}</div>
+          <div class="clinic-tag">Medical Prescription</div>
+        </div>
+        <div class="rx-stamp">Rx · ${escapeHtml(p.id.slice(0, 8))}</div>
+      </header>
 
-    <section class="meta">
-      <div>
-        <div class="label">Patient</div>
-        <div class="value">${escapeHtml(p.patientName)}${p.patientCode ? ` <span class="small" style="color:#0d9488;font-weight:600;">· ${escapeHtml(p.patientCode)}</span>` : ""}</div>
-        <div class="small">${escapeHtml(p.patientPhone || "")}</div>
-      </div>
-      <div>
-        <div class="label">Date</div>
-        <div class="value">${escapeHtml(p.date)}</div>
-      </div>
-      <div>
-        <div class="label">Doctor</div>
-        <div class="value">Dr. ${escapeHtml(p.doctorName)}</div>
-        ${p.doctorSpecialty ? `<div class="small">${escapeHtml(p.doctorSpecialty)}</div>` : ""}
-      </div>
-      <div>
-        <div class="label">Prescription ID</div>
-        <div class="value small">${escapeHtml(p.id.slice(0, 8))}</div>
-      </div>
-    </section>
+      <section class="meta">
+        <div>
+          <div class="label">Prescribed by</div>
+          <div class="value">Dr. ${escapeHtml(p.doctorName)}</div>
+          ${p.doctorSpecialty ? `<div class="small">${escapeHtml(p.doctorSpecialty)}</div>` : ""}
+        </div>
+        <div>
+          <div class="label">Patient</div>
+          <div class="value">${escapeHtml(p.patientName)}${p.patientCode ? `<span class="pcode">${escapeHtml(p.patientCode)}</span>` : ""}</div>
+          <div class="small">${escapeHtml(p.patientPhone || "")}</div>
+        </div>
+      </section>
 
-    ${
-      p.diagnosis
-        ? `<div class="dx">
-            <div class="dx-label">Diagnosis</div>
-            <div>${escapeHtml(p.diagnosis)}</div>
-          </div>`
-        : ""
-    }
-
-    <table>
-      <thead>
-        <tr>
-          <th></th>
-          <th>Medication</th>
-          <th>Dosage</th>
-          <th>Frequency</th>
-          <th>Duration</th>
-        </tr>
-      </thead>
-      <tbody>${itemRows}</tbody>
-    </table>
-
-    ${
-      p.notes
-        ? `<div class="notes">
-            <div class="notes-label">Notes for the patient</div>
-            <div>${escapeHtml(p.notes)}</div>
-          </div>`
-        : ""
-    }
-
-    <footer>
-      <div class="small">Issued ${new Date(p.createdAt).toLocaleString()}</div>
-      <div class="signature">
-        <div class="line"></div>
-        <div class="name">Dr. ${escapeHtml(p.doctorName)}</div>
-        <div class="small">${p.doctorSpecialty ? escapeHtml(p.doctorSpecialty) : "Signature"}</div>
+      <div class="meta-row">
+        <div><span class="k">Date</span><span class="v">${escapeHtml(formattedDate)}</span></div>
+        ${p.diagnosis ? `<div><span class="k">Dx</span><span class="v">${escapeHtml(p.diagnosis)}</span></div>` : ""}
       </div>
-    </footer>
+
+      <div class="meds-header">
+        <span class="rx-glyph">℞</span>
+        <span class="meds-title">Medications</span>
+        <span class="rule"></span>
+        <span class="count">${p.items.length}</span>
+      </div>
+
+      <ol class="meds">${itemRows}</ol>
+
+      ${
+        p.notes
+          ? `<div class="notes">
+              <div class="notes-label">Notes for the patient</div>
+              <div>${escapeHtml(p.notes)}</div>
+            </div>`
+          : ""
+      }
+
+      <footer>
+        <div>Issued ${new Date(p.createdAt).toLocaleString()}</div>
+        <div class="signature">
+          <div class="sig-name">Dr. ${escapeHtml(p.doctorName)}</div>
+          <div class="line"></div>
+          <div class="small">${p.doctorSpecialty ? escapeHtml(p.doctorSpecialty) : "Signature"}</div>
+        </div>
+      </footer>
+
+      <div class="ribbon">Issued via ClinicSquad</div>
+    </div>
   </div>
   <script>
     window.addEventListener("load", function () {

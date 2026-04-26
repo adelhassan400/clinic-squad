@@ -44,6 +44,9 @@ import {
   FileText,
   Stethoscope,
   User as UserIcon,
+  Clock,
+  CalendarDays,
+  ClipboardList,
 } from "lucide-react";
 import { formatDate } from "@/lib/utils";
 import { printPrescription, sendPrescriptionWhatsApp } from "@/lib/prescription";
@@ -57,6 +60,9 @@ interface ItemForm {
 }
 
 const blankItem = (): ItemForm => ({ drug: "", dosage: "", frequency: "", duration: "", notes: "" });
+
+const FREQUENCY_PRESETS = ["Once daily", "Twice daily", "3× daily", "Every 8h", "Before meals", "After meals"];
+const DURATION_PRESETS = ["3 days", "5 days", "7 days", "10 days", "14 days", "1 month"];
 
 interface PrescriptionsContentProps {
   initialPatientId?: string;
@@ -268,75 +274,139 @@ export function PrescriptionsContent({ initialPatientId, embedded }: Prescriptio
           {/* Items */}
           <div className="space-y-3">
             <div className="flex items-center justify-between">
-              <Label>Medications *</Label>
+              <Label className="flex items-center gap-2">
+                <Pill className="w-4 h-4 text-primary" />
+                Medications <span className="text-destructive">*</span>
+                <span className="text-xs font-normal text-muted-foreground">({items.filter(i => i.drug.trim()).length})</span>
+              </Label>
               <Button
                 type="button"
                 size="sm"
                 variant="outline"
                 onClick={() => setItems((prev) => [...prev, blankItem()])}
+                data-testid="button-add-medication"
               >
                 <Plus className="w-3.5 h-3.5 mr-1.5" />
                 Add medication
               </Button>
             </div>
             {items.map((item, idx) => (
-              <div key={idx} className="rounded-lg border border-border p-4 space-y-3 bg-background/40">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-medium text-muted-foreground">#{idx + 1}</span>
+              <div
+                key={idx}
+                className="rounded-lg border border-border bg-background/40 overflow-hidden transition-colors hover:border-primary/30 focus-within:border-primary/50"
+              >
+                {/* Card header */}
+                <div className="flex items-center justify-between px-3 py-2 bg-muted/40 border-b border-border">
+                  <span className="inline-flex items-center gap-2 text-xs font-semibold">
+                    <span className="w-5 h-5 rounded-full bg-primary text-primary-foreground text-[10px] font-bold flex items-center justify-center">
+                      {idx + 1}
+                    </span>
+                    <span className="text-muted-foreground">Medication</span>
+                    {item.drug.trim() && (
+                      <span className="text-foreground font-normal truncate max-w-[200px]">· {item.drug.trim()}</span>
+                    )}
+                  </span>
                   {items.length > 1 && (
                     <Button
                       type="button"
                       size="icon"
                       variant="ghost"
-                      className="h-6 w-6 text-destructive"
+                      className="h-7 w-7 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
                       onClick={() => removeItem(idx)}
+                      title="Remove medication"
+                      data-testid={`remove-item-${idx}`}
                     >
                       <Trash2 className="w-3.5 h-3.5" />
                     </Button>
                   )}
                 </div>
-                <div className="grid sm:grid-cols-2 gap-3">
+
+                <div className="p-3 space-y-3">
                   <div>
-                    <Label className="text-xs">Drug name *</Label>
+                    <Label className="text-xs flex items-center gap-1.5">
+                      <Pill className="w-3 h-3 text-muted-foreground" /> Drug name *
+                    </Label>
                     <Input
                       value={item.drug}
                       onChange={(e) => updateItem(idx, { drug: e.target.value })}
                       placeholder="e.g. Amoxicillin 500mg"
+                      className="mt-1 font-medium"
                       data-testid={`item-drug-${idx}`}
                     />
                   </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <div>
+                      <Label className="text-xs flex items-center gap-1.5">
+                        <ClipboardList className="w-3 h-3 text-muted-foreground" /> Dosage
+                      </Label>
+                      <Input
+                        value={item.dosage}
+                        onChange={(e) => updateItem(idx, { dosage: e.target.value })}
+                        placeholder="1 capsule"
+                        className="mt-1"
+                        data-testid={`item-dosage-${idx}`}
+                      />
+                    </div>
+                    <div>
+                      <Label className="text-xs flex items-center gap-1.5">
+                        <Clock className="w-3 h-3 text-muted-foreground" /> Frequency
+                      </Label>
+                      <Input
+                        value={item.frequency}
+                        onChange={(e) => updateItem(idx, { frequency: e.target.value })}
+                        placeholder="3× daily"
+                        className="mt-1"
+                        data-testid={`item-frequency-${idx}`}
+                      />
+                      <div className="flex flex-wrap gap-1 mt-1.5">
+                        {FREQUENCY_PRESETS.map((preset) => (
+                          <button
+                            key={preset}
+                            type="button"
+                            onClick={() => updateItem(idx, { frequency: preset })}
+                            className="text-[10px] px-1.5 py-0.5 rounded border border-border bg-background hover:bg-primary/10 hover:border-primary/40 hover:text-primary text-muted-foreground transition-colors"
+                          >
+                            {preset}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                    <div>
+                      <Label className="text-xs flex items-center gap-1.5">
+                        <CalendarDays className="w-3 h-3 text-muted-foreground" /> Duration
+                      </Label>
+                      <Input
+                        value={item.duration}
+                        onChange={(e) => updateItem(idx, { duration: e.target.value })}
+                        placeholder="7 days"
+                        className="mt-1"
+                        data-testid={`item-duration-${idx}`}
+                      />
+                      <div className="flex flex-wrap gap-1 mt-1.5">
+                        {DURATION_PRESETS.map((preset) => (
+                          <button
+                            key={preset}
+                            type="button"
+                            onClick={() => updateItem(idx, { duration: preset })}
+                            className="text-[10px] px-1.5 py-0.5 rounded border border-border bg-background hover:bg-primary/10 hover:border-primary/40 hover:text-primary text-muted-foreground transition-colors"
+                          >
+                            {preset}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+
                   <div>
-                    <Label className="text-xs">Dosage</Label>
+                    <Label className="text-xs">Notes (optional)</Label>
                     <Input
-                      value={item.dosage}
-                      onChange={(e) => updateItem(idx, { dosage: e.target.value })}
-                      placeholder="e.g. 1 capsule"
+                      value={item.notes}
+                      onChange={(e) => updateItem(idx, { notes: e.target.value })}
+                      placeholder="e.g. Take after meals with water"
+                      className="mt-1"
                     />
                   </div>
-                  <div>
-                    <Label className="text-xs">Frequency</Label>
-                    <Input
-                      value={item.frequency}
-                      onChange={(e) => updateItem(idx, { frequency: e.target.value })}
-                      placeholder="e.g. 3 times daily"
-                    />
-                  </div>
-                  <div>
-                    <Label className="text-xs">Duration</Label>
-                    <Input
-                      value={item.duration}
-                      onChange={(e) => updateItem(idx, { duration: e.target.value })}
-                      placeholder="e.g. 7 days"
-                    />
-                  </div>
-                </div>
-                <div>
-                  <Label className="text-xs">Notes (optional)</Label>
-                  <Input
-                    value={item.notes}
-                    onChange={(e) => updateItem(idx, { notes: e.target.value })}
-                    placeholder="e.g. Take after meals"
-                  />
                 </div>
               </div>
             ))}
@@ -560,87 +630,156 @@ interface LivePreviewProps {
 
 function LivePreview({ clinicName, doctorName, doctorSpecialty, patient, date, diagnosis, notes, items }: LivePreviewProps) {
   const filledItems = items.filter((i) => i.drug.trim());
+  const formattedDate = date
+    ? new Date(date + "T00:00:00").toLocaleDateString(undefined, {
+        year: "numeric",
+        month: "short",
+        day: "numeric",
+      })
+    : "—";
+
   return (
-    <div className="lg:sticky lg:top-4 self-start">
-      <div className="rounded-xl border-2 border-primary/20 bg-card shadow-sm overflow-hidden">
-        <div className="bg-primary/5 px-4 py-2 border-b border-primary/20 flex items-center gap-2">
-          <Eye className="w-3.5 h-3.5 text-primary" />
-          <span className="text-xs font-semibold uppercase tracking-wider text-primary">Live Preview</span>
+    <div className="lg:sticky lg:top-4 self-start space-y-2">
+      {/* Header strip outside the paper */}
+      <div className="flex items-center gap-2 text-xs">
+        <Eye className="w-3.5 h-3.5 text-primary" />
+        <span className="font-semibold uppercase tracking-wider text-primary">Live preview</span>
+        <span className="ms-auto text-muted-foreground hidden sm:inline">A4 · what your patient receives</span>
+      </div>
+
+      {/* Paper sheet — always white-ish so it reads as a real Rx, even in dark mode */}
+      <div className="relative rounded-lg shadow-xl ring-1 ring-zinc-200 bg-white text-zinc-900 overflow-hidden">
+        {/* Top accent bar */}
+        <div className="h-1.5 bg-gradient-to-r from-primary via-primary/70 to-primary/30" />
+
+        {/* Draft watermark stamp (top-right) */}
+        <div className="absolute top-3 right-3 text-[9px] font-mono text-zinc-400 tracking-[0.2em] uppercase">
+          Rx · Draft
         </div>
 
-        <div className="p-5 space-y-4">
-          {/* Header */}
-          <div className="flex items-start justify-between border-b-2 border-primary/40 pb-3">
-            <div>
-              <p className="text-base font-bold text-primary leading-tight">{clinicName || "Clinic"}</p>
-              <p className="text-[10px] uppercase tracking-wider text-muted-foreground mt-0.5">E-Prescription</p>
+        <div className="px-6 pt-5 pb-6 space-y-5">
+          {/* Header: ℞ mark + clinic */}
+          <div className="flex items-center gap-3 border-b border-zinc-200 pb-4">
+            <div
+              aria-hidden
+              className="w-12 h-12 rounded-lg bg-primary/10 border border-primary/30 flex items-center justify-center text-primary text-3xl font-serif font-bold leading-none select-none"
+            >
+              ℞
             </div>
-            <span className="text-xs font-bold tracking-widest text-muted-foreground">Rx</span>
+            <div className="min-w-0">
+              <p className="text-lg font-bold text-zinc-900 leading-tight tracking-tight truncate">
+                {clinicName || "Clinic name"}
+              </p>
+              <p className="text-[10px] uppercase tracking-[0.2em] text-zinc-500 mt-0.5">
+                Medical Prescription
+              </p>
+            </div>
           </div>
 
-          {/* Doctor + Patient */}
-          <div className="grid grid-cols-2 gap-3 text-xs">
+          {/* Doctor + Patient blocks */}
+          <div className="grid grid-cols-2 gap-4 text-xs">
             <div className="space-y-0.5">
-              <p className="text-[9px] uppercase tracking-wider text-muted-foreground flex items-center gap-1">
-                <Stethoscope className="w-2.5 h-2.5" /> Doctor
+              <p className="text-[9px] uppercase tracking-wider text-zinc-500 flex items-center gap-1">
+                <Stethoscope className="w-2.5 h-2.5" /> Prescribed by
               </p>
-              <p className="font-semibold text-sm">Dr. {doctorName || "—"}</p>
-              <p className="text-[11px] text-muted-foreground italic">
-                {doctorSpecialty || <span className="text-amber-600 not-italic">Set specialty in Settings</span>}
+              <p className="font-bold text-sm text-zinc-900">Dr. {doctorName || "—"}</p>
+              <p className="text-[11px] text-zinc-500 italic">
+                {doctorSpecialty || (
+                  <span className="text-amber-700 not-italic">Set specialty in Settings</span>
+                )}
               </p>
             </div>
             <div className="space-y-0.5">
-              <p className="text-[9px] uppercase tracking-wider text-muted-foreground flex items-center gap-1">
+              <p className="text-[9px] uppercase tracking-wider text-zinc-500 flex items-center gap-1">
                 <UserIcon className="w-2.5 h-2.5" /> Patient
               </p>
-              <p className="font-semibold text-sm">{patient?.name || <span className="text-muted-foreground/60 font-normal">No patient selected</span>}</p>
+              <p className="font-bold text-sm text-zinc-900">
+                {patient?.name || <span className="text-zinc-400 font-normal">No patient selected</span>}
+              </p>
               {patient && (
-                <div className="flex items-center gap-1.5">
+                <div className="flex items-center gap-1.5 flex-wrap">
                   {patient.code && (
                     <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-primary/10 text-primary border border-primary/20">
                       {patient.code}
                     </span>
                   )}
-                  <span className="text-[11px] text-muted-foreground">{patient.phone}</span>
+                  <span className="text-[11px] text-zinc-500">{patient.phone}</span>
                 </div>
               )}
             </div>
           </div>
 
-          {/* Date + Diagnosis */}
-          <div className="grid grid-cols-2 gap-3 text-xs border-t border-border pt-3">
-            <div>
-              <p className="text-[9px] uppercase tracking-wider text-muted-foreground">Date</p>
-              <p className="font-medium">{date || "—"}</p>
+          {/* Date + diagnosis row */}
+          <div className="flex flex-wrap items-center gap-x-5 gap-y-1 text-xs border-y border-zinc-200 py-2.5">
+            <div className="flex items-center gap-1.5">
+              <CalendarDays className="w-3 h-3 text-zinc-400" />
+              <span className="text-[9px] uppercase tracking-wider text-zinc-500">Date</span>
+              <span className="font-medium text-zinc-900">{formattedDate}</span>
             </div>
             {diagnosis && (
-              <div>
-                <p className="text-[9px] uppercase tracking-wider text-muted-foreground">Diagnosis</p>
-                <p className="font-medium">{diagnosis}</p>
+              <div className="flex items-center gap-1.5 flex-1 min-w-0">
+                <ClipboardList className="w-3 h-3 text-zinc-400 shrink-0" />
+                <span className="text-[9px] uppercase tracking-wider text-zinc-500 shrink-0">Dx</span>
+                <span className="font-medium text-zinc-900 truncate">{diagnosis}</span>
               </div>
             )}
           </div>
 
           {/* Medications */}
-          <div className="border-t border-border pt-3">
-            <p className="text-[9px] uppercase tracking-wider text-muted-foreground mb-2">
-              Medications ({filledItems.length})
-            </p>
+          <div>
+            <div className="flex items-center gap-2 mb-3">
+              <span className="text-primary font-serif text-base leading-none">℞</span>
+              <span className="text-[10px] uppercase tracking-[0.18em] text-zinc-500 font-semibold">
+                Medications
+              </span>
+              <span className="flex-1 h-px bg-zinc-200" />
+              <span className="text-[10px] text-zinc-400 font-mono">{filledItems.length}</span>
+            </div>
+
             {filledItems.length === 0 ? (
-              <p className="text-xs text-muted-foreground/60 italic py-3 text-center bg-muted/30 rounded">
+              <div className="rounded-md border border-dashed border-zinc-300 py-5 text-center text-xs text-zinc-400 italic">
                 Start typing a drug name to preview…
-              </p>
+              </div>
             ) : (
-              <ol className="space-y-1.5">
+              <ol className="space-y-2.5">
                 {filledItems.map((it, i) => {
-                  const detail = [it.dosage, it.frequency, it.duration].filter((s) => s.trim()).join(" · ");
+                  const dose = it.dosage.trim();
+                  const freq = it.frequency.trim();
+                  const dur = it.duration.trim();
+                  const itemNotes = it.notes.trim();
                   return (
-                    <li key={i} className="text-xs border-l-2 border-primary/40 ps-2.5 py-0.5">
-                      <p className="font-semibold">
-                        <span className="text-muted-foreground">{i + 1}.</span> {it.drug}
-                      </p>
-                      {detail && <p className="text-[11px] text-muted-foreground mt-0.5">{detail}</p>}
-                      {it.notes && <p className="text-[11px] text-muted-foreground italic mt-0.5">↳ {it.notes}</p>}
+                    <li key={i} className="flex gap-3">
+                      <span
+                        className="shrink-0 w-6 h-6 rounded-full bg-primary text-white text-[11px] font-bold flex items-center justify-center"
+                        aria-hidden
+                      >
+                        {i + 1}
+                      </span>
+                      <div className="flex-1 min-w-0">
+                        <p className="font-bold text-sm text-zinc-900 leading-tight">{it.drug}</p>
+                        {(dose || freq || dur) && (
+                          <div className="flex flex-wrap gap-1.5 mt-1.5">
+                            {dose && (
+                              <span className="inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded bg-zinc-100 text-zinc-700 border border-zinc-200">
+                                <Pill className="w-2.5 h-2.5" /> {dose}
+                              </span>
+                            )}
+                            {freq && (
+                              <span className="inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded bg-zinc-100 text-zinc-700 border border-zinc-200">
+                                <Clock className="w-2.5 h-2.5" /> {freq}
+                              </span>
+                            )}
+                            {dur && (
+                              <span className="inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded bg-zinc-100 text-zinc-700 border border-zinc-200">
+                                <CalendarDays className="w-2.5 h-2.5" /> {dur}
+                              </span>
+                            )}
+                          </div>
+                        )}
+                        {itemNotes && (
+                          <p className="text-[11px] text-zinc-600 italic mt-1.5">↳ {itemNotes}</p>
+                        )}
+                      </div>
                     </li>
                   );
                 })}
@@ -649,21 +788,32 @@ function LivePreview({ clinicName, doctorName, doctorSpecialty, patient, date, d
           </div>
 
           {notes && (
-            <div className="border-t border-border pt-3">
-              <p className="text-[9px] uppercase tracking-wider text-amber-700 dark:text-amber-500 mb-1">Notes</p>
-              <p className="text-xs bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900 rounded p-2">
-                {notes}
+            <div className="rounded-md bg-amber-50 border border-amber-200 p-3">
+              <p className="text-[9px] uppercase tracking-wider text-amber-800 font-semibold">
+                Notes for the patient
               </p>
+              <p className="text-xs text-amber-900 mt-1 whitespace-pre-wrap">{notes}</p>
             </div>
           )}
 
           {/* Signature */}
-          <div className="border-t border-border pt-3 flex justify-end">
+          <div className="pt-4 flex justify-end">
             <div className="text-end">
-              <div className="border-t border-foreground/40 w-32 mb-1 ms-auto"></div>
-              <p className="text-xs font-bold">Dr. {doctorName || "—"}</p>
-              {doctorSpecialty && <p className="text-[10px] text-muted-foreground">{doctorSpecialty}</p>}
+              <p className="font-serif italic text-zinc-700 text-sm pb-1.5 px-3">
+                Dr. {doctorName || ""}
+              </p>
+              <div className="border-t border-zinc-700 w-40 ms-auto" />
+              <p className="text-[10px] text-zinc-500 mt-1">
+                {doctorSpecialty || "Signature"}
+              </p>
             </div>
+          </div>
+
+          {/* Footer ribbon */}
+          <div className="text-center pt-1">
+            <p className="text-[9px] uppercase tracking-[0.25em] text-zinc-300">
+              Issued via ClinicSquad
+            </p>
           </div>
         </div>
       </div>
