@@ -23,7 +23,11 @@ export default function PendingActivationPage() {
       setLocation("/login");
       return;
     }
-    if (clinic && clinic.status !== "pending_approval") {
+    if (
+      clinic &&
+      clinic.status === "active" &&
+      clinic.subscriptionStatus !== "expired"
+    ) {
       setLocation("/dashboard");
     }
   }, [isAuthenticated, isLoading, clinic, setLocation]);

@@ -10,7 +10,6 @@ interface Props {
   requireRole?: Role | Role[];
 }
 
-// Pages a super admin should never see (clinic-scoped); they get bounced to /admin.
 const CLINIC_ONLY_PREFIXES = [
   "/dashboard", "/patients", "/appointments", "/prescriptions",
   "/finances", "/insights", "/team", "/subscription",
@@ -20,29 +19,35 @@ export function ProtectedRoute({ children, requireRole }: Props) {
   const { isAuthenticated, isLoading, user, clinic } = useAuth();
   const [location, setLocation] = useLocation();
 
-  const subscriptionExpired = clinic?.subscriptionStatus === "expired";
   const isSuperAdmin = user?.role === "superadmin";
-  const onClinicOnlyPage = CLINIC_ONLY_PREFIXES.some(p => location.startsWith(p));
-  const isPendingApproval = clinic?.status === "pending_approval";
+  const onClinicOnlyPage = CLINIC_ONLY_PREFIXES.some((p) => location.startsWith(p));
+  const clinicIsActive =
+    clinic?.status === "active" && clinic?.subscriptionStatus !== "expired";
 
   useEffect(() => {
     if (isLoading) return;
+
     if (!isAuthenticated) {
       setLocation("/login");
       return;
     }
-    if (isSuperAdmin && onClinicOnlyPage) {
-      setLocation("/admin");
+
+    if (isSuperAdmin) {
+      if (onClinicOnlyPage) setLocation("/admin");
       return;
     }
-    if (!isSuperAdmin && isPendingApproval) {
+
+    if (!clinicIsActive) {
       setLocation("/pending-activation");
-      return;
     }
-    if (!isSuperAdmin && subscriptionExpired) {
-      setLocation("/subscription/expired");
-    }
-  }, [isLoading, isAuthenticated, isSuperAdmin, onClinicOnlyPage, isPendingApproval, subscriptionExpired, setLocation]);
+  }, [
+    isLoading,
+    isAuthenticated,
+    isSuperAdmin,
+    onClinicOnlyPage,
+    clinicIsActive,
+    setLocation,
+  ]);
 
   if (isLoading) {
     return (
@@ -53,6 +58,14 @@ export function ProtectedRoute({ children, requireRole }: Props) {
   }
 
   if (!isAuthenticated) {
+    return null;
+  }
+
+  if (!isSuperAdmin && !clinicIsActive) {
+    return null;
+  }
+
+  if (isSuperAdmin && onClinicOnlyPage) {
     return null;
   }
 
@@ -71,31 +84,6 @@ export function ProtectedRoute({ children, requireRole }: Props) {
         </div>
       </div>
     );
-  }
-
-  if (clinic?.status === "pending_approval" && !isSuperAdmin) {
-    return null;
-  }
-
-  if (clinic?.status === "blocked") {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-background p-6">
-        <div className="text-center max-w-md">
-          <div className="w-16 h-16 bg-destructive/10 rounded-full flex items-center justify-center mx-auto mb-4">
-            <svg className="w-8 h-8 text-destructive" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
-            </svg>
-          </div>
-          <h1 className="text-2xl font-bold text-foreground mb-2">Account Suspended</h1>
-          <p className="text-muted-foreground">Your clinic account has been suspended. Please contact support.</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (clinic?.subscriptionStatus === "expired") {
-    setLocation("/subscription/expired");
-    return null;
   }
 
   return <>{children}</>;

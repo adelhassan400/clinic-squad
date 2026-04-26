@@ -37,7 +37,14 @@ export default function LoginPage() {
     loginMutation.mutate({ data }, {
       onSuccess: (response) => {
         login(response.user as Parameters<typeof login>[0], response.clinic as Parameters<typeof login>[1], response.token);
-        setLocation(response.user.role === "superadmin" ? "/admin" : "/dashboard");
+        if (response.user.role === "superadmin") {
+          setLocation("/admin");
+          return;
+        }
+        const clinicActive =
+          response.clinic.status === "active" &&
+          response.clinic.subscriptionStatus !== "expired";
+        setLocation(clinicActive ? "/dashboard" : "/pending-activation");
       },
       onError: (err: Error) => {
         const msg = err?.message ?? "";
