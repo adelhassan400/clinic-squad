@@ -7,6 +7,7 @@ ClinicSquad is a multi-tenant medical clinic management SaaS for Egyptian clinic
 ## Product Features
 
 - **Authentication**: Register/Login with sha256+base64 token, stored in localStorage
+- **Password Reset**: `/forgot-password` generates a single-use, 1-hour reset token (stored hashed in `password_reset_tokens`). Because no email integration is configured, the token + reset URL are returned in the API response and shown directly on the request page so users can copy them. `/reset-password?token=…` consumes the token and updates the password. Endpoints: `POST /api/auth/forgot-password`, `POST /api/auth/reset-password`. Unknown emails return a generic success response (no email enumeration).
 - **15-Day Free Trial**: New clinics get trial period automatically
 - **Subscription Plans**: Basic (200 EGP) / Premium (400 EGP) — WhatsApp payment, confirmed by superadmin
 - **Roles**: admin, secretary, nurse, superadmin

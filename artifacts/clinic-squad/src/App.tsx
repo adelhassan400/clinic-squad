@@ -10,6 +10,8 @@ import { CurrencyProvider } from "@/lib/currency";
 import LandingPage from "@/pages/landing";
 import LoginPage from "@/pages/login";
 import RegisterPage from "@/pages/register";
+import ForgotPasswordPage from "@/pages/forgot-password";
+import ResetPasswordPage from "@/pages/reset-password";
 import DashboardPage from "@/pages/dashboard";
 import PatientsPage from "@/pages/patients";
 import PatientDetailPage from "@/pages/patient-detail";
@@ -40,6 +42,8 @@ function Router() {
       <Route path="/" component={LandingPage} />
       <Route path="/login" component={LoginPage} />
       <Route path="/register" component={RegisterPage} />
+      <Route path="/forgot-password" component={ForgotPasswordPage} />
+      <Route path="/reset-password" component={ResetPasswordPage} />
       <Route path="/dashboard" component={DashboardPage} />
       <Route path="/patients" component={PatientsPage} />
       <Route path="/patients/:id" component={PatientDetailPage} />

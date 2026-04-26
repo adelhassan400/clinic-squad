@@ -58,6 +58,42 @@ export const LoginUserResponse = zod.object({
 });
 
 /**
+ * @summary Request a password reset link
+ */
+export const RequestPasswordResetBody = zod.object({
+  email: zod.string().email(),
+});
+
+export const RequestPasswordResetResponse = zod.object({
+  message: zod.string(),
+  resetToken: zod
+    .string()
+    .nullish()
+    .describe(
+      "Plain reset token. Returned in dev\/no-email mode so the user can copy the reset link directly. Will be null when email delivery is configured.",
+    ),
+  resetUrl: zod
+    .string()
+    .nullish()
+    .describe("Convenience URL containing the token, suitable for sharing."),
+  expiresAt: zod.coerce.date().nullish(),
+});
+
+/**
+ * @summary Reset password using a token
+ */
+export const resetPasswordBodyPasswordMin = 6;
+
+export const ResetPasswordBody = zod.object({
+  token: zod.string(),
+  password: zod.string().min(resetPasswordBodyPasswordMin),
+});
+
+export const ResetPasswordResponse = zod.object({
+  message: zod.string(),
+});
+
+/**
  * @summary Get current user
  */
 export const GetCurrentUserResponse = zod.object({

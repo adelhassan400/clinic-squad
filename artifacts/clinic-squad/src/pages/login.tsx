@@ -125,6 +125,16 @@ export default function LoginPage() {
               {errors.password && <p className="text-xs text-destructive mt-1">{errors.password.message}</p>}
             </div>
 
+            <div className="flex justify-end -mt-2">
+              <Link
+                href="/forgot-password"
+                className="text-xs text-muted-foreground hover:text-primary hover:underline"
+                data-testid="link-forgot-password"
+              >
+                Forgot password?
+              </Link>
+            </div>
+
             <Button type="submit" className="w-full" disabled={loginMutation.isPending} data-testid="button-submit">
               {loginMutation.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
               Sign In

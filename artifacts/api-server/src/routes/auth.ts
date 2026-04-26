@@ -1,8 +1,13 @@
 import { Router } from "express";
-import { eq } from "drizzle-orm";
-import { db, usersTable, clinicsTable } from "@workspace/db";
-import { RegisterUserBody, LoginUserBody } from "@workspace/api-zod";
-import { randomUUID } from "crypto";
+import { and, eq, gt, isNull } from "drizzle-orm";
+import { db, usersTable, clinicsTable, passwordResetTokensTable } from "@workspace/db";
+import {
+  RegisterUserBody,
+  LoginUserBody,
+  RequestPasswordResetBody,
+  ResetPasswordBody,
+} from "@workspace/api-zod";
+import { randomUUID, randomBytes } from "crypto";
 import { createHash } from "crypto";
 
 const router = Router();
@@ -10,6 +15,12 @@ const router = Router();
 function hashPassword(password: string): string {
   return createHash("sha256").update(password + "clinicsquad_salt").digest("hex");
 }
+
+function hashToken(token: string): string {
+  return createHash("sha256").update(token).digest("hex");
+}
+
+const RESET_TOKEN_TTL_MS = 60 * 60 * 1000;
 
 function generateToken(userId: string): string {
   return Buffer.from(`${userId}:${Date.now()}`).toString("base64");
@@ -109,6 +120,82 @@ router.post("/login", async (req, res) => {
   };
 
   return res.json({ user: userObj, clinic: clinicObj, token: generateToken(user.id) });
+});
+
+router.post("/forgot-password", async (req, res) => {
+  const parsed = RequestPasswordResetBody.safeParse(req.body);
+  if (!parsed.success) {
+    return res.status(400).json({ error: "Invalid input" });
+  }
+  const email = parsed.data.email.toLowerCase().trim();
+
+  const users = await db.select().from(usersTable).where(eq(usersTable.email, email)).limit(1);
+  const user = users[0];
+
+  if (!user) {
+    return res.json({
+      message: "If that email exists, a password reset link has been generated.",
+      resetToken: null,
+      resetUrl: null,
+      expiresAt: null,
+    });
+  }
+
+  const plainToken = randomBytes(32).toString("base64url");
+  const expiresAt = new Date(Date.now() + RESET_TOKEN_TTL_MS);
+
+  await db.insert(passwordResetTokensTable).values({
+    id: randomUUID(),
+    userId: user.id,
+    tokenHash: hashToken(plainToken),
+    expiresAt,
+  });
+
+  const origin =
+    (typeof req.headers.origin === "string" && req.headers.origin) ||
+    `${req.protocol}://${req.get("host") ?? ""}`;
+  const resetUrl = `${origin}/reset-password?token=${encodeURIComponent(plainToken)}`;
+
+  return res.json({
+    message: "Password reset link generated. Use the token below to set a new password.",
+    resetToken: plainToken,
+    resetUrl,
+    expiresAt: expiresAt.toISOString(),
+  });
+});
+
+router.post("/reset-password", async (req, res) => {
+  const parsed = ResetPasswordBody.safeParse(req.body);
+  if (!parsed.success) {
+    return res.status(400).json({ error: "Invalid input", details: parsed.error.issues });
+  }
+  const { token, password } = parsed.data;
+  const tokenHash = hashToken(token);
+
+  const rows = await db
+    .select()
+    .from(passwordResetTokensTable)
+    .where(
+      and(
+        eq(passwordResetTokensTable.tokenHash, tokenHash),
+        isNull(passwordResetTokensTable.usedAt),
+        gt(passwordResetTokensTable.expiresAt, new Date()),
+      ),
+    )
+    .limit(1);
+
+  const record = rows[0];
+  if (!record) {
+    return res.status(400).json({ error: "Invalid or expired reset token" });
+  }
+
+  await db.update(usersTable).set({ passwordHash: hashPassword(password) }).where(eq(usersTable.id, record.userId));
+  await db
+    .update(passwordResetTokensTable)
+    .set({ usedAt: new Date() })
+    .where(eq(passwordResetTokensTable.id, record.id));
+
+  return res.json({ message: "Password updated successfully. You can now sign in." });
 });
 
 function userIdFromAuth(req: any): string | null {

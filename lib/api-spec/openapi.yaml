@@ -86,6 +86,46 @@ paths:
         "401":
           description: Invalid credentials
 
+  /auth/forgot-password:
+    post:
+      operationId: requestPasswordReset
+      tags: [auth]
+      summary: Request a password reset link
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ForgotPasswordBody"
+      responses:
+        "200":
+          description: Reset link generated (always returned, even when email is unknown)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ForgotPasswordResponse"
+
+  /auth/reset-password:
+    post:
+      operationId: resetPassword
+      tags: [auth]
+      summary: Reset password using a token
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ResetPasswordBody"
+      responses:
+        "200":
+          description: Password reset successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ResetPasswordResponse"
+        "400":
+          description: Invalid or expired token
+
   /auth/me:
     get:
       operationId: getCurrentUser
@@ -1018,6 +1058,50 @@ components:
         token:
           type: string
       required: [user, clinic, token]
+
+    ForgotPasswordBody:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+      required: [email]
+
+    ForgotPasswordResponse:
+      type: object
+      properties:
+        message:
+          type: string
+        resetToken:
+          type: string
+          nullable: true
+          description: Plain reset token. Returned in dev/no-email mode so the user can copy the reset link directly. Will be null when email delivery is configured.
+        resetUrl:
+          type: string
+          nullable: true
+          description: Convenience URL containing the token, suitable for sharing.
+        expiresAt:
+          type: string
+          format: date-time
+          nullable: true
+      required: [message]
+
+    ResetPasswordBody:
+      type: object
+      properties:
+        token:
+          type: string
+        password:
+          type: string
+          minLength: 6
+      required: [token, password]
+
+    ResetPasswordResponse:
+      type: object
+      properties:
+        message:
+          type: string
+      required: [message]
 
     User:
       type: object

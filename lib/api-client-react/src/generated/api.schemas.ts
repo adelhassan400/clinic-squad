@@ -173,6 +173,29 @@ export interface AuthResponse {
   token: string;
 }
 
+export interface ForgotPasswordBody {
+  email: string;
+}
+
+export interface ForgotPasswordResponse {
+  message: string;
+  /** Plain reset token. Returned in dev/no-email mode so the user can copy the reset link directly. Will be null when email delivery is configured. */
+  resetToken?: string | null;
+  /** Convenience URL containing the token, suitable for sharing. */
+  resetUrl?: string | null;
+  expiresAt?: string | null;
+}
+
+export interface ResetPasswordBody {
+  token: string;
+  /** @minLength 6 */
+  password: string;
+}
+
+export interface ResetPasswordResponse {
+  message: string;
+}
+
 export interface UpdateProfileBody {
   name?: string;
   specialty?: string | null;
