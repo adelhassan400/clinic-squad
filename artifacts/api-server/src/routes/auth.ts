@@ -6,6 +6,7 @@ import {
   LoginUserBody,
   RequestPasswordResetBody,
   ResetPasswordBody,
+  ChangePasswordBody,
 } from "@workspace/api-zod";
 import { randomUUID, randomBytes } from "crypto";
 import { createHash } from "crypto";
@@ -196,6 +197,33 @@ router.post("/reset-password", async (req, res) => {
     .where(eq(passwordResetTokensTable.id, record.id));
 
   return res.json({ message: "Password updated successfully. You can now sign in." });
+});
+
+router.post("/change-password", async (req, res) => {
+  const userId = userIdFromAuth(req);
+  if (!userId) return res.status(401).json({ error: "Unauthorized" });
+
+  const parsed = ChangePasswordBody.safeParse(req.body);
+  if (!parsed.success) {
+    return res.status(400).json({ error: "Invalid input", details: parsed.error.issues });
+  }
+  const { currentPassword, newPassword } = parsed.data;
+
+  if (currentPassword === newPassword) {
+    return res.status(400).json({ error: "New password must be different from current password" });
+  }
+
+  const users = await db.select().from(usersTable).where(eq(usersTable.id, userId)).limit(1);
+  const user = users[0];
+  if (!user) return res.status(401).json({ error: "Invalid token" });
+
+  if (user.passwordHash !== hashPassword(currentPassword)) {
+    return res.status(401).json({ error: "Current password is incorrect" });
+  }
+
+  await db.update(usersTable).set({ passwordHash: hashPassword(newPassword) }).where(eq(usersTable.id, userId));
+
+  return res.json({ message: "Password changed successfully." });
 });
 
 function userIdFromAuth(req: any): string | null {

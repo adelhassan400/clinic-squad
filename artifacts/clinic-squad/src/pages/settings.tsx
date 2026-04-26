@@ -9,11 +9,30 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Crown, Sun, Moon, Shield, AlertTriangle, Coins, Stethoscope } from "lucide-react";
+import { Crown, Sun, Moon, Shield, AlertTriangle, Coins, Stethoscope, KeyRound, Eye, EyeOff, Loader2 } from "lucide-react";
 import { Link } from "wouter";
 import { formatDate, getTrialDaysLeft } from "@/lib/utils";
-import { useUpdateProfile } from "@workspace/api-client-react";
+import { useUpdateProfile, useChangePassword } from "@workspace/api-client-react";
 import { useToast } from "@/hooks/use-toast";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
+
+const passwordSchema = z
+  .object({
+    currentPassword: z.string().min(1, "Current password is required"),
+    newPassword: z.string().min(6, "At least 6 characters"),
+    confirmPassword: z.string().min(6, "At least 6 characters"),
+  })
+  .refine((d) => d.newPassword === d.confirmPassword, {
+    path: ["confirmPassword"],
+    message: "Passwords do not match",
+  })
+  .refine((d) => d.currentPassword !== d.newPassword, {
+    path: ["newPassword"],
+    message: "New password must be different from current",
+  });
+type PasswordFormData = z.infer<typeof passwordSchema>;
 
 export default function SettingsPage() {
   const { user, clinic, updateUser } = useAuth();
@@ -25,6 +44,13 @@ export default function SettingsPage() {
   const updateProfile = useUpdateProfile();
   const isDoctor = user?.role === "admin" || user?.role === "superadmin";
 
+  const [showPw, setShowPw] = useState(false);
+  const changePassword = useChangePassword();
+  const passwordForm = useForm<PasswordFormData>({
+    resolver: zodResolver(passwordSchema),
+    defaultValues: { currentPassword: "", newPassword: "", confirmPassword: "" },
+  });
+
   async function saveSpecialty() {
     try {
       const updated = await updateProfile.mutateAsync({ data: { specialty: specialty.trim() || null } });
@@ -32,6 +58,26 @@ export default function SettingsPage() {
       toast({ title: "Specialty updated" });
     } catch (err: any) {
       toast({ title: "Failed to update", description: err?.message, variant: "destructive" });
+    }
+  }
+
+  async function onChangePassword(data: PasswordFormData) {
+    try {
+      await changePassword.mutateAsync({
+        data: { currentPassword: data.currentPassword, newPassword: data.newPassword },
+      });
+      passwordForm.reset();
+      toast({ title: "Password changed", description: "Use your new password next time you sign in." });
+    } catch (err: any) {
+      const status = err?.status;
+      toast({
+        title: "Couldn't change password",
+        description:
+          status === 401
+            ? "Your current password is incorrect."
+            : "Please double-check your input and try again.",
+        variant: "destructive",
+      });
     }
   }
 
@@ -189,6 +235,102 @@ export default function SettingsPage() {
                   </SelectContent>
                 </Select>
               </div>
+            </div>
+
+            {/* Change password */}
+            <div className="rounded-xl border border-border bg-card p-6">
+              <h2 className="font-semibold mb-1 flex items-center gap-2">
+                <KeyRound className="w-4 h-4" /> Change Password
+              </h2>
+              <p className="text-xs text-muted-foreground mb-4">
+                Use a strong password you don't use anywhere else.
+              </p>
+              <form
+                onSubmit={passwordForm.handleSubmit(onChangePassword)}
+                className="space-y-4"
+              >
+                <div>
+                  <Label htmlFor="currentPassword">Current password</Label>
+                  <div className="relative mt-1.5">
+                    <Input
+                      id="currentPassword"
+                      type={showPw ? "text" : "password"}
+                      placeholder="••••••••"
+                      autoComplete="current-password"
+                      {...passwordForm.register("currentPassword")}
+                      data-testid="input-current-password"
+                      className="pr-10"
+                    />
+                    <button
+                      type="button"
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                      onClick={() => setShowPw((v) => !v)}
+                      aria-label="Toggle password visibility"
+                    >
+                      {showPw ? (
+                        <EyeOff className="w-4 h-4" />
+                      ) : (
+                        <Eye className="w-4 h-4" />
+                      )}
+                    </button>
+                  </div>
+                  {passwordForm.formState.errors.currentPassword && (
+                    <p className="text-xs text-destructive mt-1">
+                      {passwordForm.formState.errors.currentPassword.message}
+                    </p>
+                  )}
+                </div>
+
+                <div className="grid sm:grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="newPassword">New password</Label>
+                    <Input
+                      id="newPassword"
+                      type={showPw ? "text" : "password"}
+                      placeholder="At least 6 characters"
+                      autoComplete="new-password"
+                      {...passwordForm.register("newPassword")}
+                      data-testid="input-new-password"
+                      className="mt-1.5"
+                    />
+                    {passwordForm.formState.errors.newPassword && (
+                      <p className="text-xs text-destructive mt-1">
+                        {passwordForm.formState.errors.newPassword.message}
+                      </p>
+                    )}
+                  </div>
+                  <div>
+                    <Label htmlFor="confirmPassword">Confirm new password</Label>
+                    <Input
+                      id="confirmPassword"
+                      type={showPw ? "text" : "password"}
+                      placeholder="Repeat new password"
+                      autoComplete="new-password"
+                      {...passwordForm.register("confirmPassword")}
+                      data-testid="input-confirm-password"
+                      className="mt-1.5"
+                    />
+                    {passwordForm.formState.errors.confirmPassword && (
+                      <p className="text-xs text-destructive mt-1">
+                        {passwordForm.formState.errors.confirmPassword.message}
+                      </p>
+                    )}
+                  </div>
+                </div>
+
+                <div className="flex justify-end">
+                  <Button
+                    type="submit"
+                    disabled={changePassword.isPending}
+                    data-testid="button-change-password"
+                  >
+                    {changePassword.isPending && (
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    )}
+                    Update Password
+                  </Button>
+                </div>
+              </form>
             </div>
 
             {/* Security */}

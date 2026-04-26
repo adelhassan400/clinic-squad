@@ -94,6 +94,21 @@ export const ResetPasswordResponse = zod.object({
 });
 
 /**
+ * @summary Change password for the currently authenticated user
+ */
+
+export const changePasswordBodyNewPasswordMin = 6;
+
+export const ChangePasswordBody = zod.object({
+  currentPassword: zod.string().min(1),
+  newPassword: zod.string().min(changePasswordBodyNewPasswordMin),
+});
+
+export const ChangePasswordResponse = zod.object({
+  message: zod.string(),
+});
+
+/**
  * @summary Get current user
  */
 export const GetCurrentUserResponse = zod.object({

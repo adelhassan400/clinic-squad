@@ -126,6 +126,29 @@ paths:
         "400":
           description: Invalid or expired token
 
+  /auth/change-password:
+    post:
+      operationId: changePassword
+      tags: [auth]
+      summary: Change password for the currently authenticated user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ChangePasswordBody"
+      responses:
+        "200":
+          description: Password changed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ChangePasswordResponse"
+        "400":
+          description: Invalid input
+        "401":
+          description: Unauthorized or current password incorrect
+
   /auth/me:
     get:
       operationId: getCurrentUser
@@ -1097,6 +1120,24 @@ components:
       required: [token, password]
 
     ResetPasswordResponse:
+      type: object
+      properties:
+        message:
+          type: string
+      required: [message]
+
+    ChangePasswordBody:
+      type: object
+      properties:
+        currentPassword:
+          type: string
+          minLength: 1
+        newPassword:
+          type: string
+          minLength: 6
+      required: [currentPassword, newPassword]
+
+    ChangePasswordResponse:
       type: object
       properties:
         message:

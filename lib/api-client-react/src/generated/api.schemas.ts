@@ -196,6 +196,17 @@ export interface ResetPasswordResponse {
   message: string;
 }
 
+export interface ChangePasswordBody {
+  /** @minLength 1 */
+  currentPassword: string;
+  /** @minLength 6 */
+  newPassword: string;
+}
+
+export interface ChangePasswordResponse {
+  message: string;
+}
+
 export interface UpdateProfileBody {
   name?: string;
   specialty?: string | null;
