@@ -1,6 +1,6 @@
 import { Router } from "express";
-import { eq } from "drizzle-orm";
-import { db, clinicsTable, subscriptionsTable } from "@workspace/db";
+import { eq, desc } from "drizzle-orm";
+import { db, clinicsTable, subscriptionsTable, usersTable, patientsTable } from "@workspace/db";
 
 const router = Router();
 
@@ -10,6 +10,83 @@ router.get("/clinics", async (_req, res) => {
     id: c.id, name: c.name, ownerId: c.ownerId, status: c.status,
     subscriptionStatus: c.subscriptionStatus, trialEndDate: c.trialEndDate.toISOString(),
     subscriptionPlan: c.subscriptionPlan, createdAt: c.createdAt.toISOString(),
+  })));
+});
+
+router.get("/stats", async (_req, res) => {
+  const [clinics, users, subs, patients] = await Promise.all([
+    db.select().from(clinicsTable),
+    db.select().from(usersTable),
+    db.select().from(subscriptionsTable),
+    db.select().from(patientsTable),
+  ]);
+
+  const now = new Date();
+  const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+  const threeDaysFromNow = new Date(now.getTime() + 3 * 24 * 60 * 60 * 1000);
+
+  const byStatus: Record<string, number> = { pending: 0, active: 0, blocked: 0, deleted: 0 };
+  const bySub: Record<string, number> = { trial: 0, basic: 0, premium: 0, expired: 0 };
+  let trialEndingSoon = 0;
+  let newSignupsWeek = 0;
+
+  for (const c of clinics) {
+    byStatus[c.status] = (byStatus[c.status] ?? 0) + 1;
+    bySub[c.subscriptionStatus] = (bySub[c.subscriptionStatus] ?? 0) + 1;
+    if (c.subscriptionStatus === "trial" && c.trialEndDate <= threeDaysFromNow && c.trialEndDate >= now) {
+      trialEndingSoon += 1;
+    }
+    if (c.createdAt >= sevenDaysAgo) newSignupsWeek += 1;
+  }
+
+  const pendingPayments = subs.filter(s => s.paymentStatus === "pending").length;
+  const confirmedRevenue = subs
+    .filter(s => s.paymentStatus === "confirmed")
+    .reduce((sum, s) => sum + parseFloat(s.amount ?? "0"), 0);
+
+  return res.json({
+    totalClinics: clinics.length,
+    totalUsers: users.length,
+    totalPatients: patients.length,
+    byStatus, bySub,
+    trialEndingSoon,
+    newSignupsWeek,
+    pendingPayments,
+    confirmedRevenue,
+  });
+});
+
+router.get("/subscriptions", async (req, res) => {
+  const status = req.query.status as string | undefined;
+
+  const rows = await db
+    .select({
+      id: subscriptionsTable.id,
+      clinicId: subscriptionsTable.clinicId,
+      planType: subscriptionsTable.planType,
+      startDate: subscriptionsTable.startDate,
+      endDate: subscriptionsTable.endDate,
+      paymentStatus: subscriptionsTable.paymentStatus,
+      amount: subscriptionsTable.amount,
+      createdAt: subscriptionsTable.createdAt,
+      clinicName: clinicsTable.name,
+    })
+    .from(subscriptionsTable)
+    .leftJoin(clinicsTable, eq(subscriptionsTable.clinicId, clinicsTable.id))
+    .orderBy(desc(subscriptionsTable.createdAt));
+
+  const filtered = status ? rows.filter(r => r.paymentStatus === status) : rows;
+
+  return res.json(filtered.map(r => ({
+    id: r.id,
+    clinicId: r.clinicId,
+    clinicName: r.clinicName ?? "(deleted)",
+    planType: r.planType,
+    startDate: r.startDate.toISOString(),
+    endDate: r.endDate.toISOString(),
+    paymentStatus: r.paymentStatus,
+    amount: parseFloat(r.amount ?? "0"),
+    createdAt: r.createdAt.toISOString(),
   })));
 });
 
