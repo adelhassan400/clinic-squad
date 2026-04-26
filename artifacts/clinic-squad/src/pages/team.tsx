@@ -61,12 +61,7 @@ export default function TeamPage() {
   const qc = useQueryClient();
   const [copiedToken, setCopiedToken] = useState<string | null>(null);
 
-  if (!user || !clinic) return <Redirect to="/login" />;
-  if (user.role !== "admin" && user.role !== "superadmin") {
-    return <Redirect to="/dashboard" />;
-  }
-
-  const clinicId = clinic.id;
+  const clinicId = clinic?.id ?? "";
   const overviewQ = useListTeamMembers(clinicId);
   const invitesQ = useListInvitations(clinicId);
 
@@ -79,6 +74,11 @@ export default function TeamPage() {
       resolver: zodResolver(inviteSchema),
       defaultValues: { email: "", name: "", role: "secretary" },
     });
+
+  if (!user || !clinic) return <Redirect to="/login" />;
+  if (user.role !== "admin" && user.role !== "superadmin") {
+    return <Redirect to="/dashboard" />;
+  }
 
   const overview = overviewQ.data;
   const invites = invitesQ.data ?? [];
