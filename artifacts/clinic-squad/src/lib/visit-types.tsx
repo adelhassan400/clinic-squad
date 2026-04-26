@@ -5,9 +5,21 @@ export type VisitType =
   | "Follow-up"
   | "Re-exam"
   | "Emergency"
-  | "Procedure";
+  | "Procedure"
+  | "Session";
 
-export const VISIT_TYPES: VisitType[] = [
+// All known visit types — drives badge styling and price defaults.
+export const ALL_VISIT_TYPES: VisitType[] = [
+  "New Consultation",
+  "Follow-up",
+  "Re-exam",
+  "Emergency",
+  "Procedure",
+  "Session",
+];
+
+// Visit types offered when scheduling an appointment.
+export const APPOINTMENT_VISIT_TYPES: VisitType[] = [
   "New Consultation",
   "Follow-up",
   "Re-exam",
@@ -15,12 +27,24 @@ export const VISIT_TYPES: VisitType[] = [
   "Procedure",
 ];
 
+// Visit types offered on the Patient record / entry form.
+export const PATIENT_VISIT_TYPES: VisitType[] = [
+  "New Consultation",
+  "Follow-up",
+  "Emergency",
+  "Session",
+];
+
+// Backwards-compat alias used by the appointments form & pricing UI.
+export const VISIT_TYPES = APPOINTMENT_VISIT_TYPES;
+
 export const DEFAULT_VISIT_TYPE_PRICES: Record<VisitType, number> = {
   "New Consultation": 300,
   "Follow-up": 150,
   "Re-exam": 100,
   Emergency: 500,
   Procedure: 800,
+  Session: 250,
 };
 
 interface VisitTypeStyle {
@@ -60,6 +84,12 @@ const VISIT_TYPE_STYLES: Record<VisitType, VisitTypeStyle> = {
     dot: "bg-amber-500",
     bar: "bg-amber-500",
   },
+  Session: {
+    badge:
+      "bg-cyan-500/10 text-cyan-700 border-cyan-500/30 dark:text-cyan-400",
+    dot: "bg-cyan-500",
+    bar: "bg-cyan-500",
+  },
 };
 
 const FALLBACK_STYLE: VisitTypeStyle = {
@@ -70,7 +100,7 @@ const FALLBACK_STYLE: VisitTypeStyle = {
 };
 
 export function isKnownVisitType(value: string | null | undefined): value is VisitType {
-  return !!value && (VISIT_TYPES as string[]).includes(value);
+  return !!value && (ALL_VISIT_TYPES as string[]).includes(value);
 }
 
 export function getVisitTypeStyle(type: string | null | undefined): VisitTypeStyle {

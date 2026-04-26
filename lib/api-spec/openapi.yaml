@@ -1538,6 +1538,9 @@ components:
         notes:
           type: string
           nullable: true
+        visitType:
+          type: string
+          nullable: true
         createdAt:
           type: string
           format: date-time
@@ -1563,6 +1566,9 @@ components:
           type: string
           nullable: true
         notes:
+          type: string
+          nullable: true
+        visitType:
           type: string
           nullable: true
       required: [name, phone, gender]
@@ -1593,6 +1599,10 @@ components:
           type: string
         patientName:
           type: string
+        patientVisitType:
+          type: string
+          nullable: true
+          description: The visit type recorded on the patient's record (independent of this appointment's type).
         date:
           type: string
           format: date

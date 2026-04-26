@@ -18,7 +18,7 @@ ClinicSquad is a multi-tenant medical clinic management SaaS for Egyptian clinic
 - **Subscription Plans**: Basic (200 EGP) / Premium (400 EGP) — WhatsApp payment, confirmed by superadmin
 - **Roles**: admin, secretary, nurse, superadmin
 - **Team Management** (admin-only): invite secretaries/nurses by email, copyable invite links, capacity meter — trial/basic = 2 members, premium = 10
-- **Patient Management**: CRUD with search, blood type, allergies, medical notes
+- **Patient Management**: CRUD with search, blood type, allergies, medical notes, and **visit type** (one of: New Consultation, Follow-up, Emergency, Session) chosen from a colored dropdown on the patient form. The visit type is shown as a colored badge in its own column on the patients table and next to the patient name in the dashboard's "Today's Appointments" waiting list. Patient visit-type options are intentionally distinct from the appointment-type options (which include Re-exam and Procedure but not Session) — see `artifacts/clinic-squad/src/lib/visit-types.tsx` (`PATIENT_VISIT_TYPES` vs `APPOINTMENT_VISIT_TYPES`). Session uses cyan styling. Backend column: `patients.visit_type` (text, nullable). The `Appointment` API payload includes `patientVisitType` (joined from the patient row) so the dashboard can render both the appointment's type badge and the patient's visit-type badge.
 - **Appointment Scheduling**: Create/update/delete appointments, status tracking
 - **Finance Dashboard**: Available on all paid plans (basic + premium), income/expense tracking, monthly charts (Recharts)
 - **Insights**: Premium-only analytics — performance dashboard, busy-day trends, status breakdown, revenue charts

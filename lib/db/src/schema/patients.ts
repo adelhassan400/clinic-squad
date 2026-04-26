@@ -13,6 +13,7 @@ export const patientsTable = pgTable("patients", {
   bloodType: text("blood_type"),
   allergies: text("allergies"),
   notes: text("notes"),
+  visitType: text("visit_type"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
 });

@@ -403,6 +403,7 @@ export interface Patient {
   bloodType?: string | null;
   allergies?: string | null;
   notes?: string | null;
+  visitType?: string | null;
   createdAt: string;
 }
 
@@ -423,6 +424,7 @@ export interface CreatePatientBody {
   bloodType?: string | null;
   allergies?: string | null;
   notes?: string | null;
+  visitType?: string | null;
 }
 
 export interface PatientList {
@@ -447,6 +449,8 @@ export interface Appointment {
   clinicId: string;
   patientId: string;
   patientName: string;
+  /** The visit type recorded on the patient's record (independent of this appointment's type). */
+  patientVisitType?: string | null;
   date: string;
   time: string;
   status: AppointmentStatus;

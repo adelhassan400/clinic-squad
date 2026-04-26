@@ -21,11 +21,16 @@ import { z } from "zod";
 import { Plus, Search, Users, Trash2, Eye, Loader2, MessageCircle } from "lucide-react";
 import { Link } from "wouter";
 import { openWhatsApp, whatsappPatientGreeting } from "@/lib/whatsapp";
+import { PATIENT_VISIT_TYPES, VisitTypeBadge, getVisitTypeStyle } from "@/lib/visit-types";
+import { cn } from "@/lib/utils";
 
 const patientSchema = z.object({
   name: z.string().min(2, "Name required"),
   phone: z.string().min(6, "Phone required"),
   gender: z.enum(["male", "female", "other"]),
+  visitType: z.enum(PATIENT_VISIT_TYPES as [string, ...string[]], {
+    message: "Visit type is required",
+  }),
   dateOfBirth: z.string().optional(),
   bloodType: z.string().optional(),
   allergies: z.string().optional(),
@@ -50,7 +55,7 @@ export default function PatientsPage() {
 
   const form = useForm<PatientForm>({
     resolver: zodResolver(patientSchema),
-    defaultValues: { name: "", phone: "", gender: "male" },
+    defaultValues: { name: "", phone: "", gender: "male", visitType: "New Consultation" },
   });
 
   const onSubmit = (values: PatientForm) => {
@@ -105,11 +110,12 @@ export default function PatientsPage() {
 
           {/* Table */}
           <div className="rounded-xl border border-border bg-card overflow-hidden">
-            <div className="grid grid-cols-[110px_1fr_1fr_auto_auto_auto] gap-4 px-6 py-3 border-b border-border bg-muted/30 text-xs font-medium text-muted-foreground uppercase tracking-wider">
+            <div className="grid grid-cols-[110px_1fr_1fr_auto_auto_auto_auto] gap-4 px-6 py-3 border-b border-border bg-muted/30 text-xs font-medium text-muted-foreground uppercase tracking-wider">
               <span>ID</span>
               <span>Patient</span>
               <span>Phone</span>
               <span>Gender</span>
+              <span>Visit Type</span>
               <span>Date Added</span>
               <span>Actions</span>
             </div>
@@ -136,7 +142,7 @@ export default function PatientsPage() {
                 <div
                   key={patient.id}
                   data-testid={`patient-row-${patient.id}`}
-                  className="grid grid-cols-[110px_1fr_1fr_auto_auto_auto] gap-4 items-center px-6 py-4 border-b border-border last:border-0 hover:bg-muted/30 transition-colors"
+                  className="grid grid-cols-[110px_1fr_1fr_auto_auto_auto_auto] gap-4 items-center px-6 py-4 border-b border-border last:border-0 hover:bg-muted/30 transition-colors"
                 >
                   <span
                     className="text-sm font-mono font-semibold px-2.5 py-1 rounded bg-primary/10 text-primary border border-primary/20 text-center"
@@ -155,6 +161,11 @@ export default function PatientsPage() {
                   </div>
                   <span className="text-sm text-muted-foreground font-mono">{patient.phone}</span>
                   <span className="text-xs capitalize px-2 py-1 rounded bg-muted text-muted-foreground">{patient.gender}</span>
+                  <span data-testid={`patient-visit-type-${patient.id}`}>
+                    {patient.visitType
+                      ? <VisitTypeBadge type={patient.visitType} />
+                      : <span className="text-xs text-muted-foreground">—</span>}
+                  </span>
                   <span className="text-xs text-muted-foreground">{formatDate(patient.createdAt)}</span>
                   <div className="flex items-center gap-1">
                     <Link href={`/patients/${patient.id}`}>
@@ -232,6 +243,42 @@ export default function PatientsPage() {
                       </Select>
                     )}
                   />
+                </div>
+                <div>
+                  <Label>Visit Type *</Label>
+                  <Controller
+                    control={form.control}
+                    name="visitType"
+                    render={({ field }) => (
+                      <Select value={field.value || ""} onValueChange={field.onChange}>
+                        <SelectTrigger className="mt-1" data-testid="select-patient-visit-type">
+                          <SelectValue placeholder="Select visit type" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {PATIENT_VISIT_TYPES.map((vt) => {
+                            const style = getVisitTypeStyle(vt);
+                            return (
+                              <SelectItem
+                                key={vt}
+                                value={vt}
+                                data-testid={`patient-visit-type-option-${vt}`}
+                              >
+                                <span className="inline-flex items-center gap-2">
+                                  <span className={cn("w-2 h-2 rounded-full", style.dot)} />
+                                  {vt}
+                                </span>
+                              </SelectItem>
+                            );
+                          })}
+                        </SelectContent>
+                      </Select>
+                    )}
+                  />
+                  {form.formState.errors.visitType && (
+                    <p className="text-xs text-destructive mt-1">
+                      {form.formState.errors.visitType.message}
+                    </p>
+                  )}
                 </div>
                 <div>
                   <Label>Date of Birth</Label>

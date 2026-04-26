@@ -18,6 +18,7 @@ function serialize(p: typeof patientsTable.$inferSelect) {
     bloodType: p.bloodType,
     allergies: p.allergies,
     notes: p.notes,
+    visitType: p.visitType,
     createdAt: p.createdAt.toISOString(),
   };
 }
@@ -72,7 +73,7 @@ router.post("/", async (req, res) => {
   const parsed = CreatePatientBody.safeParse(req.body);
   if (!parsed.success) return res.status(400).json({ error: "Invalid input", details: parsed.error.issues });
 
-  const { name, phone, dateOfBirth, gender, bloodType, allergies, notes } = parsed.data;
+  const { name, phone, dateOfBirth, gender, bloodType, allergies, notes, visitType } = parsed.data;
   const id = randomUUID();
   const code = await nextPatientCode(clinicId);
 
@@ -83,6 +84,7 @@ router.post("/", async (req, res) => {
     bloodType: bloodType ?? null,
     allergies: allergies ?? null,
     notes: notes ?? null,
+    visitType: visitType ?? null,
   });
 
   const patient = (await db.select().from(patientsTable).where(eq(patientsTable.id, id)).limit(1))[0];
@@ -104,9 +106,18 @@ router.put("/:patientId", async (req, res) => {
   const parsed = CreatePatientBody.safeParse(req.body);
   if (!parsed.success) return res.status(400).json({ error: "Invalid input" });
 
-  const { name, phone, dateOfBirth, gender, bloodType, allergies, notes } = parsed.data;
+  const { name, phone, dateOfBirth, gender, bloodType, allergies, notes, visitType } = parsed.data;
   await db.update(patientsTable)
-    .set({ name, phone, dateOfBirth: dateOfBirth ?? null, gender, bloodType: bloodType ?? null, allergies: allergies ?? null, notes: notes ?? null })
+    .set({
+      name,
+      phone,
+      dateOfBirth: dateOfBirth ?? null,
+      gender,
+      bloodType: bloodType ?? null,
+      allergies: allergies ?? null,
+      notes: notes ?? null,
+      visitType: visitType ?? null,
+    })
     .where(and(eq(patientsTable.id, patientId), eq(patientsTable.clinicId, clinicId)));
 
   const p = (await db.select().from(patientsTable).where(eq(patientsTable.id, patientId)).limit(1))[0];

@@ -198,8 +198,14 @@ export default function DashboardPage() {
                       <span className="text-xs font-bold text-primary">{appt.patientName.charAt(0)}</span>
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium truncate">{appt.patientName}</p>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <p className="text-sm font-medium truncate">{appt.patientName}</p>
+                        {appt.patientVisitType && (
+                          <VisitTypeBadge type={appt.patientVisitType} />
+                        )}
+                      </div>
                       <div className="mt-1">
+                        <span className="text-xs text-muted-foreground mr-1.5">Today:</span>
                         <VisitTypeBadge type={appt.type} />
                       </div>
                     </div>

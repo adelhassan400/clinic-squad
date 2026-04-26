@@ -6,6 +6,38 @@ import { randomUUID } from "crypto";
 
 const router = Router({ mergeParams: true });
 
+async function buildPatientVisitTypeMap(clinicId: string, patientIds: string[]) {
+  const unique = Array.from(new Set(patientIds));
+  if (unique.length === 0) return new Map<string, string | null>();
+  const rows = await db
+    .select({ id: patientsTable.id, visitType: patientsTable.visitType })
+    .from(patientsTable)
+    .where(eq(patientsTable.clinicId, clinicId));
+  const map = new Map<string, string | null>();
+  for (const r of rows) map.set(r.id, r.visitType ?? null);
+  return map;
+}
+
+function serializeAppointment(
+  a: typeof appointmentsTable.$inferSelect,
+  patientVisitType: string | null,
+) {
+  return {
+    id: a.id,
+    clinicId: a.clinicId,
+    patientId: a.patientId,
+    patientName: a.patientName,
+    patientVisitType,
+    date: a.date,
+    time: a.time,
+    status: a.status,
+    type: a.type,
+    notes: a.notes,
+    fee: a.fee ? parseFloat(a.fee) : null,
+    createdAt: a.createdAt.toISOString(),
+  };
+}
+
 router.get("/", async (req, res) => {
   const { clinicId } = req.params;
   const date = req.query.date as string | undefined;
@@ -20,13 +52,10 @@ router.get("/", async (req, res) => {
 
   const total = appointments.length;
   const paged = appointments.slice(offset, offset + limit);
+  const visitTypes = await buildPatientVisitTypeMap(clinicId, paged.map(a => a.patientId));
 
   return res.json({
-    data: paged.map(a => ({
-      id: a.id, clinicId: a.clinicId, patientId: a.patientId, patientName: a.patientName,
-      date: a.date, time: a.time, status: a.status, type: a.type, notes: a.notes,
-      fee: a.fee ? parseFloat(a.fee) : null, createdAt: a.createdAt.toISOString(),
-    })),
+    data: paged.map(a => serializeAppointment(a, visitTypes.get(a.patientId) ?? null)),
     total, page, limit,
   });
 });
@@ -53,11 +82,7 @@ router.post("/", async (req, res) => {
   });
 
   const appt = (await db.select().from(appointmentsTable).where(eq(appointmentsTable.id, id)).limit(1))[0];
-  return res.status(201).json({
-    id: appt.id, clinicId: appt.clinicId, patientId: appt.patientId, patientName: appt.patientName,
-    date: appt.date, time: appt.time, status: appt.status, type: appt.type, notes: appt.notes,
-    fee: appt.fee ? parseFloat(appt.fee) : null, createdAt: appt.createdAt.toISOString(),
-  });
+  return res.status(201).json(serializeAppointment(appt, patient.visitType ?? null));
 });
 
 router.put("/:appointmentId", async (req, res) => {
@@ -77,11 +102,11 @@ router.put("/:appointmentId", async (req, res) => {
     .where(and(eq(appointmentsTable.id, appointmentId), eq(appointmentsTable.clinicId, clinicId)));
 
   const appt = (await db.select().from(appointmentsTable).where(eq(appointmentsTable.id, appointmentId)).limit(1))[0];
-  return res.json({
-    id: appt.id, clinicId: appt.clinicId, patientId: appt.patientId, patientName: appt.patientName,
-    date: appt.date, time: appt.time, status: appt.status, type: appt.type, notes: appt.notes,
-    fee: appt.fee ? parseFloat(appt.fee) : null, createdAt: appt.createdAt.toISOString(),
-  });
+  const patientRow = (await db.select({ visitType: patientsTable.visitType })
+    .from(patientsTable)
+    .where(eq(patientsTable.id, appt.patientId))
+    .limit(1))[0];
+  return res.json(serializeAppointment(appt, patientRow?.visitType ?? null));
 });
 
 router.delete("/:appointmentId", async (req, res) => {

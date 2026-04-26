@@ -135,12 +135,18 @@ router.get("/:clinicId/dashboard", async (req, res) => {
 router.get("/:clinicId/appointments/today", async (req, res) => {
   const { clinicId } = req.params;
   const today = new Date().toISOString().split("T")[0];
-  const appointments = await db.select().from(appointmentsTable)
-    .where(eq(appointmentsTable.clinicId, clinicId));
+  const [appointments, patients] = await Promise.all([
+    db.select().from(appointmentsTable).where(eq(appointmentsTable.clinicId, clinicId)),
+    db.select({ id: patientsTable.id, visitType: patientsTable.visitType })
+      .from(patientsTable)
+      .where(eq(patientsTable.clinicId, clinicId)),
+  ]);
+  const visitTypeById = new Map(patients.map(p => [p.id, p.visitType ?? null]));
 
   const todayAppts = appointments.filter(a => a.date === today);
   return res.json(todayAppts.map(a => ({
     id: a.id, clinicId: a.clinicId, patientId: a.patientId, patientName: a.patientName,
+    patientVisitType: visitTypeById.get(a.patientId) ?? null,
     date: a.date, time: a.time, status: a.status, type: a.type, notes: a.notes,
     fee: a.fee ? parseFloat(a.fee) : null, createdAt: a.createdAt.toISOString(),
   })));

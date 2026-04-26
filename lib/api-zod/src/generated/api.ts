@@ -382,6 +382,7 @@ export const ListPatientsResponse = zod.object({
       bloodType: zod.string().nullish(),
       allergies: zod.string().nullish(),
       notes: zod.string().nullish(),
+      visitType: zod.string().nullish(),
       createdAt: zod.coerce.date(),
     }),
   ),
@@ -405,6 +406,7 @@ export const CreatePatientBody = zod.object({
   bloodType: zod.string().nullish(),
   allergies: zod.string().nullish(),
   notes: zod.string().nullish(),
+  visitType: zod.string().nullish(),
 });
 
 /**
@@ -426,6 +428,7 @@ export const GetPatientResponse = zod.object({
   bloodType: zod.string().nullish(),
   allergies: zod.string().nullish(),
   notes: zod.string().nullish(),
+  visitType: zod.string().nullish(),
   createdAt: zod.coerce.date(),
 });
 
@@ -445,6 +448,7 @@ export const UpdatePatientBody = zod.object({
   bloodType: zod.string().nullish(),
   allergies: zod.string().nullish(),
   notes: zod.string().nullish(),
+  visitType: zod.string().nullish(),
 });
 
 export const UpdatePatientResponse = zod.object({
@@ -458,6 +462,7 @@ export const UpdatePatientResponse = zod.object({
   bloodType: zod.string().nullish(),
   allergies: zod.string().nullish(),
   notes: zod.string().nullish(),
+  visitType: zod.string().nullish(),
   createdAt: zod.coerce.date(),
 });
 
@@ -495,6 +500,12 @@ export const ListAppointmentsResponse = zod.object({
       clinicId: zod.string(),
       patientId: zod.string(),
       patientName: zod.string(),
+      patientVisitType: zod
+        .string()
+        .nullish()
+        .describe(
+          "The visit type recorded on the patient's record (independent of this appointment's type).",
+        ),
       date: zod.coerce.date(),
       time: zod.string(),
       status: zod.enum(["scheduled", "completed", "cancelled", "no_show"]),
@@ -548,6 +559,12 @@ export const UpdateAppointmentResponse = zod.object({
   clinicId: zod.string(),
   patientId: zod.string(),
   patientName: zod.string(),
+  patientVisitType: zod
+    .string()
+    .nullish()
+    .describe(
+      "The visit type recorded on the patient's record (independent of this appointment's type).",
+    ),
   date: zod.coerce.date(),
   time: zod.string(),
   status: zod.enum(["scheduled", "completed", "cancelled", "no_show"]),
@@ -750,6 +767,12 @@ export const GetTodayAppointmentsResponseItem = zod.object({
   clinicId: zod.string(),
   patientId: zod.string(),
   patientName: zod.string(),
+  patientVisitType: zod
+    .string()
+    .nullish()
+    .describe(
+      "The visit type recorded on the patient's record (independent of this appointment's type).",
+    ),
   date: zod.coerce.date(),
   time: zod.string(),
   status: zod.enum(["scheduled", "completed", "cancelled", "no_show"]),
