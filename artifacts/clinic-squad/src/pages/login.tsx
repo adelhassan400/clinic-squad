@@ -35,7 +35,7 @@ export default function LoginPage() {
     loginMutation.mutate({ data }, {
       onSuccess: (response) => {
         login(response.user as Parameters<typeof login>[0], response.clinic as Parameters<typeof login>[1], response.token);
-        setLocation("/dashboard");
+        setLocation(response.user.role === "superadmin" ? "/admin" : "/dashboard");
       },
       onError: () => {
         toast({ title: "Login failed", description: "Invalid email or password.", variant: "destructive" });

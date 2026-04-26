@@ -26,21 +26,28 @@ export function DashboardLayout({ children }: Props) {
   const [location] = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
-  const isAdmin = user?.role === "admin" || user?.role === "superadmin";
+  const isSuperAdmin = user?.role === "superadmin";
+  const isAdmin = user?.role === "admin" || isSuperAdmin;
 
-  const navItems = [
-    { href: "/dashboard", labelKey: "sidebar.dashboard", icon: LayoutDashboard },
-    { href: "/patients", labelKey: "sidebar.patients", icon: Users },
-    { href: "/appointments", labelKey: "sidebar.appointments", icon: Calendar },
-    ...(isAdmin
-      ? [
-          { href: "/prescriptions", labelKey: "sidebar.prescriptions", icon: Pill },
-          { href: "/insights", labelKey: "sidebar.insights", icon: BarChart2 },
-          { href: "/finances", labelKey: "sidebar.finances", icon: TrendingUp },
-        ]
-      : []),
-    { href: "/settings", labelKey: "sidebar.settings", icon: Settings },
-  ];
+  // Super admin gets a platform-only nav, no clinic-management pages
+  const navItems = isSuperAdmin
+    ? [
+        { href: "/admin", labelKey: "sidebar.admin", icon: Shield },
+        { href: "/settings", labelKey: "sidebar.settings", icon: Settings },
+      ]
+    : [
+        { href: "/dashboard", labelKey: "sidebar.dashboard", icon: LayoutDashboard },
+        { href: "/patients", labelKey: "sidebar.patients", icon: Users },
+        { href: "/appointments", labelKey: "sidebar.appointments", icon: Calendar },
+        ...(isAdmin
+          ? [
+              { href: "/prescriptions", labelKey: "sidebar.prescriptions", icon: Pill },
+              { href: "/insights", labelKey: "sidebar.insights", icon: BarChart2 },
+              { href: "/finances", labelKey: "sidebar.finances", icon: TrendingUp },
+            ]
+          : []),
+        { href: "/settings", labelKey: "sidebar.settings", icon: Settings },
+      ];
 
   const trialDaysLeft = clinic?.subscriptionStatus === "trial"
     ? getTrialDaysLeft(clinic.trialEndDate)
@@ -78,7 +85,8 @@ export function DashboardLayout({ children }: Props) {
           </Button>
         </div>
 
-        {/* Clinic info */}
+        {/* Clinic info — hidden for super admin (no clinic context) */}
+        {!isSuperAdmin && (
         <div className="px-4 py-4 border-b border-sidebar-border">
           <p className="text-xs text-sidebar-foreground/50 uppercase tracking-wider mb-1">{t("sidebar.clinic")}</p>
           <p className="text-sm font-semibold text-sidebar-foreground truncate">{clinic?.name}</p>
@@ -106,6 +114,7 @@ export function DashboardLayout({ children }: Props) {
             )}
           </div>
         </div>
+        )}
 
         {/* Nav */}
         <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
@@ -230,8 +239,8 @@ export function DashboardLayout({ children }: Props) {
             <Menu className="w-5 h-5" />
           </Button>
 
-          {/* Global patient search */}
-          <GlobalSearch />
+          {/* Global patient search — clinic users only */}
+          {!isSuperAdmin && <GlobalSearch />}
 
           <div className="flex-1" />
 
@@ -249,7 +258,7 @@ export function DashboardLayout({ children }: Props) {
             {theme === "dark" ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
           </Button>
 
-          {clinic?.subscriptionStatus === "trial" && (
+          {!isSuperAdmin && clinic?.subscriptionStatus === "trial" && (
             <Link href="/subscription">
               <Button size="sm" variant="outline" className="text-xs border-primary/30 text-primary hover:bg-primary/10">
                 <Crown className="w-3 h-3 me-1.5" />
@@ -257,7 +266,7 @@ export function DashboardLayout({ children }: Props) {
               </Button>
             </Link>
           )}
-          {clinic?.subscriptionStatus === "expired" && (
+          {!isSuperAdmin && clinic?.subscriptionStatus === "expired" && (
             <Link href="/subscription/expired">
               <Button size="sm" variant="destructive" className="text-xs">
                 <AlertTriangle className="w-3 h-3 me-1.5" />

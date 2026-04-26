@@ -10,11 +10,19 @@ interface Props {
   requireRole?: Role | Role[];
 }
 
+// Pages a super admin should never see (clinic-scoped); they get bounced to /admin.
+const CLINIC_ONLY_PREFIXES = [
+  "/dashboard", "/patients", "/appointments", "/prescriptions",
+  "/finances", "/insights", "/team", "/subscription",
+];
+
 export function ProtectedRoute({ children, requireRole }: Props) {
   const { isAuthenticated, isLoading, user, clinic } = useAuth();
-  const [, setLocation] = useLocation();
+  const [location, setLocation] = useLocation();
 
   const subscriptionExpired = clinic?.subscriptionStatus === "expired";
+  const isSuperAdmin = user?.role === "superadmin";
+  const onClinicOnlyPage = CLINIC_ONLY_PREFIXES.some(p => location.startsWith(p));
 
   useEffect(() => {
     if (isLoading) return;
@@ -22,10 +30,14 @@ export function ProtectedRoute({ children, requireRole }: Props) {
       setLocation("/login");
       return;
     }
-    if (subscriptionExpired) {
+    if (isSuperAdmin && onClinicOnlyPage) {
+      setLocation("/admin");
+      return;
+    }
+    if (!isSuperAdmin && subscriptionExpired) {
       setLocation("/subscription/expired");
     }
-  }, [isLoading, isAuthenticated, subscriptionExpired, setLocation]);
+  }, [isLoading, isAuthenticated, isSuperAdmin, onClinicOnlyPage, subscriptionExpired, setLocation]);
 
   if (isLoading) {
     return (
