@@ -6,7 +6,8 @@ import { useLang } from "@/lib/lang";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import {
   Shield, Users, Calendar, TrendingUp, CheckCircle, Star,
-  ArrowRight, Sun, Moon, Zap, Lock, Globe, PhoneCall
+  ArrowRight, Sun, Moon, Zap, Lock, Globe, PhoneCall,
+  UserPlus, Settings as SettingsIcon, ClipboardList, BarChart3
 } from "lucide-react";
 
 const planFeatures = {
@@ -71,6 +72,7 @@ export default function LandingPage() {
           </div>
           <div className="hidden md:flex items-center gap-6 ms-6 text-sm text-muted-foreground">
             <a href="#features" className="hover:text-foreground transition-colors">{t("nav.features")}</a>
+            <a href="#how-it-works" className="hover:text-foreground transition-colors">{t("nav.howItWorks")}</a>
             <a href="#pricing" className="hover:text-foreground transition-colors">{t("nav.pricing")}</a>
             <a href="#testimonials" className="hover:text-foreground transition-colors">{t("nav.testimonials")}</a>
           </div>
@@ -154,8 +156,39 @@ export default function LandingPage() {
         </div>
       </section>
 
+      {/* How It Works */}
+      <section id="how-it-works" className="py-20 max-w-6xl mx-auto px-6">
+        <div className="text-center mb-14">
+          <h2 className="text-3xl md:text-4xl font-serif font-bold mb-4">{t("how.title")}</h2>
+          <p className="text-muted-foreground max-w-xl mx-auto">{t("how.subtitle")}</p>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          {[
+            { num: "01", icon: UserPlus, titleKey: "how.step1.title", descKey: "how.step1.desc" },
+            { num: "02", icon: SettingsIcon, titleKey: "how.step2.title", descKey: "how.step2.desc" },
+            { num: "03", icon: ClipboardList, titleKey: "how.step3.title", descKey: "how.step3.desc" },
+            { num: "04", icon: BarChart3, titleKey: "how.step4.title", descKey: "how.step4.desc" },
+          ].map(({ num, icon: Icon, titleKey, descKey }, idx) => (
+            <div
+              key={num}
+              className="relative p-6 rounded-xl border border-border bg-card hover:border-primary/40 transition-colors"
+              data-testid={`how-step-${idx + 1}`}
+            >
+              <span className="absolute top-4 end-4 text-4xl font-serif font-bold text-primary/20 leading-none select-none">
+                {num}
+              </span>
+              <div className="w-11 h-11 rounded-lg bg-primary/10 flex items-center justify-center mb-4">
+                <Icon className="w-5 h-5 text-primary" />
+              </div>
+              <h3 className="font-semibold mb-2">{t(titleKey)}</h3>
+              <p className="text-sm text-muted-foreground leading-relaxed">{t(descKey)}</p>
+            </div>
+          ))}
+        </div>
+      </section>
+
       {/* Pricing */}
-      <section id="pricing" className="py-20 max-w-6xl mx-auto px-6">
+      <section id="pricing" className="bg-card border-y border-border py-20"><div className="max-w-6xl mx-auto px-6">
         <div className="text-center mb-14">
           <h2 className="text-3xl md:text-4xl font-serif font-bold mb-4">{t("pricing.title")}</h2>
           <p className="text-muted-foreground">{t("pricing.subtitle")}</p>
@@ -192,6 +225,7 @@ export default function LandingPage() {
               </Link>
             </div>
           ))}
+        </div>
         </div>
       </section>
 

@@ -12,6 +12,7 @@ interface LangContextType {
 const translations: Record<string, Record<Lang, string>> = {
   // Nav
   "nav.features": { en: "Features", ar: "المميزات" },
+  "nav.howItWorks": { en: "How It Works", ar: "كيف تعمل" },
   "nav.pricing": { en: "Pricing", ar: "الأسعار" },
   "nav.testimonials": { en: "Testimonials", ar: "آراء العملاء" },
   "nav.signIn": { en: "Sign In", ar: "تسجيل الدخول" },
@@ -51,6 +52,17 @@ const translations: Record<string, Record<Lang, string>> = {
   "pricing.premium.desc": { en: "Full-featured for growing clinics", ar: "متكاملة للعيادات النامية" },
   "pricing.cta": { en: "Start Free Trial", ar: "ابدأ التجربة المجانية" },
   // Testimonials
+  "how.title": { en: "How to Get Started with ClinicSquad?", ar: "كيف تبدأ مع كلينيك سكواد؟" },
+  "how.subtitle": { en: "Four simple steps from sign-up to a fully running, data-driven clinic.", ar: "أربع خطوات بسيطة من التسجيل إلى عيادة متكاملة تعمل بالبيانات." },
+  "how.step1.title": { en: "Create Your Account", ar: "أنشئ حسابك" },
+  "how.step1.desc": { en: "Register in seconds — no credit card required. Set up your clinic profile with your name, specialty, and consultation fees.", ar: "سجّل في ثوانٍ — بدون بطاقة ائتمانية. أنشئ ملف عيادتك مع اسمك وتخصصك ورسوم الكشف." },
+  "how.step2.title": { en: "Customize Your Settings", ar: "خصّص إعداداتك" },
+  "how.step2.desc": { en: "Configure consultation fees, add doctors and secretary accounts, and personalize the system to match your daily workflow.", ar: "حدّد رسوم الكشف، أضف حسابات الأطباء والسكرتيرة، وخصّص النظام ليناسب سير عملك اليومي." },
+  "how.step3.title": { en: "Add Patients & Book Appointments", ar: "أضف المرضى واحجز المواعيد" },
+  "how.step3.desc": { en: "Start adding patient records and booking appointments. The system handles the waitlist, visit history, and billing automatically.", ar: "ابدأ بإضافة سجلات المرضى وحجز المواعيد. النظام يتولى قائمة الانتظار وسجل الزيارات والفواتير تلقائياً." },
+  "how.step4.title": { en: "Track & Grow", ar: "تابع وانمُ" },
+  "how.step4.desc": { en: "Monitor clinic performance, revenue trends, and patient statistics from a beautiful analytics dashboard.", ar: "تابع أداء عيادتك واتجاهات الإيرادات وإحصائيات المرضى من لوحة تحليلات أنيقة." },
+
   "test.title": { en: "Trusted by Egyptian Doctors", ar: "موثوق به من الأطباء المصريين" },
   // CTA Section
   "cta.title": { en: "Ready to Transform Your Clinic?", ar: "مستعد لتحويل عيادتك؟" },
