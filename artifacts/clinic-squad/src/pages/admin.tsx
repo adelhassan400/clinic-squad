@@ -126,6 +126,7 @@ export default function AdminPage() {
   const [planView, setPlanView] = useState<PlanKey | null>(null);
   const [selectedClinicId, setSelectedClinicId] = useState<string | null>(null);
   const [revenueYear, setRevenueYear] = useState<number | "rolling12">("rolling12");
+  const [revenueMonth, setRevenueMonth] = useState<number | "all">("all"); // 1-12 or "all"
 
   // Existing data + new endpoints (raw fetch)
   const { data: clinics, isLoading: clinicsLoading } = useAdminListClinics({
@@ -253,7 +254,18 @@ export default function AdminPage() {
             mode={stats?.revenueRange?.mode ?? "rolling12"}
             selectedYear={revenueYear}
             availableYears={stats?.availableYears ?? []}
-            onChangeYear={setRevenueYear}
+            onChangeYear={(y) => {
+              setRevenueYear(y);
+              if (y === "rolling12") setRevenueMonth("all");
+            }}
+            selectedMonth={revenueMonth}
+            onChangeMonth={(m) => {
+              setRevenueMonth(m);
+              // If user picks a specific month while in rolling mode, snap year to current year.
+              if (m !== "all" && revenueYear === "rolling12") {
+                setRevenueYear(new Date().getUTCFullYear());
+              }
+            }}
           />
 
           {/* Subscribers by Plan */}
@@ -791,6 +803,11 @@ function formatMonthLabel(month: string, opts: { short?: boolean } = {}): string
   });
 }
 
+const MONTH_NAMES = [
+  "January", "February", "March", "April", "May", "June",
+  "July", "August", "September", "October", "November", "December",
+];
+
 function MonthlyRevenuePanel({
   data,
   currentMonthRevenue,
@@ -800,6 +817,8 @@ function MonthlyRevenuePanel({
   selectedYear,
   availableYears,
   onChangeYear,
+  selectedMonth,
+  onChangeMonth,
 }: {
   data: MonthlyRevenue[];
   currentMonthRevenue: number;
@@ -809,19 +828,28 @@ function MonthlyRevenuePanel({
   selectedYear: number | "rolling12";
   availableYears: number[];
   onChangeYear: (v: number | "rolling12") => void;
+  selectedMonth: number | "all";
+  onChangeMonth: (v: number | "all") => void;
 }) {
   const nowKey = (() => {
     const d = new Date();
     return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}`;
   })();
 
+  // The month-key the user has focused on (only meaningful in year mode).
+  const focusedMonthKey =
+    selectedMonth !== "all" && mode === "year" && typeof selectedYear === "number"
+      ? `${selectedYear}-${String(selectedMonth).padStart(2, "0")}`
+      : null;
+
   const chartData = useMemo(
     () => data.map((d) => ({
       ...d,
       label: formatMonthLabel(d.month, { short: true }),
       isCurrent: d.month === nowKey,
+      isFocused: focusedMonthKey !== null && d.month === focusedMonthKey,
     })),
-    [data, nowKey],
+    [data, nowKey, focusedMonthKey],
   );
 
   const totalForRange = data.reduce((sum, d) => sum + d.amount, 0);
@@ -833,6 +861,13 @@ function MonthlyRevenuePanel({
   );
   const fmt = (n: number) =>
     `${Math.round(n).toLocaleString()} ${currencyCode}`;
+
+  // Focused-month stats (when a specific month is picked).
+  const focused = focusedMonthKey ? data.find((d) => d.month === focusedMonthKey) : null;
+  const focusedIdx = focused ? data.findIndex((d) => d.month === focusedMonthKey) : -1;
+  const prevMonth = focusedIdx > 0 ? data[focusedIdx - 1] : null;
+  const focusedDelta = focused && prevMonth ? focused.amount - prevMonth.amount : null;
+  const focusedAvg = focused && focused.count > 0 ? focused.amount / focused.count : 0;
 
   const currentInRange = data.find((d) => d.month === nowKey);
   const currentMonthLabel = currentInRange
@@ -846,6 +881,8 @@ function MonthlyRevenuePanel({
       ? `${selectedYear} total`
       : "12-month total";
 
+  const monthDisabled = mode === "rolling12";
+
   return (
     <div className="rounded-xl border border-border bg-card overflow-hidden">
       <div className="px-5 py-3 border-b border-border bg-muted/30 flex items-center gap-2 flex-wrap">
@@ -854,9 +891,9 @@ function MonthlyRevenuePanel({
         <span className="text-xs text-muted-foreground hidden sm:inline">
           Confirmed payments only
         </span>
-        <div className="ms-auto flex items-center gap-2">
+        <div className="ms-auto flex items-center gap-2 flex-wrap">
           <label htmlFor="revenue-year" className="text-xs text-muted-foreground">
-            Showing
+            Year
           </label>
           <select
             id="revenue-year"
@@ -872,6 +909,25 @@ function MonthlyRevenuePanel({
               <option key={y} value={y}>{y}</option>
             ))}
           </select>
+          <label htmlFor="revenue-month" className="text-xs text-muted-foreground ms-1">
+            Month
+          </label>
+          <select
+            id="revenue-month"
+            value={selectedMonth === "all" ? "all" : String(selectedMonth)}
+            onChange={(e) =>
+              onChangeMonth(e.target.value === "all" ? "all" : Number(e.target.value))
+            }
+            disabled={monthDisabled}
+            title={monthDisabled ? "Pick a year first to focus on a month" : undefined}
+            className="text-xs h-8 px-2 rounded-md border border-border bg-background focus:outline-none focus:ring-1 focus:ring-primary/40 disabled:opacity-50 disabled:cursor-not-allowed"
+            data-testid="select-revenue-month"
+          >
+            <option value="all">All months</option>
+            {MONTH_NAMES.map((name, idx) => (
+              <option key={name} value={idx + 1}>{name}</option>
+            ))}
+          </select>
         </div>
       </div>
 
@@ -879,47 +935,93 @@ function MonthlyRevenuePanel({
         <div className="p-5"><Skeleton className="h-48 w-full" /></div>
       ) : (
         <>
-          <div className="grid sm:grid-cols-3 divide-y sm:divide-y-0 sm:divide-x divide-border border-b border-border">
-            <div className="p-5">
-              <p className="text-xs uppercase tracking-wider text-muted-foreground font-medium">
-                {currentMonthLabel}
-              </p>
-              <p className="text-2xl font-bold mt-1 text-primary">
-                {fmt(currentMonthRevenue)}
-              </p>
-              <p className="text-xs text-muted-foreground mt-0.5">
-                Current month (always live)
-              </p>
+          {focused ? (
+            <div className="grid sm:grid-cols-3 divide-y sm:divide-y-0 sm:divide-x divide-border border-b border-border bg-primary/5">
+              <div className="p-5">
+                <p className="text-xs uppercase tracking-wider text-muted-foreground font-medium">
+                  {formatMonthLabel(focused.month)}
+                </p>
+                <p className="text-2xl font-bold mt-1 text-primary" data-testid="text-focused-revenue">
+                  {fmt(focused.amount)}
+                </p>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  {focusedDelta === null
+                    ? "No prior month for comparison"
+                    : focusedDelta === 0
+                      ? "Same as previous month"
+                      : focusedDelta > 0
+                        ? `▲ ${fmt(focusedDelta)} vs previous month`
+                        : `▼ ${fmt(Math.abs(focusedDelta))} vs previous month`}
+                </p>
+              </div>
+              <div className="p-5">
+                <p className="text-xs uppercase tracking-wider text-muted-foreground font-medium">
+                  Payments
+                </p>
+                <p className="text-2xl font-bold mt-1" data-testid="text-focused-count">
+                  {focused.count}
+                </p>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  Confirmed in {MONTH_NAMES[(focused.month.split("-")[1] ? Number(focused.month.split("-")[1]) - 1 : 0)]}
+                </p>
+              </div>
+              <div className="p-5">
+                <p className="text-xs uppercase tracking-wider text-muted-foreground font-medium">
+                  Avg per payment
+                </p>
+                <p className="text-2xl font-bold mt-1">
+                  {focused.count > 0 ? fmt(focusedAvg) : "—"}
+                </p>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  {focused.count > 0
+                    ? `${focused.count} payment${focused.count === 1 ? "" : "s"} this month`
+                    : "No payments this month"}
+                </p>
+              </div>
             </div>
-            <div className="p-5">
-              <p className="text-xs uppercase tracking-wider text-muted-foreground font-medium">
-                {mode === "year" ? "Range avg" : "Last 3 months"}
-              </p>
-              <p className="text-2xl font-bold mt-1">
-                {mode === "year"
-                  ? fmt(totalForRange / 12)
-                  : fmt(last3)}
-              </p>
-              <p className="text-xs text-muted-foreground mt-0.5">
-                {mode === "year"
-                  ? `Avg per month across ${selectedYear}`
-                  : `Avg ${fmt(last3 / 3)} / month`}
-              </p>
+          ) : (
+            <div className="grid sm:grid-cols-3 divide-y sm:divide-y-0 sm:divide-x divide-border border-b border-border">
+              <div className="p-5">
+                <p className="text-xs uppercase tracking-wider text-muted-foreground font-medium">
+                  {currentMonthLabel}
+                </p>
+                <p className="text-2xl font-bold mt-1 text-primary">
+                  {fmt(currentMonthRevenue)}
+                </p>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  Current month (always live)
+                </p>
+              </div>
+              <div className="p-5">
+                <p className="text-xs uppercase tracking-wider text-muted-foreground font-medium">
+                  {mode === "year" ? "Range avg" : "Last 3 months"}
+                </p>
+                <p className="text-2xl font-bold mt-1">
+                  {mode === "year"
+                    ? fmt(totalForRange / 12)
+                    : fmt(last3)}
+                </p>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  {mode === "year"
+                    ? `Avg per month across ${selectedYear}`
+                    : `Avg ${fmt(last3 / 3)} / month`}
+                </p>
+              </div>
+              <div className="p-5">
+                <p className="text-xs uppercase tracking-wider text-muted-foreground font-medium">
+                  Best month
+                </p>
+                <p className="text-2xl font-bold mt-1">
+                  {bestMonth && bestMonth.amount > 0 ? fmt(bestMonth.amount) : "—"}
+                </p>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  {bestMonth && bestMonth.amount > 0
+                    ? formatMonthLabel(bestMonth.month)
+                    : "No revenue in range"}
+                </p>
+              </div>
             </div>
-            <div className="p-5">
-              <p className="text-xs uppercase tracking-wider text-muted-foreground font-medium">
-                Best month
-              </p>
-              <p className="text-2xl font-bold mt-1">
-                {bestMonth && bestMonth.amount > 0 ? fmt(bestMonth.amount) : "—"}
-              </p>
-              <p className="text-xs text-muted-foreground mt-0.5">
-                {bestMonth && bestMonth.amount > 0
-                  ? formatMonthLabel(bestMonth.month)
-                  : "No revenue in range"}
-              </p>
-            </div>
-          </div>
+          )}
 
           <div className="p-5">
             {totalForRange === 0 ? (
@@ -966,12 +1068,18 @@ function MonthlyRevenuePanel({
                         }
                       />
                       <Bar dataKey="amount" radius={[4, 4, 0, 0]}>
-                        {chartData.map((entry) => (
-                          <Cell
-                            key={entry.month}
-                            fill={entry.isCurrent ? "hsl(var(--primary))" : "hsl(var(--primary) / 0.45)"}
-                          />
-                        ))}
+                        {chartData.map((entry) => {
+                          // When a month is focused, ONLY that bar is solid; everything else is muted.
+                          // Otherwise, the current month gets the solid color.
+                          const fill = focusedMonthKey
+                            ? (entry.isFocused
+                                ? "hsl(var(--primary))"
+                                : "hsl(var(--primary) / 0.2)")
+                            : (entry.isCurrent
+                                ? "hsl(var(--primary))"
+                                : "hsl(var(--primary) / 0.45)");
+                          return <Cell key={entry.month} fill={fill} />;
+                        })}
                       </Bar>
                     </BarChart>
                   </ResponsiveContainer>
@@ -989,15 +1097,24 @@ function MonthlyRevenuePanel({
                     <tbody className="divide-y divide-border">
                       {[...data].reverse().map((row) => {
                         const isCurrent = row.month === nowKey;
+                        const isFocused = focusedMonthKey !== null && row.month === focusedMonthKey;
                         return (
                           <tr
                             key={row.month}
-                            className={cn(isCurrent && "bg-primary/5")}
+                            className={cn(
+                              isFocused && "bg-primary/15 ring-1 ring-primary/30",
+                              !isFocused && isCurrent && "bg-primary/5",
+                            )}
                             data-testid={`revenue-row-${row.month}`}
                           >
                             <td className="py-2 font-medium">
                               {formatMonthLabel(row.month)}
-                              {isCurrent && (
+                              {isFocused && (
+                                <span className="ms-2 text-[10px] uppercase font-semibold text-primary">
+                                  selected
+                                </span>
+                              )}
+                              {!isFocused && isCurrent && (
                                 <span className="ms-2 text-[10px] uppercase font-semibold text-primary">
                                   current
                                 </span>
