@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Link } from "wouter";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
+import { VisitTypeBadge } from "@/lib/visit-types";
 
 function StatCard({ label, value, icon: Icon, sub, color }: {
   label: string; value: string | number; icon: typeof Users; sub?: string; color?: string;
@@ -198,7 +199,9 @@ export default function DashboardPage() {
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium truncate">{appt.patientName}</p>
-                      <p className="text-xs text-muted-foreground">{appt.type}</p>
+                      <div className="mt-1">
+                        <VisitTypeBadge type={appt.type} />
+                      </div>
                     </div>
                     <div className="flex items-center gap-3 shrink-0">
                       <span className="text-xs text-muted-foreground font-mono">{appt.time}</span>

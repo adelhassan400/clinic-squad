@@ -27,6 +27,7 @@ import { Link } from "wouter";
 import { cn } from "@/lib/utils";
 import { useCurrency } from "@/lib/currency";
 import { openWhatsApp, whatsappAppointmentReminder } from "@/lib/whatsapp";
+import { VISIT_TYPES, VisitTypeBadge, getVisitTypeStyle } from "@/lib/visit-types";
 
 const apptSchema = z.object({
   patientId: z.string().min(1, "Select a patient"),
@@ -325,6 +326,7 @@ function DayCalendar({
               const top = (topMins / 60) * HOUR_HEIGHT;
               const minHeight = 52;
               const s = STATUS_STYLES[appt.status] ?? STATUS_STYLES.scheduled;
+              const vt = getVisitTypeStyle(appt.type);
 
               return (
                 <div
@@ -336,15 +338,17 @@ function DayCalendar({
                   )}
                   style={{ top: top + 2, minHeight }}
                 >
-                  {/* Color bar */}
-                  <div className={cn("w-1 rounded-full shrink-0 self-stretch", s.bar)} />
+                  {/* Color bar — visit type */}
+                  <div className={cn("w-1 rounded-full shrink-0 self-stretch", vt.bar)} />
 
                   {/* Content */}
                   <div className="flex-1 min-w-0">
                     <div className="flex items-start justify-between gap-2">
                       <div className="min-w-0">
                         <p className={cn("text-xs font-bold truncate", s.text)}>{appt.patientName}</p>
-                        <p className="text-xs text-muted-foreground truncate">{appt.type}</p>
+                        <div className="mt-0.5">
+                          <VisitTypeBadge type={appt.type} className="text-[10px] px-1.5 py-0" />
+                        </div>
                       </div>
                       <div className="flex items-center gap-0.5 shrink-0">
                         {appt.status === "scheduled" && (
@@ -601,7 +605,7 @@ export default function AppointmentsPage() {
                       <p className="text-sm">{appt.date}</p>
                       <p className="text-xs text-muted-foreground font-mono">{appt.time}</p>
                     </div>
-                    <span className="text-xs text-muted-foreground">{appt.type}</span>
+                    <VisitTypeBadge type={appt.type} />
                     <StatusBadge status={appt.status} />
                     <div className="flex items-center gap-1">
                       {appt.status === "scheduled" && (
@@ -725,8 +729,31 @@ export default function AppointmentsPage() {
                 </div>
               </div>
               <div>
-                <Label>Appointment Type *</Label>
-                <Input {...form.register("type")} placeholder="General Checkup, Consultation..." className="mt-1" />
+                <Label>Visit Type *</Label>
+                <Controller
+                  control={form.control}
+                  name="type"
+                  render={({ field }) => (
+                    <Select value={field.value || ""} onValueChange={field.onChange}>
+                      <SelectTrigger className="mt-1" data-testid="select-visit-type">
+                        <SelectValue placeholder="Select visit type" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {VISIT_TYPES.map((vt) => {
+                          const style = getVisitTypeStyle(vt);
+                          return (
+                            <SelectItem key={vt} value={vt} data-testid={`visit-type-option-${vt}`}>
+                              <span className="inline-flex items-center gap-2">
+                                <span className={cn("w-2 h-2 rounded-full", style.dot)} />
+                                {vt}
+                              </span>
+                            </SelectItem>
+                          );
+                        })}
+                      </SelectContent>
+                    </Select>
+                  )}
+                />
                 {form.formState.errors.type && (
                   <p className="text-xs text-destructive mt-1">{form.formState.errors.type.message}</p>
                 )}

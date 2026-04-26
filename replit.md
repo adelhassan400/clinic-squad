@@ -88,3 +88,4 @@ lib/
 - Prescriptions route (`/prescriptions`, displayed as "ePrescription") is available on all paid plans; admin-only for create/delete (backend returns 403 when not admin). Print/WhatsApp helpers live in `artifacts/clinic-squad/src/lib/prescription.ts`.
 - Subscription expired → redirected to /subscription/expired
 - Generated API hooks require `queryKey` in query options for `enabled` to work
+- Visit Type system: `artifacts/clinic-squad/src/lib/visit-types.tsx` exports `VISIT_TYPES`, `VisitTypeBadge`, and `getVisitTypeStyle`. Used by appointments form (Select dropdown), list view, day calendar (color bar), and dashboard today's appointments. Colors: New Consultation=blue, Follow-up=green, Emergency=red, Procedure=purple, Session=amber. Free-form legacy values fall back to a neutral muted badge.
