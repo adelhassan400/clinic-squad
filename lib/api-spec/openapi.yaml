@@ -790,6 +790,21 @@ paths:
                 items:
                   $ref: "#/components/schemas/Clinic"
 
+  /admin/pending-clinics:
+    get:
+      operationId: adminListPendingClinics
+      tags: [clinics]
+      summary: SuperAdmin - list clinics waiting for manual approval
+      responses:
+        "200":
+          description: Pending clinics with owner contact info
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/PendingClinic"
+
   /admin/clinics/{clinicId}/activate:
     post:
       operationId: adminActivateClinic
@@ -1403,6 +1418,33 @@ components:
         specialty:
           type: string
           nullable: true
+
+    PendingClinic:
+      type: object
+      properties:
+        clinicId:
+          type: string
+        clinicName:
+          type: string
+        ownerId:
+          type: string
+        ownerName:
+          type: string
+        ownerEmail:
+          type: string
+        specialty:
+          type: string
+          nullable: true
+        whatsappNumber:
+          type: string
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+        trialEndDate:
+          type: string
+          format: date-time
+      required: [clinicId, clinicName, ownerId, ownerName, ownerEmail, createdAt, trialEndDate]
 
     Clinic:
       type: object

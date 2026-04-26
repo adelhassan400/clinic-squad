@@ -808,6 +808,24 @@ export const AdminListClinicsResponseItem = zod.object({
 export const AdminListClinicsResponse = zod.array(AdminListClinicsResponseItem);
 
 /**
+ * @summary SuperAdmin - list clinics waiting for manual approval
+ */
+export const AdminListPendingClinicsResponseItem = zod.object({
+  clinicId: zod.string(),
+  clinicName: zod.string(),
+  ownerId: zod.string(),
+  ownerName: zod.string(),
+  ownerEmail: zod.string(),
+  specialty: zod.string().nullish(),
+  whatsappNumber: zod.string().nullish(),
+  createdAt: zod.coerce.date(),
+  trialEndDate: zod.coerce.date(),
+});
+export const AdminListPendingClinicsResponse = zod.array(
+  AdminListPendingClinicsResponseItem,
+);
+
+/**
  * @summary SuperAdmin - activate clinic
  */
 export const AdminActivateClinicParams = zod.object({

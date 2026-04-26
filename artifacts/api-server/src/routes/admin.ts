@@ -246,6 +246,39 @@ router.get("/clinics/:clinicId/detail", async (req, res) => {
   });
 });
 
+router.get("/pending-clinics", async (_req, res) => {
+  const rows = await db
+    .select({
+      clinicId: clinicsTable.id,
+      clinicName: clinicsTable.name,
+      ownerId: clinicsTable.ownerId,
+      createdAt: clinicsTable.createdAt,
+      trialEndDate: clinicsTable.trialEndDate,
+      ownerName: usersTable.name,
+      ownerEmail: usersTable.email,
+      specialty: usersTable.specialty,
+      whatsappNumber: usersTable.whatsappNumber,
+    })
+    .from(clinicsTable)
+    .leftJoin(usersTable, eq(usersTable.id, clinicsTable.ownerId))
+    .where(eq(clinicsTable.status, "pending_approval"))
+    .orderBy(desc(clinicsTable.createdAt));
+
+  return res.json(
+    rows.map((r) => ({
+      clinicId: r.clinicId,
+      clinicName: r.clinicName,
+      ownerId: r.ownerId,
+      ownerName: r.ownerName ?? "",
+      ownerEmail: r.ownerEmail ?? "",
+      specialty: r.specialty,
+      whatsappNumber: r.whatsappNumber,
+      createdAt: r.createdAt.toISOString(),
+      trialEndDate: r.trialEndDate.toISOString(),
+    })),
+  );
+});
+
 router.post("/clinics/:clinicId/activate", async (req, res) => {
   const { clinicId } = req.params;
   await db.update(clinicsTable).set({ status: "active" }).where(eq(clinicsTable.id, clinicId));

@@ -49,6 +49,7 @@ import type {
   LoginBody,
   Patient,
   PatientList,
+  PendingClinic,
   Prescription,
   PrescriptionList,
   RegisterBody,
@@ -3171,6 +3172,82 @@ export function useAdminListClinics<
   request?: SecondParameter<typeof customFetch>;
 }): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
   const queryOptions = getAdminListClinicsQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary SuperAdmin - list clinics waiting for manual approval
+ */
+export const getAdminListPendingClinicsUrl = () => {
+  return `/api/admin/pending-clinics`;
+};
+
+export const adminListPendingClinics = async (
+  options?: RequestInit,
+): Promise<PendingClinic[]> => {
+  return customFetch<PendingClinic[]>(getAdminListPendingClinicsUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getAdminListPendingClinicsQueryKey = () => {
+  return [`/api/admin/pending-clinics`] as const;
+};
+
+export const getAdminListPendingClinicsQueryOptions = <
+  TData = Awaited<ReturnType<typeof adminListPendingClinics>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof adminListPendingClinics>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getAdminListPendingClinicsQueryKey();
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof adminListPendingClinics>>
+  > = ({ signal }) => adminListPendingClinics({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof adminListPendingClinics>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type AdminListPendingClinicsQueryResult = NonNullable<
+  Awaited<ReturnType<typeof adminListPendingClinics>>
+>;
+export type AdminListPendingClinicsQueryError = ErrorType<unknown>;
+
+/**
+ * @summary SuperAdmin - list clinics waiting for manual approval
+ */
+
+export function useAdminListPendingClinics<
+  TData = Awaited<ReturnType<typeof adminListPendingClinics>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof adminListPendingClinics>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getAdminListPendingClinicsQueryOptions(options);
 
   const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
     queryKey: QueryKey;

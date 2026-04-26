@@ -330,6 +330,18 @@ export interface UpdateProfileBody {
   specialty?: string | null;
 }
 
+export interface PendingClinic {
+  clinicId: string;
+  clinicName: string;
+  ownerId: string;
+  ownerName: string;
+  ownerEmail: string;
+  specialty?: string | null;
+  whatsappNumber?: string | null;
+  createdAt: string;
+  trialEndDate: string;
+}
+
 export type SubscriptionPlanType =
   (typeof SubscriptionPlanType)[keyof typeof SubscriptionPlanType];
 

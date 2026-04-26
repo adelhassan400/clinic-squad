@@ -6,6 +6,7 @@ import {
   useAdminListClinics, useAdminActivateClinic, useAdminBlockClinic,
   useAdminConfirmSubscription, getAdminListClinicsQueryKey,
   useAdminGetClinicDetail,
+  useAdminListPendingClinics, getAdminListPendingClinicsQueryKey,
 } from "@workspace/api-client-react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { formatDate } from "@/lib/utils";
@@ -145,6 +146,10 @@ export default function AdminPage() {
     queryKey: ["/api/admin/subscriptions"],
     queryFn: () => customFetch<AdminSubscription[]>("/api/admin/subscriptions"),
   });
+  const pendingApprovalsQ = useAdminListPendingClinics({
+    query: { queryKey: getAdminListPendingClinicsQueryKey() },
+  });
+  const pendingApprovals = pendingApprovalsQ.data ?? [];
 
   const activateMutation = useAdminActivateClinic();
   const blockMutation = useAdminBlockClinic();
@@ -152,6 +157,7 @@ export default function AdminPage() {
 
   function refetchAll() {
     qc.invalidateQueries({ queryKey: getAdminListClinicsQueryKey() });
+    qc.invalidateQueries({ queryKey: getAdminListPendingClinicsQueryKey() });
     qc.invalidateQueries({ queryKey: ["/api/admin/stats"], exact: false });
     qc.invalidateQueries({ queryKey: ["/api/admin/subscriptions"] });
   }
@@ -244,6 +250,14 @@ export default function AdminPage() {
               value={stats ? `${Math.round(stats.confirmedRevenue).toLocaleString()}` : "—"}
               sub={currencyCode} tone="success" />
           </div>
+
+          {/* Pending Approvals (manual trial activation) */}
+          <PendingApprovalsPanel
+            items={pendingApprovals}
+            isLoading={pendingApprovalsQ.isLoading}
+            onActivate={handleActivate}
+            activatingId={activateMutation.isPending ? activateMutation.variables?.clinicId ?? null : null}
+          />
 
           {/* Monthly revenue */}
           <MonthlyRevenuePanel
@@ -1160,6 +1174,149 @@ function CountTile({
         {label}
       </div>
       <p className="text-lg font-semibold mt-1 truncate">{value}</p>
+    </div>
+  );
+}
+
+interface PendingApprovalItem {
+  clinicId: string;
+  clinicName: string;
+  ownerId: string;
+  ownerName: string;
+  ownerEmail: string;
+  specialty?: string | null;
+  whatsappNumber?: string | null;
+  createdAt: string;
+  trialEndDate: string;
+}
+
+function PendingApprovalsPanel({
+  items,
+  isLoading,
+  onActivate,
+  activatingId,
+}: {
+  items: PendingApprovalItem[];
+  isLoading: boolean;
+  onActivate: (clinicId: string) => void;
+  activatingId: string | null;
+}) {
+  function whatsappUrl(name: string, number: string | null | undefined) {
+    const digits = (number ?? "").replace(/[^0-9]/g, "");
+    const text = `Hello Dr. ${name || "there"}, your ClinicSquad 15-day free trial has been activated. You can now sign in to your dashboard.`;
+    if (!digits) return null;
+    return `https://wa.me/${digits}?text=${encodeURIComponent(text)}`;
+  }
+
+  return (
+    <div className="rounded-xl border border-border bg-card overflow-hidden">
+      <div className="px-5 py-3 border-b border-border bg-muted/30 flex items-center gap-2 flex-wrap">
+        <Hourglass className="w-4 h-4 text-primary" />
+        <h2 className="text-sm font-semibold">Pending Approvals</h2>
+        <span
+          className="text-xs font-semibold px-2 py-0.5 rounded-full bg-primary/15 text-primary"
+          data-testid="text-pending-approvals-count"
+        >
+          {items.length}
+        </span>
+        <span className="text-xs text-muted-foreground hidden sm:inline">
+          New trial requests waiting for activation
+        </span>
+      </div>
+
+      {isLoading ? (
+        <div className="p-5 space-y-2">
+          <Skeleton className="h-12 w-full" />
+          <Skeleton className="h-12 w-full" />
+        </div>
+      ) : items.length === 0 ? (
+        <div className="p-8 text-center text-sm text-muted-foreground">
+          <CheckCircle className="w-8 h-8 mx-auto text-primary/60 mb-2" />
+          No pending approvals — you&apos;re all caught up.
+        </div>
+      ) : (
+        <ul className="divide-y divide-border">
+          {items.map((item) => {
+            const wa = whatsappUrl(item.ownerName, item.whatsappNumber);
+            const isActivating = activatingId === item.clinicId;
+            return (
+              <li
+                key={item.clinicId}
+                className="p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center gap-4"
+                data-testid={`row-pending-${item.clinicId}`}
+              >
+                <div className="flex-1 min-w-0 space-y-1">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <p className="font-semibold truncate" data-testid={`text-pending-clinic-${item.clinicId}`}>
+                      {item.clinicName}
+                    </p>
+                    <span className="text-xs text-muted-foreground">
+                      Requested {formatDate(item.createdAt)}
+                    </span>
+                  </div>
+                  <p className="text-sm text-muted-foreground truncate">
+                    {item.ownerName}
+                    {item.specialty ? (
+                      <>
+                        <span className="mx-1.5">•</span>
+                        <Stethoscope className="w-3 h-3 inline -mt-0.5 me-1" />
+                        {item.specialty}
+                      </>
+                    ) : null}
+                  </p>
+                  <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
+                    <span className="inline-flex items-center gap-1">
+                      <Mail className="w-3 h-3" />
+                      <a
+                        href={`mailto:${item.ownerEmail}`}
+                        className="hover:underline truncate"
+                        data-testid={`link-email-${item.clinicId}`}
+                      >
+                        {item.ownerEmail}
+                      </a>
+                    </span>
+                    {item.whatsappNumber ? (
+                      <span className="inline-flex items-center gap-1">
+                        <Phone className="w-3 h-3" />
+                        <span data-testid={`text-whatsapp-${item.clinicId}`}>{item.whatsappNumber}</span>
+                      </span>
+                    ) : null}
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2 shrink-0">
+                  {wa ? (
+                    <Button
+                      asChild
+                      variant="outline"
+                      size="sm"
+                      data-testid={`button-whatsapp-${item.clinicId}`}
+                    >
+                      <a href={wa} target="_blank" rel="noopener noreferrer">
+                        <Phone className="w-4 h-4 me-1.5" />
+                        WhatsApp
+                      </a>
+                    </Button>
+                  ) : null}
+                  <Button
+                    size="sm"
+                    onClick={() => onActivate(item.clinicId)}
+                    disabled={isActivating}
+                    data-testid={`button-activate-${item.clinicId}`}
+                  >
+                    {isActivating ? (
+                      <Loader2 className="w-4 h-4 me-1.5 animate-spin" />
+                    ) : (
+                      <CheckCircle className="w-4 h-4 me-1.5" />
+                    )}
+                    Activate Trial
+                  </Button>
+                </div>
+              </li>
+            );
+          })}
+        </ul>
+      )}
     </div>
   );
 }
