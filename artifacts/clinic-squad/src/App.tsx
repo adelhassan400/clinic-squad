@@ -12,6 +12,8 @@ import LoginPage from "@/pages/login";
 import RegisterPage from "@/pages/register";
 import ForgotPasswordPage from "@/pages/forgot-password";
 import ResetPasswordPage from "@/pages/reset-password";
+import VerifyEmailPage from "@/pages/verify-email";
+import ResendVerificationPage from "@/pages/resend-verification";
 import DashboardPage from "@/pages/dashboard";
 import PatientsPage from "@/pages/patients";
 import PatientDetailPage from "@/pages/patient-detail";
@@ -44,6 +46,8 @@ function Router() {
       <Route path="/register" component={RegisterPage} />
       <Route path="/forgot-password" component={ForgotPasswordPage} />
       <Route path="/reset-password" component={ResetPasswordPage} />
+      <Route path="/verify-email" component={VerifyEmailPage} />
+      <Route path="/resend-verification" component={ResendVerificationPage} />
       <Route path="/dashboard" component={DashboardPage} />
       <Route path="/patients" component={PatientsPage} />
       <Route path="/patients/:id" component={PatientDetailPage} />

@@ -135,6 +135,7 @@ export interface User {
   name: string;
   specialty?: string | null;
   isBlocked: boolean;
+  emailVerifiedAt?: string | null;
 }
 
 export type ClinicStatus = (typeof ClinicStatus)[keyof typeof ClinicStatus];
@@ -171,6 +172,32 @@ export interface AuthResponse {
   user: User;
   clinic: Clinic;
   token: string;
+}
+
+export interface RegisterResponse {
+  message: string;
+  user: User;
+  clinic: Clinic;
+  /** Plain verification token. Returned in dev/no-email mode so the user can copy the verification link directly. Will be null when email delivery is configured. */
+  verifyToken?: string | null;
+  /** Convenience URL containing the token, suitable for sharing. */
+  verifyUrl?: string | null;
+  expiresAt?: string | null;
+}
+
+export interface VerifyEmailBody {
+  token: string;
+}
+
+export interface ResendVerificationBody {
+  email: string;
+}
+
+export interface ResendVerificationResponse {
+  message: string;
+  verifyToken?: string | null;
+  verifyUrl?: string | null;
+  expiresAt?: string | null;
 }
 
 export interface ForgotPasswordBody {

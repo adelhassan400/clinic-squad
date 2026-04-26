@@ -27,6 +27,51 @@ export const RegisterUserBody = zod.object({
 });
 
 /**
+ * @summary Verify a user's email address using a one-time token
+ */
+export const VerifyEmailBody = zod.object({
+  token: zod.string(),
+});
+
+export const VerifyEmailResponse = zod.object({
+  user: zod.object({
+    id: zod.string(),
+    email: zod.string(),
+    role: zod.enum(["admin", "secretary", "nurse", "superadmin"]),
+    clinicId: zod.string(),
+    name: zod.string(),
+    specialty: zod.string().nullish(),
+    isBlocked: zod.boolean(),
+    emailVerifiedAt: zod.coerce.date().nullish(),
+  }),
+  clinic: zod.object({
+    id: zod.string(),
+    name: zod.string(),
+    ownerId: zod.string(),
+    status: zod.enum(["pending", "active", "blocked", "deleted"]),
+    subscriptionStatus: zod.enum(["trial", "basic", "premium", "expired"]),
+    trialEndDate: zod.coerce.date(),
+    subscriptionPlan: zod.string().nullish(),
+    createdAt: zod.coerce.date(),
+  }),
+  token: zod.string(),
+});
+
+/**
+ * @summary Generate a new email verification link
+ */
+export const ResendVerificationBody = zod.object({
+  email: zod.string().email(),
+});
+
+export const ResendVerificationResponse = zod.object({
+  message: zod.string(),
+  verifyToken: zod.string().nullish(),
+  verifyUrl: zod.string().nullish(),
+  expiresAt: zod.coerce.date().nullish(),
+});
+
+/**
  * @summary Login
  */
 export const LoginUserBody = zod.object({
@@ -43,6 +88,7 @@ export const LoginUserResponse = zod.object({
     name: zod.string(),
     specialty: zod.string().nullish(),
     isBlocked: zod.boolean(),
+    emailVerifiedAt: zod.coerce.date().nullish(),
   }),
   clinic: zod.object({
     id: zod.string(),
@@ -200,6 +246,7 @@ export const GetCurrentUserResponse = zod.object({
   name: zod.string(),
   specialty: zod.string().nullish(),
   isBlocked: zod.boolean(),
+  emailVerifiedAt: zod.coerce.date().nullish(),
 });
 
 /**
@@ -218,6 +265,7 @@ export const UpdateProfileResponse = zod.object({
   name: zod.string(),
   specialty: zod.string().nullish(),
   isBlocked: zod.boolean(),
+  emailVerifiedAt: zod.coerce.date().nullish(),
 });
 
 /**
@@ -868,6 +916,7 @@ export const AcceptInvitationResponse = zod.object({
     name: zod.string(),
     specialty: zod.string().nullish(),
     isBlocked: zod.boolean(),
+    emailVerifiedAt: zod.coerce.date().nullish(),
   }),
   clinic: zod.object({
     id: zod.string(),

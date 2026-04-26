@@ -1,15 +1,14 @@
 import { useState } from "react";
-import { Link, useLocation } from "wouter";
+import { Link } from "wouter";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useRegisterUser } from "@workspace/api-client-react";
-import { useAuth } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { Shield, Eye, EyeOff, Loader2, CheckCircle } from "lucide-react";
+import { Shield, Eye, EyeOff, Loader2, CheckCircle, MailCheck, Copy, CheckCircle2, ArrowRight } from "lucide-react";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 
 const schema = z.object({
@@ -21,10 +20,12 @@ const schema = z.object({
 type FormData = z.infer<typeof schema>;
 
 export default function RegisterPage() {
-  const { login } = useAuth();
-  const [, setLocation] = useLocation();
   const { toast } = useToast();
   const [showPw, setShowPw] = useState(false);
+  const [verifyUrl, setVerifyUrl] = useState<string | null>(null);
+  const [verifyToken, setVerifyToken] = useState<string | null>(null);
+  const [expiresAt, setExpiresAt] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
 
   const { register, handleSubmit, formState: { errors } } = useForm<FormData>({
     resolver: zodResolver(schema),
@@ -36,15 +37,26 @@ export default function RegisterPage() {
   const onSubmit = (data: FormData) => {
     registerMutation.mutate({ data }, {
       onSuccess: (response) => {
-        login(response.user as Parameters<typeof login>[0], response.clinic as Parameters<typeof login>[1], response.token);
-        toast({ title: "Welcome to ClinicSquad!", description: "Your 15-day free trial has started." });
-        setLocation("/dashboard");
+        setVerifyUrl(response.verifyUrl ?? null);
+        setVerifyToken(response.verifyToken ?? null);
+        setExpiresAt(response.expiresAt ?? null);
+        toast({
+          title: "Account created",
+          description: "Verify your email to start your trial.",
+        });
       },
       onError: (err: Error) => {
         const msg = err?.message?.includes("409") ? "An account with this email already exists." : "Registration failed. Please try again.";
         toast({ title: "Registration failed", description: msg, variant: "destructive" });
       },
     });
+  };
+
+  const copyLink = async () => {
+    if (!verifyUrl) return;
+    await navigator.clipboard.writeText(verifyUrl);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 1500);
   };
 
   return (
@@ -88,75 +100,148 @@ export default function RegisterPage() {
               <div className="hidden lg:block" />
               <LanguageSwitcher />
             </div>
-            <h1 className="text-2xl font-bold mb-1">Register your clinic</h1>
-            <p className="text-sm text-muted-foreground">Start your 15-day free trial — no credit card needed</p>
+            {!verifyToken && !verifyUrl ? (
+              <>
+                <h1 className="text-2xl font-bold mb-1">Register your clinic</h1>
+                <p className="text-sm text-muted-foreground">Start your 15-day free trial — no credit card needed</p>
+              </>
+            ) : (
+              <>
+                <h1 className="text-2xl font-bold mb-1">Verify your email</h1>
+                <p className="text-sm text-muted-foreground">One last step before your trial begins.</p>
+              </>
+            )}
           </div>
 
-          <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-            <div>
-              <Label htmlFor="clinicName">Clinic Name</Label>
-              <Input
-                id="clinicName"
-                placeholder="Cairo Medical Center"
-                {...register("clinicName")}
-                data-testid="input-clinic-name"
-                className="mt-1.5"
-              />
-              {errors.clinicName && <p className="text-xs text-destructive mt-1">{errors.clinicName.message}</p>}
-            </div>
-
-            <div>
-              <Label htmlFor="ownerName">Your Full Name</Label>
-              <Input
-                id="ownerName"
-                placeholder="Dr. Ahmed Hassan"
-                {...register("ownerName")}
-                data-testid="input-owner-name"
-                className="mt-1.5"
-              />
-              {errors.ownerName && <p className="text-xs text-destructive mt-1">{errors.ownerName.message}</p>}
-            </div>
-
-            <div>
-              <Label htmlFor="email">Email Address</Label>
-              <Input
-                id="email"
-                type="email"
-                placeholder="doctor@clinic.com"
-                {...register("email")}
-                data-testid="input-email"
-                className="mt-1.5"
-              />
-              {errors.email && <p className="text-xs text-destructive mt-1">{errors.email.message}</p>}
-            </div>
-
-            <div>
-              <Label htmlFor="password">Password</Label>
-              <div className="relative mt-1.5">
+          {!verifyToken && !verifyUrl ? (
+            <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+              <div>
+                <Label htmlFor="clinicName">Clinic Name</Label>
                 <Input
-                  id="password"
-                  type={showPw ? "text" : "password"}
-                  placeholder="Min. 6 characters"
-                  {...register("password")}
-                  data-testid="input-password"
-                  className="pr-10"
+                  id="clinicName"
+                  placeholder="Cairo Medical Center"
+                  {...register("clinicName")}
+                  data-testid="input-clinic-name"
+                  className="mt-1.5"
                 />
-                <button
-                  type="button"
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                  onClick={() => setShowPw(v => !v)}
-                >
-                  {showPw ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                </button>
+                {errors.clinicName && <p className="text-xs text-destructive mt-1">{errors.clinicName.message}</p>}
               </div>
-              {errors.password && <p className="text-xs text-destructive mt-1">{errors.password.message}</p>}
-            </div>
 
-            <Button type="submit" className="w-full mt-2" disabled={registerMutation.isPending} data-testid="button-submit">
-              {registerMutation.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-              Create Account & Start Trial
-            </Button>
-          </form>
+              <div>
+                <Label htmlFor="ownerName">Your Full Name</Label>
+                <Input
+                  id="ownerName"
+                  placeholder="Dr. Ahmed Hassan"
+                  {...register("ownerName")}
+                  data-testid="input-owner-name"
+                  className="mt-1.5"
+                />
+                {errors.ownerName && <p className="text-xs text-destructive mt-1">{errors.ownerName.message}</p>}
+              </div>
+
+              <div>
+                <Label htmlFor="email">Email Address</Label>
+                <Input
+                  id="email"
+                  type="email"
+                  placeholder="doctor@clinic.com"
+                  {...register("email")}
+                  data-testid="input-email"
+                  className="mt-1.5"
+                />
+                {errors.email && <p className="text-xs text-destructive mt-1">{errors.email.message}</p>}
+              </div>
+
+              <div>
+                <Label htmlFor="password">Password</Label>
+                <div className="relative mt-1.5">
+                  <Input
+                    id="password"
+                    type={showPw ? "text" : "password"}
+                    placeholder="Min. 6 characters"
+                    {...register("password")}
+                    data-testid="input-password"
+                    className="pr-10"
+                  />
+                  <button
+                    type="button"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                    onClick={() => setShowPw(v => !v)}
+                  >
+                    {showPw ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
+                {errors.password && <p className="text-xs text-destructive mt-1">{errors.password.message}</p>}
+              </div>
+
+              <Button type="submit" className="w-full mt-2" disabled={registerMutation.isPending} data-testid="button-submit">
+                {registerMutation.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                Create Account & Start Trial
+              </Button>
+            </form>
+          ) : (
+            <div className="space-y-5">
+              <div className="rounded-lg border border-primary/30 bg-primary/5 p-4 space-y-3">
+                <div className="flex items-start gap-2">
+                  <MailCheck className="w-5 h-5 text-primary mt-0.5 shrink-0" />
+                  <div className="text-sm">
+                    <p className="font-medium text-foreground">
+                      Verification link generated
+                    </p>
+                    <p className="text-muted-foreground text-xs mt-0.5">
+                      {expiresAt
+                        ? `Valid for 24 hours (until ${new Date(expiresAt).toLocaleString()}).`
+                        : "Valid for 24 hours."}
+                    </p>
+                  </div>
+                </div>
+
+                {verifyUrl && (
+                  <div className="space-y-2">
+                    <Label className="text-xs">Verification link</Label>
+                    <div className="flex gap-2">
+                      <Input
+                        readOnly
+                        value={verifyUrl}
+                        data-testid="input-verify-url"
+                        className="font-mono text-xs"
+                      />
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="icon"
+                        onClick={copyLink}
+                        data-testid="button-copy-verify-link"
+                      >
+                        {copied ? (
+                          <CheckCircle2 className="w-4 h-4 text-primary" />
+                        ) : (
+                          <Copy className="w-4 h-4" />
+                        )}
+                      </Button>
+                    </div>
+                  </div>
+                )}
+
+                {verifyToken && (
+                  <p className="text-xs text-muted-foreground">
+                    Or open the link directly:{" "}
+                    <Link
+                      href={`/verify-email?token=${encodeURIComponent(verifyToken)}`}
+                      className="text-primary hover:underline inline-flex items-center gap-1"
+                      data-testid="link-open-verify"
+                    >
+                      Verify now <ArrowRight className="w-3 h-3" />
+                    </Link>
+                  </p>
+                )}
+              </div>
+
+              <p className="text-xs text-muted-foreground">
+                In production, this link would be emailed to you. For now we display it directly so you can finish signing up. Your trial begins as soon as your email is verified.
+              </p>
+            </div>
+          )}
 
           <p className="mt-6 text-center text-sm text-muted-foreground">
             Already have an account?{" "}

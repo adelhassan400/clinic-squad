@@ -8,6 +8,7 @@ export interface AuthUser {
   name: string;
   specialty?: string | null;
   isBlocked: boolean;
+  emailVerifiedAt?: string | null;
 }
 
 export interface AuthClinic {

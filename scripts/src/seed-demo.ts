@@ -34,6 +34,7 @@ async function ensureAdmin() {
     role: "admin",
     clinicId,
     isBlocked: false,
+    emailVerifiedAt: new Date(),
   });
   console.log("Created admin@demo.com / demo1234");
 }
@@ -66,6 +67,7 @@ async function ensureSuperAdmin() {
     role: "superadmin",
     clinicId,
     isBlocked: false,
+    emailVerifiedAt: new Date(),
   });
   console.log("Created super@clinicsquad.com / super1234");
 }

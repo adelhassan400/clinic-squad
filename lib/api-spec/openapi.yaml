@@ -57,13 +57,53 @@ paths:
               $ref: "#/components/schemas/RegisterBody"
       responses:
         "201":
-          description: Registered successfully
+          description: Registered successfully. Email must be verified before signing in.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RegisterResponse"
+        "409":
+          description: Email already exists
+
+  /auth/verify-email:
+    post:
+      operationId: verifyEmail
+      tags: [auth]
+      summary: Verify a user's email address using a one-time token
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/VerifyEmailBody"
+      responses:
+        "200":
+          description: Email verified — returns an authenticated session
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/AuthResponse"
-        "409":
-          description: Email already exists
+        "400":
+          description: Invalid or expired token
+
+  /auth/resend-verification:
+    post:
+      operationId: resendVerification
+      tags: [auth]
+      summary: Generate a new email verification link
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ResendVerificationBody"
+      responses:
+        "200":
+          description: Verification link generated (always returned, even when email is unknown or already verified)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ResendVerificationResponse"
 
   /auth/login:
     post:
@@ -1120,6 +1160,61 @@ components:
           type: string
       required: [user, clinic, token]
 
+    RegisterResponse:
+      type: object
+      properties:
+        message:
+          type: string
+        user:
+          $ref: "#/components/schemas/User"
+        clinic:
+          $ref: "#/components/schemas/Clinic"
+        verifyToken:
+          type: string
+          nullable: true
+          description: Plain verification token. Returned in dev/no-email mode so the user can copy the verification link directly. Will be null when email delivery is configured.
+        verifyUrl:
+          type: string
+          nullable: true
+          description: Convenience URL containing the token, suitable for sharing.
+        expiresAt:
+          type: string
+          format: date-time
+          nullable: true
+      required: [message, user, clinic]
+
+    VerifyEmailBody:
+      type: object
+      properties:
+        token:
+          type: string
+      required: [token]
+
+    ResendVerificationBody:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+      required: [email]
+
+    ResendVerificationResponse:
+      type: object
+      properties:
+        message:
+          type: string
+        verifyToken:
+          type: string
+          nullable: true
+        verifyUrl:
+          type: string
+          nullable: true
+        expiresAt:
+          type: string
+          format: date-time
+          nullable: true
+      required: [message]
+
     ForgotPasswordBody:
       type: object
       properties:
@@ -1292,6 +1387,10 @@ components:
           nullable: true
         isBlocked:
           type: boolean
+        emailVerifiedAt:
+          type: string
+          format: date-time
+          nullable: true
       required: [id, email, role, clinicId, name, isBlocked]
 
     UpdateProfileBody:
