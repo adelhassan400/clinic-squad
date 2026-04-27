@@ -385,7 +385,8 @@ export interface CreateSubscriptionBody {
 }
 
 export type PatientVisitType =
-  (typeof PatientVisitType)[keyof typeof PatientVisitType];
+  | (typeof PatientVisitType)[keyof typeof PatientVisitType]
+  | null;
 
 export const PatientVisitType = {
   New_Consultation: "New Consultation",
@@ -397,6 +398,7 @@ export const PatientVisitType = {
 export type PatientStatus = (typeof PatientStatus)[keyof typeof PatientStatus];
 
 export const PatientStatus = {
+  registered: "registered",
   waiting: "waiting",
   "in-progress": "in-progress",
   completed: "completed",
@@ -413,23 +415,16 @@ export interface Patient {
   bloodType?: string | null;
   allergies?: string | null;
   notes?: string | null;
-  visitType: PatientVisitType;
+  visitType?: PatientVisitType;
   status: PatientStatus;
   diagnosis?: string | null;
   clinicalNotes?: string | null;
   createdAt: string;
 }
 
-export type CreatePatientBodyVisitType =
-  (typeof CreatePatientBodyVisitType)[keyof typeof CreatePatientBodyVisitType];
-
-export const CreatePatientBodyVisitType = {
-  New_Consultation: "New Consultation",
-  "Follow-up": "Follow-up",
-  "Re-exam": "Re-exam",
-  Emergency: "Emergency",
-} as const;
-
+/**
+ * Creates a master patient record. The patient is NOT placed on the waiting list — placing on the waiting list requires a separate check-in via PATCH (status set to waiting, plus a visitType).
+ */
 export interface CreatePatientBody {
   name: string;
   phone: string;
@@ -442,7 +437,6 @@ export interface CreatePatientBody {
   bloodType?: string | null;
   allergies?: string | null;
   notes?: string | null;
-  visitType: CreatePatientBodyVisitType;
 }
 
 export type UpdatePatientBodyVisitType =

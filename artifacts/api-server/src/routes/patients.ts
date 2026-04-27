@@ -80,11 +80,12 @@ router.post("/", async (req, res) => {
   const parsed = CreatePatientBody.safeParse(req.body);
   if (!parsed.success) return res.status(400).json({ error: "Invalid input", details: parsed.error.issues });
 
-  const { name, phone, age, dateOfBirth, bloodType, allergies, notes, visitType } = parsed.data;
+  const { name, phone, age, dateOfBirth, bloodType, allergies, notes } = parsed.data;
   const id = randomUUID();
   const code = await nextPatientCode(clinicId);
 
-  // Every new patient is automatically placed on the doctor's waiting list.
+  // Master record only — patient is NOT placed on the waiting list here.
+  // The doctor's waiting list is populated explicitly via PATCH (check-in).
   await db.insert(patientsTable).values({
     id, clinicId, code, name, phone,
     age,
@@ -92,8 +93,8 @@ router.post("/", async (req, res) => {
     bloodType: bloodType ?? null,
     allergies: allergies ?? null,
     notes: notes ?? null,
-    visitType,
-    status: "waiting",
+    visitType: null,
+    status: "registered",
   });
 
   const patient = (await db.select().from(patientsTable).where(eq(patientsTable.id, id)).limit(1))[0];

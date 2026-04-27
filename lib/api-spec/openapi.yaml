@@ -1570,9 +1570,10 @@ components:
         visitType:
           type: string
           enum: [New Consultation, Follow-up, Re-exam, Emergency]
+          nullable: true
         status:
           type: string
-          enum: [waiting, in-progress, completed]
+          enum: [registered, waiting, in-progress, completed]
         diagnosis:
           type: string
           nullable: true
@@ -1582,10 +1583,11 @@ components:
         createdAt:
           type: string
           format: date-time
-      required: [id, clinicId, name, phone, visitType, status, createdAt]
+      required: [id, clinicId, name, phone, status, createdAt]
 
     CreatePatientBody:
       type: object
+      description: Creates a master patient record. The patient is NOT placed on the waiting list — placing on the waiting list requires a separate check-in via PATCH (status set to waiting, plus a visitType).
       properties:
         name:
           type: string
@@ -1608,10 +1610,7 @@ components:
         notes:
           type: string
           nullable: true
-        visitType:
-          type: string
-          enum: [New Consultation, Follow-up, Re-exam, Emergency]
-      required: [name, phone, age, visitType]
+      required: [name, phone, age]
 
     UpdatePatientBody:
       type: object

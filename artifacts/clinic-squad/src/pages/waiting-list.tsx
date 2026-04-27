@@ -122,7 +122,7 @@ export default function WaitingListPage() {
                 <Clock className="w-10 h-10 mx-auto mb-3 opacity-30" />
                 <p className="font-medium text-sm">Waiting list is empty</p>
                 <p className="text-xs mt-1">
-                  New patients added at reception appear here automatically.
+                  Use the Check-in button on the Patients page to send a patient to today&apos;s queue.
                 </p>
               </div>
             ) : (

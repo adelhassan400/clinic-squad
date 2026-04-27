@@ -382,13 +382,10 @@ export const ListPatientsResponse = zod.object({
       bloodType: zod.string().nullish(),
       allergies: zod.string().nullish(),
       notes: zod.string().nullish(),
-      visitType: zod.enum([
-        "New Consultation",
-        "Follow-up",
-        "Re-exam",
-        "Emergency",
-      ]),
-      status: zod.enum(["waiting", "in-progress", "completed"]),
+      visitType: zod
+        .enum(["New Consultation", "Follow-up", "Re-exam", "Emergency"])
+        .nullish(),
+      status: zod.enum(["registered", "waiting", "in-progress", "completed"]),
       diagnosis: zod.string().nullish(),
       clinicalNotes: zod.string().nullish(),
       createdAt: zod.coerce.date(),
@@ -409,21 +406,19 @@ export const CreatePatientParams = zod.object({
 export const createPatientBodyAgeMin = 0;
 export const createPatientBodyAgeMax = 149;
 
-export const CreatePatientBody = zod.object({
-  name: zod.string(),
-  phone: zod.string(),
-  age: zod.number().min(createPatientBodyAgeMin).max(createPatientBodyAgeMax),
-  dateOfBirth: zod.coerce.date().nullish(),
-  bloodType: zod.string().nullish(),
-  allergies: zod.string().nullish(),
-  notes: zod.string().nullish(),
-  visitType: zod.enum([
-    "New Consultation",
-    "Follow-up",
-    "Re-exam",
-    "Emergency",
-  ]),
-});
+export const CreatePatientBody = zod
+  .object({
+    name: zod.string(),
+    phone: zod.string(),
+    age: zod.number().min(createPatientBodyAgeMin).max(createPatientBodyAgeMax),
+    dateOfBirth: zod.coerce.date().nullish(),
+    bloodType: zod.string().nullish(),
+    allergies: zod.string().nullish(),
+    notes: zod.string().nullish(),
+  })
+  .describe(
+    "Creates a master patient record. The patient is NOT placed on the waiting list — placing on the waiting list requires a separate check-in via PATCH (status set to waiting, plus a visitType).",
+  );
 
 /**
  * @summary Get patient by ID
@@ -444,13 +439,10 @@ export const GetPatientResponse = zod.object({
   bloodType: zod.string().nullish(),
   allergies: zod.string().nullish(),
   notes: zod.string().nullish(),
-  visitType: zod.enum([
-    "New Consultation",
-    "Follow-up",
-    "Re-exam",
-    "Emergency",
-  ]),
-  status: zod.enum(["waiting", "in-progress", "completed"]),
+  visitType: zod
+    .enum(["New Consultation", "Follow-up", "Re-exam", "Emergency"])
+    .nullish(),
+  status: zod.enum(["registered", "waiting", "in-progress", "completed"]),
   diagnosis: zod.string().nullish(),
   clinicalNotes: zod.string().nullish(),
   createdAt: zod.coerce.date(),
@@ -467,21 +459,19 @@ export const UpdatePatientParams = zod.object({
 export const updatePatientBodyAgeMin = 0;
 export const updatePatientBodyAgeMax = 149;
 
-export const UpdatePatientBody = zod.object({
-  name: zod.string(),
-  phone: zod.string(),
-  age: zod.number().min(updatePatientBodyAgeMin).max(updatePatientBodyAgeMax),
-  dateOfBirth: zod.coerce.date().nullish(),
-  bloodType: zod.string().nullish(),
-  allergies: zod.string().nullish(),
-  notes: zod.string().nullish(),
-  visitType: zod.enum([
-    "New Consultation",
-    "Follow-up",
-    "Re-exam",
-    "Emergency",
-  ]),
-});
+export const UpdatePatientBody = zod
+  .object({
+    name: zod.string(),
+    phone: zod.string(),
+    age: zod.number().min(updatePatientBodyAgeMin).max(updatePatientBodyAgeMax),
+    dateOfBirth: zod.coerce.date().nullish(),
+    bloodType: zod.string().nullish(),
+    allergies: zod.string().nullish(),
+    notes: zod.string().nullish(),
+  })
+  .describe(
+    "Creates a master patient record. The patient is NOT placed on the waiting list — placing on the waiting list requires a separate check-in via PATCH (status set to waiting, plus a visitType).",
+  );
 
 export const UpdatePatientResponse = zod.object({
   id: zod.string(),
@@ -494,13 +484,10 @@ export const UpdatePatientResponse = zod.object({
   bloodType: zod.string().nullish(),
   allergies: zod.string().nullish(),
   notes: zod.string().nullish(),
-  visitType: zod.enum([
-    "New Consultation",
-    "Follow-up",
-    "Re-exam",
-    "Emergency",
-  ]),
-  status: zod.enum(["waiting", "in-progress", "completed"]),
+  visitType: zod
+    .enum(["New Consultation", "Follow-up", "Re-exam", "Emergency"])
+    .nullish(),
+  status: zod.enum(["registered", "waiting", "in-progress", "completed"]),
   diagnosis: zod.string().nullish(),
   clinicalNotes: zod.string().nullish(),
   createdAt: zod.coerce.date(),
@@ -550,13 +537,10 @@ export const PatchPatientResponse = zod.object({
   bloodType: zod.string().nullish(),
   allergies: zod.string().nullish(),
   notes: zod.string().nullish(),
-  visitType: zod.enum([
-    "New Consultation",
-    "Follow-up",
-    "Re-exam",
-    "Emergency",
-  ]),
-  status: zod.enum(["waiting", "in-progress", "completed"]),
+  visitType: zod
+    .enum(["New Consultation", "Follow-up", "Re-exam", "Emergency"])
+    .nullish(),
+  status: zod.enum(["registered", "waiting", "in-progress", "completed"]),
   diagnosis: zod.string().nullish(),
   clinicalNotes: zod.string().nullish(),
   createdAt: zod.coerce.date(),
