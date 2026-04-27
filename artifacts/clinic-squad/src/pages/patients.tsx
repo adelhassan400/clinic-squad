@@ -27,25 +27,26 @@ import { cn } from "@/lib/utils";
 const patientSchema = z.object({
   name: z.string().min(2, "Name required"),
   phone: z.string().min(6, "Phone required"),
+  age: z.preprocess(
+    (val) => (val === "" || val === null || val === undefined ? undefined : Number(val)),
+    z
+      .number()
+      .int("Age must be a whole number")
+      .min(0, "Age is required and must be 0 or greater")
+      .max(149, "Age looks too high"),
+  ),
   visitType: z.enum(PATIENT_VISIT_TYPES, {
     message: "Visit type is required",
   }),
-  dateOfBirth: z.string().optional(),
   bloodType: z.string().optional(),
   allergies: z.string().optional(),
   notes: z.string().optional(),
 });
 type PatientForm = z.infer<typeof patientSchema>;
 
-function ageFromDob(dob: string | null | undefined): string {
-  if (!dob) return "—";
-  const d = new Date(dob);
-  if (isNaN(d.getTime())) return "—";
-  const now = new Date();
-  let age = now.getFullYear() - d.getFullYear();
-  const m = now.getMonth() - d.getMonth();
-  if (m < 0 || (m === 0 && now.getDate() < d.getDate())) age--;
-  return age >= 0 && age < 150 ? `${age}` : "—";
+function displayAge(age: number | null | undefined): string {
+  if (age === null || age === undefined) return "—";
+  return `${age}`;
 }
 
 export default function PatientsPage() {
@@ -170,7 +171,7 @@ export default function PatientsPage() {
                     </div>
                   </div>
                   <span className="text-sm font-mono text-muted-foreground" data-testid={`patient-age-${patient.id}`}>
-                    {ageFromDob(patient.dateOfBirth)}
+                    {displayAge(patient.age)}
                   </span>
                   <span className="text-sm text-muted-foreground font-mono">{patient.phone}</span>
                   <span data-testid={`patient-visit-type-${patient.id}`}>
@@ -236,6 +237,23 @@ export default function PatientsPage() {
                   {form.formState.errors.phone && <p className="text-xs text-destructive mt-1">{form.formState.errors.phone.message}</p>}
                 </div>
                 <div>
+                  <Label>Age *</Label>
+                  <Input
+                    {...form.register("age")}
+                    type="number"
+                    min={0}
+                    max={149}
+                    step={1}
+                    inputMode="numeric"
+                    placeholder="e.g. 32"
+                    className="mt-1"
+                    data-testid="input-age"
+                  />
+                  {form.formState.errors.age && (
+                    <p className="text-xs text-destructive mt-1">{form.formState.errors.age.message}</p>
+                  )}
+                </div>
+                <div>
                   <Label>Visit Type *</Label>
                   <Controller
                     control={form.control}
@@ -270,10 +288,6 @@ export default function PatientsPage() {
                       {form.formState.errors.visitType.message}
                     </p>
                   )}
-                </div>
-                <div>
-                  <Label>Date of Birth</Label>
-                  <Input {...form.register("dateOfBirth")} type="date" className="mt-1" />
                 </div>
                 <div>
                   <Label>Blood Type</Label>

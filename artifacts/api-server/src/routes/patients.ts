@@ -13,6 +13,7 @@ function serialize(p: typeof patientsTable.$inferSelect) {
     code: p.code,
     name: p.name,
     phone: p.phone,
+    age: p.age,
     dateOfBirth: p.dateOfBirth,
     bloodType: p.bloodType,
     allergies: p.allergies,
@@ -79,13 +80,14 @@ router.post("/", async (req, res) => {
   const parsed = CreatePatientBody.safeParse(req.body);
   if (!parsed.success) return res.status(400).json({ error: "Invalid input", details: parsed.error.issues });
 
-  const { name, phone, dateOfBirth, bloodType, allergies, notes, visitType } = parsed.data;
+  const { name, phone, age, dateOfBirth, bloodType, allergies, notes, visitType } = parsed.data;
   const id = randomUUID();
   const code = await nextPatientCode(clinicId);
 
   // Every new patient is automatically placed on the doctor's waiting list.
   await db.insert(patientsTable).values({
     id, clinicId, code, name, phone,
+    age,
     dateOfBirth: dateOfBirth ?? null,
     bloodType: bloodType ?? null,
     allergies: allergies ?? null,
@@ -113,11 +115,12 @@ router.put("/:patientId", async (req, res) => {
   const parsed = CreatePatientBody.safeParse(req.body);
   if (!parsed.success) return res.status(400).json({ error: "Invalid input" });
 
-  const { name, phone, dateOfBirth, bloodType, allergies, notes, visitType } = parsed.data;
+  const { name, phone, age, dateOfBirth, bloodType, allergies, notes, visitType } = parsed.data;
   await db.update(patientsTable)
     .set({
       name,
       phone,
+      age,
       dateOfBirth: dateOfBirth ?? null,
       bloodType: bloodType ?? null,
       allergies: allergies ?? null,
@@ -139,6 +142,7 @@ router.patch("/:patientId", async (req, res) => {
   const update: Record<string, unknown> = {};
   if (data.name !== undefined) update.name = data.name;
   if (data.phone !== undefined) update.phone = data.phone;
+  if (data.age !== undefined) update.age = data.age ?? null;
   if (data.dateOfBirth !== undefined) update.dateOfBirth = data.dateOfBirth ?? null;
   if (data.bloodType !== undefined) update.bloodType = data.bloodType ?? null;
   if (data.allergies !== undefined) update.allergies = data.allergies ?? null;

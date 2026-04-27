@@ -377,7 +377,8 @@ export const ListPatientsResponse = zod.object({
       code: zod.string().nullish(),
       name: zod.string(),
       phone: zod.string(),
-      dateOfBirth: zod.coerce.date().optional(),
+      age: zod.number().nullish(),
+      dateOfBirth: zod.coerce.date().nullish(),
       bloodType: zod.string().nullish(),
       allergies: zod.string().nullish(),
       notes: zod.string().nullish(),
@@ -405,10 +406,14 @@ export const CreatePatientParams = zod.object({
   clinicId: zod.coerce.string(),
 });
 
+export const createPatientBodyAgeMin = 0;
+export const createPatientBodyAgeMax = 149;
+
 export const CreatePatientBody = zod.object({
   name: zod.string(),
   phone: zod.string(),
-  dateOfBirth: zod.coerce.date().optional(),
+  age: zod.number().min(createPatientBodyAgeMin).max(createPatientBodyAgeMax),
+  dateOfBirth: zod.coerce.date().nullish(),
   bloodType: zod.string().nullish(),
   allergies: zod.string().nullish(),
   notes: zod.string().nullish(),
@@ -434,7 +439,8 @@ export const GetPatientResponse = zod.object({
   code: zod.string().nullish(),
   name: zod.string(),
   phone: zod.string(),
-  dateOfBirth: zod.coerce.date().optional(),
+  age: zod.number().nullish(),
+  dateOfBirth: zod.coerce.date().nullish(),
   bloodType: zod.string().nullish(),
   allergies: zod.string().nullish(),
   notes: zod.string().nullish(),
@@ -458,10 +464,14 @@ export const UpdatePatientParams = zod.object({
   patientId: zod.coerce.string(),
 });
 
+export const updatePatientBodyAgeMin = 0;
+export const updatePatientBodyAgeMax = 149;
+
 export const UpdatePatientBody = zod.object({
   name: zod.string(),
   phone: zod.string(),
-  dateOfBirth: zod.coerce.date().optional(),
+  age: zod.number().min(updatePatientBodyAgeMin).max(updatePatientBodyAgeMax),
+  dateOfBirth: zod.coerce.date().nullish(),
   bloodType: zod.string().nullish(),
   allergies: zod.string().nullish(),
   notes: zod.string().nullish(),
@@ -479,7 +489,8 @@ export const UpdatePatientResponse = zod.object({
   code: zod.string().nullish(),
   name: zod.string(),
   phone: zod.string(),
-  dateOfBirth: zod.coerce.date().optional(),
+  age: zod.number().nullish(),
+  dateOfBirth: zod.coerce.date().nullish(),
   bloodType: zod.string().nullish(),
   allergies: zod.string().nullish(),
   notes: zod.string().nullish(),
@@ -503,10 +514,18 @@ export const PatchPatientParams = zod.object({
   patientId: zod.coerce.string(),
 });
 
+export const patchPatientBodyAgeMin = 0;
+export const patchPatientBodyAgeMax = 149;
+
 export const PatchPatientBody = zod
   .object({
     name: zod.string().optional(),
     phone: zod.string().optional(),
+    age: zod
+      .number()
+      .min(patchPatientBodyAgeMin)
+      .max(patchPatientBodyAgeMax)
+      .nullish(),
     dateOfBirth: zod.coerce.date().nullish(),
     bloodType: zod.string().nullish(),
     allergies: zod.string().nullish(),
@@ -526,7 +545,8 @@ export const PatchPatientResponse = zod.object({
   code: zod.string().nullish(),
   name: zod.string(),
   phone: zod.string(),
-  dateOfBirth: zod.coerce.date().optional(),
+  age: zod.number().nullish(),
+  dateOfBirth: zod.coerce.date().nullish(),
   bloodType: zod.string().nullish(),
   allergies: zod.string().nullish(),
   notes: zod.string().nullish(),

@@ -1,4 +1,4 @@
-import { pgTable, text, timestamp } from "drizzle-orm/pg-core";
+import { pgTable, text, integer, timestamp } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 
@@ -8,6 +8,7 @@ export const patientsTable = pgTable("patients", {
   code: text("code"),
   name: text("name").notNull(),
   phone: text("phone").notNull(),
+  age: integer("age"),
   dateOfBirth: text("date_of_birth"),
   bloodType: text("blood_type"),
   allergies: text("allergies"),

@@ -14,15 +14,9 @@ import { cn } from "@/lib/utils";
 import { VisitTypeBadge } from "@/lib/visit-types";
 import { useToast } from "@/hooks/use-toast";
 
-function ageFromDob(dob: string | null | undefined): string {
-  if (!dob) return "—";
-  const d = new Date(dob);
-  if (isNaN(d.getTime())) return "—";
-  const now = new Date();
-  let age = now.getFullYear() - d.getFullYear();
-  const m = now.getMonth() - d.getMonth();
-  if (m < 0 || (m === 0 && now.getDate() < d.getDate())) age--;
-  return age >= 0 && age < 150 ? `${age}` : "—";
+function displayAge(age: number | null | undefined): string {
+  if (age === null || age === undefined) return "—";
+  return `${age}`;
 }
 
 function StatusPill({ status }: { status: string }) {
@@ -164,7 +158,7 @@ export default function WaitingListPage() {
                     <p className="text-sm font-medium truncate">{p.name}</p>
                   </div>
                   <span className="text-sm font-mono text-muted-foreground">
-                    {ageFromDob(p.dateOfBirth)}
+                    {displayAge(p.age)}
                   </span>
                   <span className="text-sm text-muted-foreground font-mono">{p.phone}</span>
                   <span data-testid={`waiting-visit-type-${p.id}`}>

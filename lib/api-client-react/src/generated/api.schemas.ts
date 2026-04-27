@@ -408,7 +408,8 @@ export interface Patient {
   code?: string | null;
   name: string;
   phone: string;
-  dateOfBirth?: string;
+  age?: number | null;
+  dateOfBirth?: string | null;
   bloodType?: string | null;
   allergies?: string | null;
   notes?: string | null;
@@ -432,7 +433,12 @@ export const CreatePatientBodyVisitType = {
 export interface CreatePatientBody {
   name: string;
   phone: string;
-  dateOfBirth?: string;
+  /**
+   * @minimum 0
+   * @maximum 149
+   */
+  age: number;
+  dateOfBirth?: string | null;
   bloodType?: string | null;
   allergies?: string | null;
   notes?: string | null;
@@ -464,6 +470,11 @@ export const UpdatePatientBodyStatus = {
 export interface UpdatePatientBody {
   name?: string;
   phone?: string;
+  /**
+   * @minimum 0
+   * @maximum 149
+   */
+  age?: number | null;
   dateOfBirth?: string | null;
   bloodType?: string | null;
   allergies?: string | null;

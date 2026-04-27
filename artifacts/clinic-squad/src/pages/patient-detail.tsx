@@ -27,15 +27,9 @@ import { VisitTypeBadge } from "@/lib/visit-types";
 
 interface Props { params: { id: string } }
 
-function ageFromDob(dob: string | null | undefined): string | null {
-  if (!dob) return null;
-  const d = new Date(dob);
-  if (isNaN(d.getTime())) return null;
-  const now = new Date();
-  let age = now.getFullYear() - d.getFullYear();
-  const m = now.getMonth() - d.getMonth();
-  if (m < 0 || (m === 0 && now.getDate() < d.getDate())) age--;
-  return age >= 0 && age < 150 ? `${age}` : null;
+function displayAge(age: number | null | undefined): string | null {
+  if (age === null || age === undefined) return null;
+  return `${age}`;
 }
 
 function PatientStatusBadge({ status }: { status: string }) {
@@ -206,7 +200,7 @@ export default function PatientDetailPage({ params }: Props) {
     .filter(a => a.status === "completed" && a.fee)
     .reduce((s, a) => s + (a.fee ?? 0), 0);
 
-  const age = ageFromDob(patient?.dateOfBirth);
+  const age = displayAge(patient?.age);
 
   return (
     <ProtectedRoute>
@@ -237,13 +231,20 @@ export default function PatientDetailPage({ params }: Props) {
                     <span className="text-2xl font-bold text-primary">{patient.name.charAt(0)}</span>
                   </div>
                   <div className="flex-1">
-                    <div className="flex items-center gap-2 mb-1 flex-wrap">
+                    <div className="flex items-center gap-2 mb-2 flex-wrap">
                       <h1 className="text-xl font-bold">{patient.name}</h1>
                       {patient.code && (
                         <span className="text-xs font-mono px-2 py-0.5 rounded bg-primary/10 text-primary border border-primary/20">
                           {patient.code}
                         </span>
                       )}
+                      <span
+                        data-testid="patient-detail-age"
+                        className="inline-flex items-center gap-1.5 text-sm font-semibold px-2.5 py-0.5 rounded-md bg-primary/10 text-primary border border-primary/20"
+                      >
+                        <Calendar className="w-3.5 h-3.5" />
+                        {age !== null ? `Age ${age}` : "Age —"}
+                      </span>
                       <PatientStatusBadge status={patient.status} />
                       <VisitTypeBadge type={patient.visitType} />
                     </div>
@@ -269,16 +270,6 @@ export default function PatientDetailPage({ params }: Props) {
                         <MessageCircle className="w-3.5 h-3.5 mr-1" />
                         WhatsApp
                       </Button>
-                      {age !== null && (
-                        <span className="flex items-center gap-1.5">
-                          <Calendar className="w-3.5 h-3.5" />Age {age}
-                        </span>
-                      )}
-                      {patient.dateOfBirth && (
-                        <span className="flex items-center gap-1.5">
-                          <Calendar className="w-3.5 h-3.5" />{formatDate(patient.dateOfBirth)}
-                        </span>
-                      )}
                       {patient.bloodType && (
                         <span className="flex items-center gap-1.5">
                           <Droplets className="w-3.5 h-3.5 text-red-500" />{patient.bloodType}
