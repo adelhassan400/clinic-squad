@@ -47,9 +47,11 @@ import {
   Clock,
   CalendarDays,
   ClipboardList,
+  MapPin,
+  Phone as PhoneIcon,
 } from "lucide-react";
 import { formatDate } from "@/lib/utils";
-import { printPrescription, sendPrescriptionWhatsApp } from "@/lib/prescription";
+import { printPrescription, sendPrescriptionWhatsApp, type ClinicBranding } from "@/lib/prescription";
 
 interface ItemForm {
   drug: string;
@@ -72,6 +74,11 @@ interface PrescriptionsContentProps {
 export function PrescriptionsContent({ initialPatientId, embedded }: PrescriptionsContentProps) {
   const { clinic, user } = useAuth();
   const clinicId = clinic?.id ?? "";
+  const clinicBranding: ClinicBranding = {
+    name: clinic?.name ?? "",
+    phone: clinic?.phone ?? null,
+    address: clinic?.address ?? null,
+  };
   const isAdmin = user?.role === "admin" || user?.role === "superadmin";
   const queryClient = useQueryClient();
   const { toast } = useToast();
@@ -436,6 +443,8 @@ export function PrescriptionsContent({ initialPatientId, embedded }: Prescriptio
         {/* Live preview panel */}
         <LivePreview
           clinicName={clinic?.name ?? ""}
+          clinicPhone={clinic?.phone ?? null}
+          clinicAddress={clinic?.address ?? null}
           doctorName={user?.name ?? ""}
           doctorSpecialty={user?.specialty ?? null}
           patient={patientList.find((p) => p.id === patientId) ?? null}
@@ -511,7 +520,7 @@ export function PrescriptionsContent({ initialPatientId, embedded }: Prescriptio
                   variant="ghost"
                   size="icon"
                   className="h-8 w-8 text-primary"
-                  onClick={() => printPrescription(p, clinic?.name ?? "")}
+                  onClick={() => printPrescription(p, clinicBranding)}
                   title="Print / PDF"
                   data-testid={`print-prescription-${p.id}`}
                 >
@@ -521,7 +530,7 @@ export function PrescriptionsContent({ initialPatientId, embedded }: Prescriptio
                   variant="ghost"
                   size="icon"
                   className="h-8 w-8 text-green-600"
-                  onClick={() => sendPrescriptionWhatsApp(p, clinic?.name ?? "")}
+                  onClick={() => sendPrescriptionWhatsApp(p, clinicBranding)}
                   title="Send via WhatsApp"
                   data-testid={`whatsapp-prescription-${p.id}`}
                 >
@@ -599,12 +608,12 @@ export function PrescriptionsContent({ initialPatientId, embedded }: Prescriptio
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => sendPrescriptionWhatsApp(viewing, clinic?.name ?? "")}
+                  onClick={() => sendPrescriptionWhatsApp(viewing, clinicBranding)}
                 >
                   <MessageCircle className="w-4 h-4 mr-2" />
                   WhatsApp
                 </Button>
-                <Button size="sm" onClick={() => printPrescription(viewing, clinic?.name ?? "")}>
+                <Button size="sm" onClick={() => printPrescription(viewing, clinicBranding)}>
                   <Printer className="w-4 h-4 mr-2" />
                   Print / PDF
                 </Button>
@@ -619,6 +628,8 @@ export function PrescriptionsContent({ initialPatientId, embedded }: Prescriptio
 
 interface LivePreviewProps {
   clinicName: string;
+  clinicPhone: string | null;
+  clinicAddress: string | null;
   doctorName: string;
   doctorSpecialty: string | null;
   patient: { name: string; phone: string; code?: string | null } | null;
@@ -656,7 +667,7 @@ function CaduceusWatermark() {
   );
 }
 
-function LivePreview({ clinicName, doctorName, doctorSpecialty, patient, date, diagnosis, notes, items }: LivePreviewProps) {
+function LivePreview({ clinicName, clinicPhone, clinicAddress, doctorName, doctorSpecialty, patient, date, diagnosis, notes, items }: LivePreviewProps) {
   const filledItems = items.filter((i) => i.drug.trim());
   const formattedDate = date
     ? new Date(date + "T00:00:00").toLocaleDateString(undefined, {
@@ -666,63 +677,69 @@ function LivePreview({ clinicName, doctorName, doctorSpecialty, patient, date, d
       })
     : "—";
 
+  const BRAND = "#20B8AD";
+
   return (
     <div className="lg:sticky lg:top-4 self-start space-y-2">
       {/* Header strip outside the paper */}
       <div className="flex items-center gap-2 text-xs">
-        <Eye className="w-3.5 h-3.5 text-teal-500" />
-        <span className="font-semibold uppercase tracking-wider text-teal-500">Live preview</span>
+        <Eye className="w-3.5 h-3.5" style={{ color: BRAND }} />
+        <span className="font-semibold uppercase tracking-wider" style={{ color: BRAND }}>Live preview</span>
         <span className="ms-auto text-muted-foreground hidden sm:inline">A4 · what your patient receives</span>
       </div>
 
       {/* Outer surround mimicking the colored backdrop */}
-      <div className="rounded-xl bg-gradient-to-br from-teal-300 to-teal-500 p-3 shadow-2xl">
+      <div className="rounded-xl p-3 shadow-2xl" style={{ background: `linear-gradient(135deg, ${BRAND}aa, ${BRAND})` }}>
         {/* Paper sheet — always white so it reads as a real Rx, even in dark mode */}
         <div className="relative rounded-md bg-white text-zinc-900 overflow-hidden shadow-lg">
-          {/* ===== Header banner ===== */}
-          <div className="relative h-[92px] overflow-hidden">
-            {/* Decorative angled stripes */}
+          {/* ===== Header — clinic name as the focal element ===== */}
+          <div className="relative px-7 pt-6 pb-4">
+            {/* Stamp */}
+            <div className="absolute top-2 right-3 text-[8px] font-mono text-zinc-400 tracking-[0.2em] uppercase">
+              Rx · Draft
+            </div>
+            <h2
+              className="text-center font-extrabold leading-tight tracking-tight break-words"
+              style={{ color: BRAND, fontSize: "26px" }}
+            >
+              {clinicName || "Your Clinic"}
+            </h2>
+            <div className="mx-auto mt-2 h-[2px] w-full rounded-sm" style={{ backgroundColor: BRAND }} />
+            <div className="mx-auto mt-[3px] h-px w-3/5 rounded-sm" style={{ backgroundColor: `${BRAND}73` }} />
+
+            {/* Doctor strip */}
             <div
-              className="absolute inset-y-0 left-[60%] w-[60px] bg-gradient-to-br from-teal-400/55 to-teal-600/35"
-              style={{ clipPath: "polygon(0 0, 100% 0, calc(100% - 50px) 100%, 0 100%)" }}
-            />
-            <div
-              className="absolute inset-y-0 left-[68%] w-[40px] bg-gradient-to-br from-teal-400/30 to-teal-600/15"
-              style={{ clipPath: "polygon(0 0, 100% 0, calc(100% - 40px) 100%, 0 100%)" }}
-            />
-            {/* Main banner */}
-            <div
-              className="absolute inset-y-0 left-0 w-[70%] bg-gradient-to-br from-teal-500 to-teal-600 text-white flex items-center px-7"
-              style={{ clipPath: "polygon(0 0, 100% 0, calc(100% - 60px) 100%, 0 100%)" }}
+              className="mt-3.5 flex items-center justify-between gap-3 rounded-md px-3 py-2 border"
+              style={{ background: `${BRAND}10`, borderColor: `${BRAND}33` }}
             >
               <div className="min-w-0">
-                <p className="text-xl leading-tight tracking-tight truncate">
-                  <span className="font-extrabold">Dr.</span>{" "}
-                  <span className="font-extrabold">{doctorName || "Doctor Name"}</span>
+                <p className="text-[14px] font-bold text-slate-900 leading-tight truncate">
+                  Dr. {doctorName || "Doctor Name"}
                 </p>
-                <p className="text-[9px] uppercase tracking-[0.32em] text-white/90 mt-1 font-medium truncate">
+                <p className="text-[9px] uppercase tracking-[0.18em] mt-0.5 font-semibold truncate" style={{ color: BRAND }}>
                   {doctorSpecialty || "Medical Practitioner"}
                 </p>
               </div>
-            </div>
-            {/* Stamp */}
-            <div className="absolute top-2 right-[110px] text-[8px] font-mono text-zinc-400 tracking-[0.2em] uppercase">
-              Rx · Draft
-            </div>
-            {/* Stethoscope disk */}
-            <div className="absolute right-7 top-1/2 -translate-y-1/2 w-[58px] h-[58px] rounded-full bg-gradient-to-br from-teal-500 to-teal-600 text-white flex items-center justify-center border-[3px] border-white shadow-lg shadow-teal-500/30">
-              <Stethoscope className="w-7 h-7" strokeWidth={2} />
+              <div
+                className="flex-shrink-0 w-9 h-9 rounded-full text-white flex items-center justify-center shadow"
+                style={{ backgroundColor: BRAND }}
+              >
+                <Stethoscope className="w-5 h-5" strokeWidth={2} />
+              </div>
             </div>
           </div>
 
           {/* ===== Patient info form ===== */}
-          <div className="px-7 pt-5 pb-3 grid grid-cols-2 gap-x-7 gap-y-3 text-[12px]">
+          <div className="px-7 pt-3 pb-3 grid grid-cols-2 gap-x-7 gap-y-3 text-[12px]">
             <div className="flex items-baseline gap-2 border-b border-slate-300 pb-1 min-h-[22px]">
               <span className="text-slate-600 font-medium shrink-0">Patient Name:</span>
               <span className="text-slate-900 font-semibold flex-1 truncate">
                 {patient?.name || <span className="text-slate-400 font-normal italic">—</span>}
                 {patient?.code && (
-                  <span className="ml-1.5 text-[10px] font-mono px-1.5 py-0.5 rounded bg-teal-500/10 text-teal-600 border border-teal-500/30 font-semibold">
+                  <span
+                    className="ml-1.5 text-[10px] font-mono px-1.5 py-0.5 rounded font-semibold"
+                    style={{ background: `${BRAND}1f`, color: BRAND, border: `1px solid ${BRAND}4d` }}
+                  >
                     {patient.code}
                   </span>
                 )}
@@ -739,10 +756,8 @@ function LivePreview({ clinicName, doctorName, doctorSpecialty, patient, date, d
               </span>
             </div>
             <div className="flex items-baseline gap-2 border-b border-slate-300 pb-1 min-h-[22px]">
-              <span className="text-slate-600 font-medium shrink-0">Clinic:</span>
-              <span className="text-slate-900 font-semibold flex-1 truncate">
-                {clinicName || <span className="text-slate-400 font-normal italic">—</span>}
-              </span>
+              <span className="text-slate-600 font-medium shrink-0">Rx ID:</span>
+              <span className="text-slate-400 font-mono text-[10px] flex-1 italic">— draft —</span>
             </div>
             <div className="col-span-2 flex items-baseline gap-2 border-b border-slate-300 pb-1 min-h-[22px]">
               <span className="text-slate-600 font-medium shrink-0">Diagnosis:</span>
@@ -753,16 +768,19 @@ function LivePreview({ clinicName, doctorName, doctorSpecialty, patient, date, d
           </div>
 
           {/* ===== Body / meds ===== */}
-          <div className="relative px-7 pt-3 pb-5 min-h-[280px]">
+          <div className="relative px-7 pt-3 pb-5 min-h-[260px]">
             {/* Watermark caduceus */}
-            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-[45%] w-[260px] h-[340px] text-teal-500 opacity-[0.05] pointer-events-none z-0">
+            <div
+              className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-[45%] w-[260px] h-[340px] opacity-[0.05] pointer-events-none z-0"
+              style={{ color: BRAND }}
+            >
               <CaduceusWatermark />
             </div>
 
             {/* Big Rx mark */}
             <div className="relative z-10 mb-3 leading-[0.8]">
-              <span className="font-serif text-[52px] font-bold text-slate-900">R</span>
-              <span className="font-serif italic text-[52px] font-bold text-teal-600 -ml-2">x</span>
+              <span className="font-serif text-[48px] font-bold text-slate-900">R</span>
+              <span className="font-serif italic text-[48px] font-bold -ml-2" style={{ color: BRAND }}>x</span>
             </div>
 
             {filledItems.length === 0 ? (
@@ -779,7 +797,8 @@ function LivePreview({ clinicName, doctorName, doctorSpecialty, patient, date, d
                   return (
                     <li key={i} className="flex gap-3 py-2 border-b border-dashed border-slate-200 last:border-b-0">
                       <span
-                        className="shrink-0 w-6 h-6 rounded-full bg-gradient-to-br from-teal-500 to-teal-600 text-white text-[11px] font-bold flex items-center justify-center shadow-sm shadow-teal-500/30"
+                        className="shrink-0 w-6 h-6 rounded-full text-white text-[11px] font-bold flex items-center justify-center shadow-sm"
+                        style={{ backgroundColor: BRAND, boxShadow: `0 2px 5px ${BRAND}4d` }}
                         aria-hidden
                       >
                         {i + 1}
@@ -789,17 +808,26 @@ function LivePreview({ clinicName, doctorName, doctorSpecialty, patient, date, d
                         {(dose || freq || dur) && (
                           <div className="flex flex-wrap gap-1.5 mt-1.5">
                             {dose && (
-                              <span className="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full bg-teal-500/10 text-teal-600 border border-teal-500/30 font-medium">
+                              <span
+                                className="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full font-medium"
+                                style={{ background: `${BRAND}14`, color: BRAND, border: `1px solid ${BRAND}40` }}
+                              >
                                 <Pill className="w-2.5 h-2.5" /> {dose}
                               </span>
                             )}
                             {freq && (
-                              <span className="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full bg-teal-500/10 text-teal-600 border border-teal-500/30 font-medium">
+                              <span
+                                className="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full font-medium"
+                                style={{ background: `${BRAND}14`, color: BRAND, border: `1px solid ${BRAND}40` }}
+                              >
                                 <Clock className="w-2.5 h-2.5" /> {freq}
                               </span>
                             )}
                             {dur && (
-                              <span className="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full bg-teal-500/10 text-teal-600 border border-teal-500/30 font-medium">
+                              <span
+                                className="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full font-medium"
+                                style={{ background: `${BRAND}14`, color: BRAND, border: `1px solid ${BRAND}40` }}
+                              >
                                 <CalendarDays className="w-2.5 h-2.5" /> {dur}
                               </span>
                             )}
@@ -816,8 +844,11 @@ function LivePreview({ clinicName, doctorName, doctorSpecialty, patient, date, d
             )}
 
             {notes && (
-              <div className="relative z-10 mt-4 border-l-[3px] border-teal-500 bg-teal-500/5 rounded p-3">
-                <p className="text-[9px] uppercase tracking-[0.18em] text-teal-700 font-bold">
+              <div
+                className="relative z-10 mt-4 border-l-[3px] rounded p-3"
+                style={{ borderColor: BRAND, background: `${BRAND}0f` }}
+              >
+                <p className="text-[9px] uppercase tracking-[0.18em] font-bold" style={{ color: BRAND }}>
                   Notes for the patient
                 </p>
                 <p className="text-xs text-slate-800 mt-1 whitespace-pre-wrap">{notes}</p>
@@ -839,29 +870,40 @@ function LivePreview({ clinicName, doctorName, doctorSpecialty, patient, date, d
             </div>
           </div>
 
-          {/* ===== Footer ===== */}
-          <footer className="px-7 py-3 bg-gradient-to-r from-slate-50 to-slate-100 border-t border-slate-200 flex items-center justify-between gap-3 flex-wrap text-[11px]">
-            <div className="font-bold uppercase tracking-[0.15em] text-slate-900 text-[11px] truncate max-w-[180px]">
-              {clinicName || "Clinic"}
-            </div>
-            <div className="inline-flex items-center gap-1.5 text-slate-600">
-              <span className="text-teal-600">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" width="11" height="11">
-                  <path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z" />
-                  <circle cx="12" cy="10" r="3" />
-                </svg>
-              </span>
-              <span className="truncate max-w-[160px]">{doctorSpecialty || "Medical Practice"}</span>
-            </div>
-            <div className="inline-flex items-center gap-1.5 text-slate-600">
-              <span className="text-teal-600">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" width="11" height="11">
-                  <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92Z" />
-                </svg>
-              </span>
-              <span className="truncate max-w-[140px]">{patient?.phone || "—"}</span>
-            </div>
-          </footer>
+          {/* ===== Footer — horizontal line, then address & phone with icons ===== */}
+          <div className="px-7 pb-4">
+            <div className="h-[1.5px] rounded-sm mb-2.5" style={{ backgroundColor: BRAND }} />
+            <footer className="flex items-start justify-between gap-4 flex-wrap text-[10pt] text-slate-700">
+              <div className="flex items-start gap-1.5 flex-1 min-w-[170px]">
+                <MapPin className="w-3 h-3 mt-[3px] flex-shrink-0" style={{ color: BRAND }} />
+                <div className="min-w-0">
+                  <p className="text-[8.5pt] uppercase tracking-[0.12em] font-bold leading-tight" style={{ color: BRAND }}>
+                    Address
+                  </p>
+                  <p
+                    className="text-[10pt] leading-snug whitespace-pre-line break-words"
+                    style={{ color: clinicAddress ? "#0f172a" : "#94a3b8", fontWeight: clinicAddress ? 500 : 400, fontStyle: clinicAddress ? "normal" : "italic" }}
+                  >
+                    {clinicAddress || "—"}
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-start gap-1.5 flex-1 min-w-[140px] justify-end text-right">
+                <PhoneIcon className="w-3 h-3 mt-[3px] flex-shrink-0" style={{ color: BRAND }} />
+                <div className="min-w-0">
+                  <p className="text-[8.5pt] uppercase tracking-[0.12em] font-bold leading-tight" style={{ color: BRAND }}>
+                    Phone
+                  </p>
+                  <p
+                    className="text-[10pt] leading-snug break-words"
+                    style={{ color: clinicPhone ? "#0f172a" : "#94a3b8", fontWeight: clinicPhone ? 500 : 400, fontStyle: clinicPhone ? "normal" : "italic" }}
+                  >
+                    {clinicPhone || "—"}
+                  </p>
+                </div>
+              </div>
+            </footer>
+          </div>
         </div>
       </div>
     </div>

@@ -33,7 +33,7 @@ import { useVisitTypePrices } from "@/lib/visit-prices";
 import { cn } from "@/lib/utils";
 import { Link } from "wouter";
 import { formatDate, getTrialDaysLeft } from "@/lib/utils";
-import { useUpdateProfile, useChangePassword, useListAuthEvents } from "@workspace/api-client-react";
+import { useUpdateProfile, useChangePassword, useListAuthEvents, useUpdateClinic } from "@workspace/api-client-react";
 import { useToast } from "@/hooks/use-toast";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -97,7 +97,7 @@ function shortUA(ua: string): string {
 }
 
 export default function SettingsPage() {
-  const { user, clinic, updateUser } = useAuth();
+  const { user, clinic, updateUser, updateClinic } = useAuth();
   const { theme, toggleTheme } = useTheme();
   const { currency, setCurrencyCode, options: currencyOptions, format: formatMoney } = useCurrency();
   const { prices: visitPrices, updatePrice: updateVisitPrice, resetPrices: resetVisitPrices } =
@@ -151,6 +151,54 @@ export default function SettingsPage() {
     ? getTrialDaysLeft(clinic.trialEndDate)
     : null;
 
+  // Clinic identity (name, phone, address) — editable by admin/superadmin only
+  const updateClinicMutation = useUpdateClinic();
+  const isAdminOrOwner = user?.role === "admin" || user?.role === "superadmin";
+  const [clinicName, setClinicName] = useState(clinic?.name ?? "");
+  const [clinicPhone, setClinicPhone] = useState(clinic?.phone ?? "");
+  const [clinicAddress, setClinicAddress] = useState(clinic?.address ?? "");
+  useEffect(() => {
+    setClinicName(clinic?.name ?? "");
+    setClinicPhone(clinic?.phone ?? "");
+    setClinicAddress(clinic?.address ?? "");
+  }, [clinic?.id, clinic?.name, clinic?.phone, clinic?.address]);
+
+  const identityDirty =
+    clinicName.trim() !== (clinic?.name ?? "").trim() ||
+    clinicPhone.trim() !== (clinic?.phone ?? "").trim() ||
+    clinicAddress.trim() !== (clinic?.address ?? "").trim();
+
+  async function saveClinicIdentity() {
+    if (!clinic?.id) return;
+    if (!clinicName.trim()) {
+      toast({ title: "Clinic name is required", variant: "destructive" });
+      return;
+    }
+    try {
+      const updated = await updateClinicMutation.mutateAsync({
+        clinicId: clinic.id,
+        data: {
+          name: clinicName.trim(),
+          phone: clinicPhone.trim() || null,
+          address: clinicAddress.trim() || null,
+        },
+      });
+      updateClinic({
+        ...(clinic as any),
+        name: updated.name,
+        phone: updated.phone ?? null,
+        address: updated.address ?? null,
+      });
+      toast({ title: "Clinic identity updated" });
+    } catch (err: any) {
+      toast({
+        title: "Failed to update clinic",
+        description: err?.data?.error ?? err?.message ?? "Try again",
+        variant: "destructive",
+      });
+    }
+  }
+
   return (
     <ProtectedRoute>
       <DashboardLayout>
@@ -199,6 +247,62 @@ export default function SettingsPage() {
                 </div>
               )}
             </div>
+
+            {/* Clinic Identity (editable, admin only) — appears on prescriptions */}
+            {isAdminOrOwner && (
+              <div className="rounded-xl border border-border bg-card p-6">
+                <h2 className="font-semibold mb-1">Clinic Identity</h2>
+                <p className="text-xs text-muted-foreground mb-4">
+                  Shown on every prescription header and footer (PDF, print, and WhatsApp).
+                </p>
+                <div className="space-y-4">
+                  <div>
+                    <Label htmlFor="clinic-name" className="mb-1.5 block text-sm">Clinic Name *</Label>
+                    <Input
+                      id="clinic-name"
+                      value={clinicName}
+                      onChange={(e) => setClinicName(e.target.value)}
+                      placeholder="e.g. ClinicSquad Medical Center"
+                      maxLength={200}
+                      data-testid="input-clinic-name"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="clinic-phone" className="mb-1.5 block text-sm">Phone</Label>
+                    <Input
+                      id="clinic-phone"
+                      value={clinicPhone}
+                      onChange={(e) => setClinicPhone(e.target.value)}
+                      placeholder="e.g. +20 123 456 7890"
+                      maxLength={50}
+                      data-testid="input-clinic-phone"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="clinic-address" className="mb-1.5 block text-sm">Address</Label>
+                    <textarea
+                      id="clinic-address"
+                      value={clinicAddress}
+                      onChange={(e) => setClinicAddress(e.target.value)}
+                      placeholder="Street, City, Country"
+                      rows={3}
+                      maxLength={500}
+                      className="flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                      data-testid="input-clinic-address"
+                    />
+                  </div>
+                  <div className="flex justify-end">
+                    <Button
+                      onClick={saveClinicIdentity}
+                      disabled={updateClinicMutation.isPending || !identityDirty}
+                      data-testid="button-save-clinic-identity"
+                    >
+                      {updateClinicMutation.isPending ? "Saving..." : "Save Identity"}
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            )}
 
             {/* Clinic */}
             <div className="rounded-xl border border-border bg-card p-6">

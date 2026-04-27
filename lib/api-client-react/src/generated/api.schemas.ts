@@ -172,6 +172,8 @@ export const ClinicSubscriptionStatus = {
 export interface Clinic {
   id: string;
   name: string;
+  phone?: string | null;
+  address?: string | null;
   ownerId: string;
   status: ClinicStatus;
   subscriptionStatus: ClinicSubscriptionStatus;
@@ -340,6 +342,18 @@ export interface PendingClinic {
   whatsappNumber?: string | null;
   createdAt: string;
   trialEndDate: string;
+}
+
+export interface UpdateClinicBody {
+  /**
+   * @minLength 1
+   * @maxLength 200
+   */
+  name?: string;
+  /** @maxLength 50 */
+  phone?: string | null;
+  /** @maxLength 500 */
+  address?: string | null;
 }
 
 export type SubscriptionPlanType =

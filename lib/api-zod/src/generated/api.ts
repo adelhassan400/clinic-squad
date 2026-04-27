@@ -60,6 +60,8 @@ export const VerifyEmailResponse = zod.object({
   clinic: zod.object({
     id: zod.string(),
     name: zod.string(),
+    phone: zod.string().nullish(),
+    address: zod.string().nullish(),
     ownerId: zod.string(),
     status: zod.enum([
       "pending",
@@ -113,6 +115,8 @@ export const LoginUserResponse = zod.object({
   clinic: zod.object({
     id: zod.string(),
     name: zod.string(),
+    phone: zod.string().nullish(),
+    address: zod.string().nullish(),
     ownerId: zod.string(),
     status: zod.enum([
       "pending",
@@ -306,6 +310,46 @@ export const GetClinicParams = zod.object({
 export const GetClinicResponse = zod.object({
   id: zod.string(),
   name: zod.string(),
+  phone: zod.string().nullish(),
+  address: zod.string().nullish(),
+  ownerId: zod.string(),
+  status: zod.enum([
+    "pending",
+    "pending_approval",
+    "active",
+    "blocked",
+    "deleted",
+  ]),
+  subscriptionStatus: zod.enum(["trial", "basic", "premium", "expired"]),
+  trialEndDate: zod.coerce.date(),
+  subscriptionPlan: zod.string().nullish(),
+  createdAt: zod.coerce.date(),
+});
+
+/**
+ * @summary Update clinic identity (name, phone, address)
+ */
+export const UpdateClinicParams = zod.object({
+  clinicId: zod.coerce.string(),
+});
+
+export const updateClinicBodyNameMax = 200;
+
+export const updateClinicBodyPhoneMax = 50;
+
+export const updateClinicBodyAddressMax = 500;
+
+export const UpdateClinicBody = zod.object({
+  name: zod.string().min(1).max(updateClinicBodyNameMax).optional(),
+  phone: zod.string().max(updateClinicBodyPhoneMax).nullish(),
+  address: zod.string().max(updateClinicBodyAddressMax).nullish(),
+});
+
+export const UpdateClinicResponse = zod.object({
+  id: zod.string(),
+  name: zod.string(),
+  phone: zod.string().nullish(),
+  address: zod.string().nullish(),
   ownerId: zod.string(),
   status: zod.enum([
     "pending",
@@ -979,6 +1023,8 @@ export const GetFinanceSummaryResponse = zod.object({
 export const AdminListClinicsResponseItem = zod.object({
   id: zod.string(),
   name: zod.string(),
+  phone: zod.string().nullish(),
+  address: zod.string().nullish(),
   ownerId: zod.string(),
   status: zod.enum([
     "pending",
@@ -1022,6 +1068,8 @@ export const AdminActivateClinicParams = zod.object({
 export const AdminActivateClinicResponse = zod.object({
   id: zod.string(),
   name: zod.string(),
+  phone: zod.string().nullish(),
+  address: zod.string().nullish(),
   ownerId: zod.string(),
   status: zod.enum([
     "pending",
@@ -1046,6 +1094,8 @@ export const AdminBlockClinicParams = zod.object({
 export const AdminBlockClinicResponse = zod.object({
   id: zod.string(),
   name: zod.string(),
+  phone: zod.string().nullish(),
+  address: zod.string().nullish(),
   ownerId: zod.string(),
   status: zod.enum([
     "pending",
@@ -1179,6 +1229,8 @@ export const AcceptInvitationResponse = zod.object({
   clinic: zod.object({
     id: zod.string(),
     name: zod.string(),
+    phone: zod.string().nullish(),
+    address: zod.string().nullish(),
     ownerId: zod.string(),
     status: zod.enum([
       "pending",

@@ -228,6 +228,8 @@ router.post("/verify-email", async (req, res) => {
   const clinicObj = {
     id: clinic.id,
     name: clinic.name,
+    phone: clinic.phone ?? null,
+    address: clinic.address ?? null,
     ownerId: clinic.ownerId,
     status: clinic.status,
     subscriptionStatus: clinic.subscriptionStatus,
@@ -318,6 +320,8 @@ router.post("/login", async (req, res) => {
   const clinicObj = {
     id: clinic.id,
     name: clinic.name,
+    phone: clinic.phone ?? null,
+    address: clinic.address ?? null,
     ownerId: clinic.ownerId,
     status: clinic.status,
     subscriptionStatus: clinic.subscriptionStatus,

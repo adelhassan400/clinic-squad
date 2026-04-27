@@ -9,7 +9,7 @@ function escapeHtml(value: string): string {
     .replace(/'/g, "&#39;");
 }
 
-const STETHOSCOPE_SVG = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="34" height="34" aria-hidden="true">
+const STETHOSCOPE_SVG = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="22" height="22" aria-hidden="true">
   <path d="M11 2v2"/>
   <path d="M5 2v2"/>
   <path d="M5 3H4a2 2 0 0 0-2 2v4a6 6 0 0 0 12 0V5a2 2 0 0 0-2-2h-1"/>
@@ -35,7 +35,13 @@ const PIN_SVG = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stro
 
 const PHONE_SVG = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="11" height="11" aria-hidden="true"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92Z"/></svg>`;
 
-function buildPrintHtml(p: Prescription, clinicName: string): string {
+export interface ClinicBranding {
+  name: string;
+  phone?: string | null;
+  address?: string | null;
+}
+
+function buildPrintHtml(p: Prescription, branding: ClinicBranding): string {
   const itemRows = p.items
     .map((it, i) => {
       const dose = (it.dosage || "").trim();
@@ -71,6 +77,9 @@ function buildPrintHtml(p: Prescription, clinicName: string): string {
   })();
 
   const specialtyLine = p.doctorSpecialty ? escapeHtml(p.doctorSpecialty) : "Medical Practitioner";
+  const clinicName = (branding.name || "").trim() || "Clinic";
+  const clinicPhone = (branding.phone || "").trim();
+  const clinicAddress = (branding.address || "").trim();
 
   return `<!doctype html>
 <html lang="en">
@@ -81,11 +90,11 @@ function buildPrintHtml(p: Prescription, clinicName: string): string {
   * { box-sizing: border-box; }
   html, body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
   body {
-    font-family: -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    font-family: "Inter", -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
     color: #0f172a;
     margin: 0;
-    padding: 28px 16px;
-    background: linear-gradient(135deg, #5eead4 0%, #14b8a6 100%);
+    padding: 24px 16px;
+    background: #f1f5f9;
     min-height: 100vh;
   }
   .sheet {
@@ -93,96 +102,101 @@ function buildPrintHtml(p: Prescription, clinicName: string): string {
     margin: 0 auto;
     background: #ffffff;
     border-radius: 6px;
-    box-shadow: 0 30px 60px rgba(15, 23, 42, 0.18), 0 8px 20px rgba(15, 23, 42, 0.1);
+    box-shadow: 0 24px 48px rgba(15, 23, 42, 0.16), 0 6px 16px rgba(15, 23, 42, 0.08);
     overflow: hidden;
     position: relative;
   }
 
-  /* ===== Header ===== */
+  /* ===== Header — clinic name as the focal element ===== */
   .rx-header {
     position: relative;
-    height: 110px;
-    overflow: hidden;
+    padding: 26px 40px 18px;
+    background: #ffffff;
   }
-  .rx-banner {
-    position: absolute;
-    top: 0;
-    left: 0;
-    height: 100%;
-    width: 70%;
-    background: linear-gradient(135deg, #14b8a6 0%, #0d9488 100%);
-    color: #fff;
+  .rx-clinic {
+    text-align: center;
+    color: #20B8AD;
+    font-size: 30px;
+    font-weight: 800;
+    letter-spacing: -0.01em;
+    line-height: 1.15;
+    text-transform: none;
+    word-break: break-word;
+  }
+  .rx-clinic-rule {
+    margin: 10px auto 0;
+    height: 2px;
+    width: 100%;
+    background: #20B8AD;
+    border-radius: 2px;
+  }
+  .rx-clinic-rule-thin {
+    margin: 3px auto 0;
+    height: 1px;
+    width: 60%;
+    background: rgba(32, 184, 173, 0.45);
+    border-radius: 1px;
+  }
+
+  /* Doctor strip below clinic name */
+  .rx-doc {
+    margin-top: 14px;
     display: flex;
     align-items: center;
-    padding: 0 38px;
-    clip-path: polygon(0 0, 100% 0, calc(100% - 70px) 100%, 0 100%);
+    justify-content: space-between;
+    gap: 14px;
+    padding: 10px 14px;
+    background: rgba(32, 184, 173, 0.06);
+    border: 1px solid rgba(32, 184, 173, 0.2);
+    border-radius: 6px;
   }
-  .rx-banner-stripe {
-    position: absolute;
-    top: 0;
-    left: 60%;
-    width: 60px;
-    height: 100%;
-    background: linear-gradient(135deg, rgba(20, 184, 166, 0.55), rgba(13, 148, 136, 0.35));
-    clip-path: polygon(0 0, 100% 0, calc(100% - 50px) 100%, 0 100%);
+  .rx-doc-info {
+    min-width: 0;
   }
-  .rx-banner-stripe.b {
-    left: 70%;
-    width: 40px;
-    background: linear-gradient(135deg, rgba(20, 184, 166, 0.3), rgba(13, 148, 136, 0.15));
+  .rx-doc-name {
+    font-size: 15px;
+    font-weight: 700;
+    color: #0f172a;
+    line-height: 1.2;
+    letter-spacing: -0.005em;
   }
-  .doc-name {
-    font-size: 26px;
-    font-weight: 300;
-    letter-spacing: -0.01em;
-    line-height: 1.1;
-    color: #ffffff;
-  }
-  .doc-name b {
-    font-weight: 800;
-    margin-right: 4px;
-  }
-  .doc-qual {
+  .rx-doc-qual {
     font-size: 10px;
-    letter-spacing: 0.32em;
-    color: rgba(255, 255, 255, 0.92);
-    margin-top: 6px;
+    letter-spacing: 0.18em;
     text-transform: uppercase;
-    font-weight: 500;
+    color: #1a9d93;
+    margin-top: 3px;
+    font-weight: 600;
   }
-  .rx-icon-disk {
-    position: absolute;
-    right: 36px;
-    top: 50%;
-    transform: translateY(-50%);
-    width: 70px;
-    height: 70px;
+  .rx-doc-icon {
+    flex-shrink: 0;
+    width: 40px;
+    height: 40px;
     border-radius: 50%;
-    background: linear-gradient(135deg, #14b8a6 0%, #0d9488 100%);
+    background: #20B8AD;
     color: #ffffff;
     display: flex;
     align-items: center;
     justify-content: center;
-    box-shadow: 0 6px 18px rgba(20, 184, 166, 0.35);
-    border: 3px solid #ffffff;
+    box-shadow: 0 4px 10px rgba(32, 184, 173, 0.3);
   }
   .rx-stamp {
     position: absolute;
-    top: 8px;
-    right: 130px;
+    top: 10px;
+    right: 14px;
     font-family: ui-monospace, Menlo, monospace;
     font-size: 9px;
-    color: rgba(15, 23, 42, 0.45);
-    letter-spacing: 0.2em;
+    color: rgba(15, 23, 42, 0.4);
+    letter-spacing: 0.18em;
     text-transform: uppercase;
   }
 
   /* ===== Patient info form ===== */
   .rx-info {
-    padding: 22px 40px 18px;
+    padding: 18px 40px 14px;
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 14px 36px;
+    gap: 12px 36px;
     font-size: 12.5px;
   }
   .rx-info .row {
@@ -212,9 +226,9 @@ function buildPrintHtml(p: Prescription, clinicName: string): string {
     font-size: 10px;
     padding: 1px 6px;
     border-radius: 4px;
-    background: rgba(20, 184, 166, 0.12);
-    color: #0d9488;
-    border: 1px solid rgba(20, 184, 166, 0.3);
+    background: rgba(32, 184, 173, 0.12);
+    color: #1a9d93;
+    border: 1px solid rgba(32, 184, 173, 0.3);
     margin-left: 6px;
     vertical-align: middle;
     font-weight: 600;
@@ -223,7 +237,7 @@ function buildPrintHtml(p: Prescription, clinicName: string): string {
   /* ===== Body / meds ===== */
   .rx-body {
     position: relative;
-    padding: 14px 40px 28px;
+    padding: 14px 40px 24px;
     min-height: 320px;
   }
   .rx-watermark {
@@ -233,7 +247,7 @@ function buildPrintHtml(p: Prescription, clinicName: string): string {
     transform: translate(-50%, -45%);
     width: 320px;
     height: 420px;
-    color: #14b8a6;
+    color: #20B8AD;
     opacity: 0.05;
     pointer-events: none;
     z-index: 0;
@@ -244,54 +258,52 @@ function buildPrintHtml(p: Prescription, clinicName: string): string {
   }
   .rx-mark {
     font-family: "Times New Roman", Times, Georgia, serif;
-    font-size: 56px;
+    font-size: 52px;
     font-weight: 700;
     color: #0f172a;
     line-height: 0.85;
-    margin-bottom: 14px;
+    margin-bottom: 12px;
     position: relative;
     z-index: 1;
   }
-  .rx-mark .r {
-    color: #0f172a;
-  }
+  .rx-mark .r { color: #0f172a; }
   .rx-mark .x {
-    color: #0d9488;
+    color: #20B8AD;
     margin-left: -10px;
     font-style: italic;
   }
   ol.meds {
     list-style: none;
     padding: 0;
-    margin: 0 0 16px;
+    margin: 0 0 14px;
     position: relative;
     z-index: 1;
   }
   li.med {
     display: flex;
     gap: 14px;
-    padding: 10px 0;
+    padding: 9px 0;
     border-bottom: 1px dashed #e2e8f0;
   }
   li.med:last-child { border-bottom: 0; }
   .med-num {
     flex-shrink: 0;
-    width: 26px;
-    height: 26px;
+    width: 24px;
+    height: 24px;
     border-radius: 50%;
-    background: linear-gradient(135deg, #14b8a6 0%, #0d9488 100%);
+    background: #20B8AD;
     color: #fff;
-    font-size: 12px;
+    font-size: 11px;
     font-weight: 700;
     display: flex;
     align-items: center;
     justify-content: center;
-    box-shadow: 0 2px 6px rgba(13, 148, 136, 0.25);
+    box-shadow: 0 2px 5px rgba(32, 184, 173, 0.3);
   }
   .med-body { flex: 1; min-width: 0; }
   .med-drug {
     font-weight: 700;
-    font-size: 14px;
+    font-size: 13.5px;
     color: #0f172a;
     letter-spacing: -0.005em;
   }
@@ -299,28 +311,28 @@ function buildPrintHtml(p: Prescription, clinicName: string): string {
     margin-top: 6px;
     display: flex;
     flex-wrap: wrap;
-    gap: 6px;
+    gap: 5px;
   }
   .chip {
     display: inline-block;
-    font-size: 11px;
+    font-size: 10.5px;
     padding: 2px 9px;
     border-radius: 999px;
-    background: rgba(20, 184, 166, 0.08);
-    color: #0d9488;
-    border: 1px solid rgba(20, 184, 166, 0.25);
+    background: rgba(32, 184, 173, 0.08);
+    color: #1a9d93;
+    border: 1px solid rgba(32, 184, 173, 0.25);
     font-weight: 500;
   }
   .med-notes {
-    margin-top: 6px;
+    margin-top: 5px;
     color: #475569;
     font-style: italic;
-    font-size: 12px;
+    font-size: 11.5px;
   }
   .notes {
-    margin-top: 14px;
-    border-left: 3px solid #14b8a6;
-    background: rgba(20, 184, 166, 0.06);
+    margin-top: 12px;
+    border-left: 3px solid #20B8AD;
+    background: rgba(32, 184, 173, 0.06);
     border-radius: 4px;
     padding: 10px 14px;
     font-size: 12px;
@@ -329,16 +341,16 @@ function buildPrintHtml(p: Prescription, clinicName: string): string {
   }
   .notes-label {
     text-transform: uppercase;
-    font-size: 10px;
+    font-size: 9.5px;
     letter-spacing: 0.18em;
-    color: #0d9488;
+    color: #1a9d93;
     margin-bottom: 4px;
     font-weight: 700;
   }
 
   /* ===== Signature ===== */
   .rx-signature {
-    padding: 18px 40px 12px;
+    padding: 14px 40px 6px;
     display: flex;
     justify-content: flex-end;
     position: relative;
@@ -351,7 +363,7 @@ function buildPrintHtml(p: Prescription, clinicName: string): string {
   .sig-name {
     font-family: "Brush Script MT", "Lucida Handwriting", "Segoe Script", cursive;
     font-style: italic;
-    font-size: 20px;
+    font-size: 19px;
     color: #0f172a;
     padding-bottom: 4px;
   }
@@ -361,53 +373,87 @@ function buildPrintHtml(p: Prescription, clinicName: string): string {
     width: 200px;
   }
   .sig-label {
-    font-size: 10px;
+    font-size: 9.5px;
     color: #475569;
     letter-spacing: 0.15em;
     text-transform: uppercase;
   }
 
-  /* ===== Footer ===== */
-  .rx-footer {
-    position: relative;
-    margin-top: 6px;
-    padding: 14px 40px;
-    background: linear-gradient(90deg, #f8fafc 0%, #f1f5f9 100%);
-    border-top: 1px solid #e2e8f0;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 14px;
-    flex-wrap: wrap;
-    font-size: 12px;
-    color: #334155;
+  /* ===== Footer — horizontal line, then address & phone with icons ===== */
+  .rx-footer-wrap {
+    padding: 0 40px 18px;
   }
-  .rx-footer .clinic {
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.15em;
-    color: #0f172a;
-    font-size: 11.5px;
+  .rx-footer-line {
+    height: 1.5px;
+    background: #20B8AD;
+    border-radius: 2px;
+    margin-bottom: 10px;
+  }
+  .rx-footer {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 18px;
+    flex-wrap: wrap;
+    font-size: 10pt;
+    color: #334155;
+    line-height: 1.45;
   }
   .rx-footer .item {
     display: inline-flex;
-    align-items: center;
+    align-items: flex-start;
     gap: 6px;
-    color: #475569;
+    color: #334155;
+    flex: 1 1 0;
+    min-width: 200px;
   }
-  .rx-footer .item svg {
-    color: #0d9488;
+  .rx-footer .item.right {
+    justify-content: flex-end;
+    text-align: right;
+  }
+  .rx-footer .item .icon {
+    color: #20B8AD;
+    flex-shrink: 0;
+    margin-top: 2px;
+  }
+  .rx-footer .item .icon svg {
+    width: 12px;
+    height: 12px;
+  }
+  .rx-footer .item .label {
+    font-size: 8.5pt;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: #1a9d93;
+    font-weight: 700;
+    margin-bottom: 1px;
+  }
+  .rx-footer .item .value {
+    font-size: 10pt;
+    color: #0f172a;
+    font-weight: 500;
+    word-break: break-word;
+    white-space: pre-line;
+  }
+  .rx-footer .item .value.muted {
+    color: #94a3b8;
+    font-style: italic;
+    font-weight: 400;
   }
   .rx-ribbon {
     text-align: center;
     padding: 8px 0 14px;
-    font-size: 9px;
-    letter-spacing: 0.3em;
+    font-size: 8.5pt;
+    letter-spacing: 0.28em;
     text-transform: uppercase;
     color: #94a3b8;
   }
 
   /* ===== Print ===== */
+  @page {
+    size: A4;
+    margin: 12mm 10mm;
+  }
   @media print {
     body {
       background: #ffffff;
@@ -427,21 +473,22 @@ function buildPrintHtml(p: Prescription, clinicName: string): string {
     margin-bottom: 18px;
   }
   .toolbar button {
-    background: #ffffff;
-    color: #0d9488;
+    background: #20B8AD;
+    color: #ffffff;
     border: 0;
-    padding: 10px 20px;
+    padding: 10px 22px;
     border-radius: 8px;
     font-size: 13px;
     cursor: pointer;
     margin: 0 4px;
     font-weight: 700;
-    box-shadow: 0 4px 12px rgba(15, 23, 42, 0.15);
+    box-shadow: 0 4px 12px rgba(32, 184, 173, 0.3);
   }
   .toolbar button.secondary {
-    background: rgba(255, 255, 255, 0.2);
-    color: #ffffff;
-    backdrop-filter: blur(8px);
+    background: #ffffff;
+    color: #20B8AD;
+    border: 1px solid rgba(32, 184, 173, 0.4);
+    box-shadow: 0 2px 6px rgba(15, 23, 42, 0.08);
   }
 </style>
 </head>
@@ -452,16 +499,17 @@ function buildPrintHtml(p: Prescription, clinicName: string): string {
   </div>
   <div class="sheet">
     <header class="rx-header">
-      <div class="rx-banner">
-        <div>
-          <div class="doc-name"><b>Dr. ${escapeHtml(p.doctorName)}</b></div>
-          <div class="doc-qual">${specialtyLine}</div>
-        </div>
-      </div>
-      <div class="rx-banner-stripe"></div>
-      <div class="rx-banner-stripe b"></div>
       <div class="rx-stamp">Rx · ${escapeHtml(p.id.slice(0, 8))}</div>
-      <div class="rx-icon-disk">${STETHOSCOPE_SVG}</div>
+      <div class="rx-clinic">${escapeHtml(clinicName)}</div>
+      <div class="rx-clinic-rule"></div>
+      <div class="rx-clinic-rule-thin"></div>
+      <div class="rx-doc">
+        <div class="rx-doc-info">
+          <div class="rx-doc-name">Dr. ${escapeHtml(p.doctorName)}</div>
+          <div class="rx-doc-qual">${specialtyLine}</div>
+        </div>
+        <div class="rx-doc-icon">${STETHOSCOPE_SVG}</div>
+      </div>
     </header>
 
     <section class="rx-info">
@@ -509,11 +557,29 @@ function buildPrintHtml(p: Prescription, clinicName: string): string {
       </div>
     </div>
 
-    <footer class="rx-footer">
-      <div class="clinic">${escapeHtml(clinicName || "Clinic")}</div>
-      <div class="item">${PIN_SVG}<span>${escapeHtml(p.doctorSpecialty || "Medical Practice")}</span></div>
-      <div class="item">${PHONE_SVG}<span>${escapeHtml(p.patientPhone || "—")}</span></div>
-    </footer>
+    <div class="rx-footer-wrap">
+      <div class="rx-footer-line"></div>
+      <footer class="rx-footer">
+        <div class="item">
+          <span class="icon">${PIN_SVG}</span>
+          <span>
+            <span class="label">Address</span>
+            <span class="value${clinicAddress ? "" : " muted"}">${
+              clinicAddress ? escapeHtml(clinicAddress) : "—"
+            }</span>
+          </span>
+        </div>
+        <div class="item right">
+          <span class="icon">${PHONE_SVG}</span>
+          <span>
+            <span class="label">Phone</span>
+            <span class="value${clinicPhone ? "" : " muted"}">${
+              clinicPhone ? escapeHtml(clinicPhone) : "—"
+            }</span>
+          </span>
+        </div>
+      </footer>
+    </div>
 
     <div class="rx-ribbon">Issued via ClinicSquad · ${new Date(p.createdAt).toLocaleString()}</div>
   </div>
@@ -526,8 +592,8 @@ function buildPrintHtml(p: Prescription, clinicName: string): string {
 </html>`;
 }
 
-export function printPrescription(p: Prescription, clinicName: string): void {
-  const html = buildPrintHtml(p, clinicName);
+export function printPrescription(p: Prescription, branding: ClinicBranding): void {
+  const html = buildPrintHtml(p, branding);
   const win = window.open("", "_blank", "width=820,height=1000");
   if (!win) {
     alert("Please allow pop-ups to print prescriptions.");
@@ -546,9 +612,10 @@ function normalizePhone(raw: string): string {
   return digits;
 }
 
-function buildWhatsAppMessage(p: Prescription, clinicName: string): string {
+function buildWhatsAppMessage(p: Prescription, branding: ClinicBranding): string {
   const lines: string[] = [];
-  lines.push(`*${clinicName || "Clinic"} — Prescription*`);
+  const clinicName = (branding.name || "").trim() || "Clinic";
+  lines.push(`*${clinicName} — Prescription*`);
   lines.push(`Patient: ${p.patientName}${p.patientCode ? ` (${p.patientCode})` : ""}`);
   lines.push(`Date: ${p.date}`);
   lines.push(`Doctor: Dr. ${p.doctorName}${p.doctorSpecialty ? ` — ${p.doctorSpecialty}` : ""}`);
@@ -564,18 +631,27 @@ function buildWhatsAppMessage(p: Prescription, clinicName: string): string {
     lines.push("");
     lines.push(`Notes: ${p.notes}`);
   }
+  // Clinic contact footer
+  const clinicPhone = (branding.phone || "").trim();
+  const clinicAddress = (branding.address || "").trim();
+  if (clinicAddress || clinicPhone) {
+    lines.push("");
+    lines.push("—");
+    if (clinicAddress) lines.push(`📍 ${clinicAddress}`);
+    if (clinicPhone) lines.push(`📞 ${clinicPhone}`);
+  }
   lines.push("");
   lines.push("Get well soon 🌿");
   return lines.join("\n");
 }
 
-export function sendPrescriptionWhatsApp(p: Prescription, clinicName: string): void {
+export function sendPrescriptionWhatsApp(p: Prescription, branding: ClinicBranding): void {
   const phone = normalizePhone(p.patientPhone || "");
   if (!phone) {
     alert("Patient has no phone number on file.");
     return;
   }
-  const text = encodeURIComponent(buildWhatsAppMessage(p, clinicName));
+  const text = encodeURIComponent(buildWhatsAppMessage(p, branding));
   const url = `https://wa.me/${phone}?text=${text}`;
   window.open(url, "_blank", "noopener");
 }

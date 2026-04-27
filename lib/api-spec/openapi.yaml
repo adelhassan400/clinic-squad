@@ -275,6 +275,29 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Clinic"
+    patch:
+      operationId: updateClinic
+      tags: [clinics]
+      summary: Update clinic identity (name, phone, address)
+      parameters:
+        - in: path
+          name: clinicId
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateClinicBody"
+      responses:
+        "200":
+          description: Updated clinic
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Clinic"
 
   /clinics/{clinicId}/subscription:
     get:
@@ -1558,6 +1581,12 @@ components:
           type: string
         name:
           type: string
+        phone:
+          type: string
+          nullable: true
+        address:
+          type: string
+          nullable: true
         ownerId:
           type: string
         status:
@@ -1576,6 +1605,22 @@ components:
           type: string
           format: date-time
       required: [id, name, ownerId, status, subscriptionStatus, trialEndDate, createdAt]
+
+    UpdateClinicBody:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 200
+        phone:
+          type: string
+          nullable: true
+          maxLength: 50
+        address:
+          type: string
+          nullable: true
+          maxLength: 500
 
     Subscription:
       type: object

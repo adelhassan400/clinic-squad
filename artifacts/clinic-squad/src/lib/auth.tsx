@@ -15,6 +15,8 @@ export interface AuthUser {
 export interface AuthClinic {
   id: string;
   name: string;
+  phone?: string | null;
+  address?: string | null;
   ownerId: string;
   status: "pending" | "pending_approval" | "active" | "blocked" | "deleted";
   subscriptionStatus: "trial" | "basic" | "premium" | "expired";

@@ -64,6 +64,7 @@ import type {
   Subscription,
   TeamOverview,
   UpdateAppointmentBody,
+  UpdateClinicBody,
   UpdatePatientBody,
   UpdateProfileBody,
   User,
@@ -1163,6 +1164,93 @@ export function useGetClinic<
 
   return { ...query, queryKey: queryOptions.queryKey };
 }
+
+/**
+ * @summary Update clinic identity (name, phone, address)
+ */
+export const getUpdateClinicUrl = (clinicId: string) => {
+  return `/api/clinics/${clinicId}`;
+};
+
+export const updateClinic = async (
+  clinicId: string,
+  updateClinicBody: UpdateClinicBody,
+  options?: RequestInit,
+): Promise<Clinic> => {
+  return customFetch<Clinic>(getUpdateClinicUrl(clinicId), {
+    ...options,
+    method: "PATCH",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(updateClinicBody),
+  });
+};
+
+export const getUpdateClinicMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof updateClinic>>,
+    TError,
+    { clinicId: string; data: BodyType<UpdateClinicBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof updateClinic>>,
+  TError,
+  { clinicId: string; data: BodyType<UpdateClinicBody> },
+  TContext
+> => {
+  const mutationKey = ["updateClinic"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof updateClinic>>,
+    { clinicId: string; data: BodyType<UpdateClinicBody> }
+  > = (props) => {
+    const { clinicId, data } = props ?? {};
+
+    return updateClinic(clinicId, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type UpdateClinicMutationResult = NonNullable<
+  Awaited<ReturnType<typeof updateClinic>>
+>;
+export type UpdateClinicMutationBody = BodyType<UpdateClinicBody>;
+export type UpdateClinicMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Update clinic identity (name, phone, address)
+ */
+export const useUpdateClinic = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof updateClinic>>,
+    TError,
+    { clinicId: string; data: BodyType<UpdateClinicBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof updateClinic>>,
+  TError,
+  { clinicId: string; data: BodyType<UpdateClinicBody> },
+  TContext
+> => {
+  return useMutation(getUpdateClinicMutationOptions(options));
+};
 
 /**
  * @summary Get clinic subscription

@@ -1,10 +1,25 @@
 import { Router } from "express";
 import { eq } from "drizzle-orm";
 import { db, clinicsTable, usersTable, subscriptionsTable, patientsTable, appointmentsTable, financesTable } from "@workspace/db";
-import { CreateSubscriptionBody } from "@workspace/api-zod";
+import { CreateSubscriptionBody, UpdateClinicBody } from "@workspace/api-zod";
 import { randomUUID } from "crypto";
 
 const router = Router();
+
+function serializeClinic(clinic: typeof clinicsTable.$inferSelect) {
+  return {
+    id: clinic.id,
+    name: clinic.name,
+    phone: clinic.phone ?? null,
+    address: clinic.address ?? null,
+    ownerId: clinic.ownerId,
+    status: clinic.status,
+    subscriptionStatus: clinic.subscriptionStatus,
+    trialEndDate: clinic.trialEndDate.toISOString(),
+    subscriptionPlan: clinic.subscriptionPlan,
+    createdAt: clinic.createdAt.toISOString(),
+  };
+}
 
 router.get("/:clinicId", async (req, res) => {
   const { clinicId } = req.params;
@@ -18,16 +33,37 @@ router.get("/:clinicId", async (req, res) => {
     clinic.subscriptionStatus = "expired";
   }
 
-  return res.json({
-    id: clinic.id,
-    name: clinic.name,
-    ownerId: clinic.ownerId,
-    status: clinic.status,
-    subscriptionStatus: clinic.subscriptionStatus,
-    trialEndDate: clinic.trialEndDate.toISOString(),
-    subscriptionPlan: clinic.subscriptionPlan,
-    createdAt: clinic.createdAt.toISOString(),
-  });
+  return res.json(serializeClinic(clinic));
+});
+
+router.patch("/:clinicId", async (req, res) => {
+  const { clinicId } = req.params;
+  const parsed = UpdateClinicBody.safeParse(req.body);
+  if (!parsed.success) {
+    return res.status(400).json({ error: "Invalid input", details: parsed.error.issues });
+  }
+
+  const existing = (await db.select().from(clinicsTable).where(eq(clinicsTable.id, clinicId)).limit(1))[0];
+  if (!existing) return res.status(404).json({ error: "Clinic not found" });
+
+  const patch: Partial<typeof clinicsTable.$inferInsert> = {};
+  if (parsed.data.name !== undefined) patch.name = parsed.data.name.trim();
+  if (parsed.data.phone !== undefined) {
+    const v = parsed.data.phone === null ? null : parsed.data.phone.trim();
+    patch.phone = v && v.length > 0 ? v : null;
+  }
+  if (parsed.data.address !== undefined) {
+    const v = parsed.data.address === null ? null : parsed.data.address.trim();
+    patch.address = v && v.length > 0 ? v : null;
+  }
+
+  if (Object.keys(patch).length === 0) {
+    return res.json(serializeClinic(existing));
+  }
+
+  await db.update(clinicsTable).set(patch).where(eq(clinicsTable.id, clinicId));
+  const updated = (await db.select().from(clinicsTable).where(eq(clinicsTable.id, clinicId)).limit(1))[0];
+  return res.json(serializeClinic(updated));
 });
 
 router.get("/:clinicId/subscription", async (req, res) => {
