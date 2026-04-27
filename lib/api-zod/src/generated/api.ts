@@ -563,7 +563,7 @@ export const listAppointmentsQueryLimitDefault = 20;
 export const ListAppointmentsQueryParams = zod.object({
   date: zod.date().optional(),
   status: zod
-    .enum(["scheduled", "completed", "cancelled", "no_show"])
+    .enum(["scheduled", "checked_in", "completed", "cancelled", "no_show"])
     .optional(),
   page: zod.coerce.number().default(listAppointmentsQueryPageDefault),
   limit: zod.coerce.number().default(listAppointmentsQueryLimitDefault),
@@ -584,7 +584,13 @@ export const ListAppointmentsResponse = zod.object({
         ),
       date: zod.coerce.date(),
       time: zod.string(),
-      status: zod.enum(["scheduled", "completed", "cancelled", "no_show"]),
+      status: zod.enum([
+        "scheduled",
+        "checked_in",
+        "completed",
+        "cancelled",
+        "no_show",
+      ]),
       type: zod.string(),
       notes: zod.string().nullish(),
       fee: zod.number().nullish(),
@@ -622,7 +628,7 @@ export const UpdateAppointmentParams = zod.object({
 
 export const UpdateAppointmentBody = zod.object({
   status: zod
-    .enum(["scheduled", "completed", "cancelled", "no_show"])
+    .enum(["scheduled", "checked_in", "completed", "cancelled", "no_show"])
     .optional(),
   date: zod.coerce.date().optional(),
   time: zod.string().optional(),
@@ -643,7 +649,13 @@ export const UpdateAppointmentResponse = zod.object({
     ),
   date: zod.coerce.date(),
   time: zod.string(),
-  status: zod.enum(["scheduled", "completed", "cancelled", "no_show"]),
+  status: zod.enum([
+    "scheduled",
+    "checked_in",
+    "completed",
+    "cancelled",
+    "no_show",
+  ]),
   type: zod.string(),
   notes: zod.string().nullish(),
   fee: zod.number().nullish(),
@@ -851,7 +863,13 @@ export const GetTodayAppointmentsResponseItem = zod.object({
     ),
   date: zod.coerce.date(),
   time: zod.string(),
-  status: zod.enum(["scheduled", "completed", "cancelled", "no_show"]),
+  status: zod.enum([
+    "scheduled",
+    "checked_in",
+    "completed",
+    "cancelled",
+    "no_show",
+  ]),
   type: zod.string(),
   notes: zod.string().nullish(),
   fee: zod.number().nullish(),

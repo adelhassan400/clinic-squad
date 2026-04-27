@@ -63,6 +63,12 @@ export default function WaitingListPage() {
       return a.createdAt.localeCompare(b.createdAt);
     });
 
+  // Queue position is computed only across "waiting" patients (in-progress = 0).
+  const waitingOnly = active.filter((p) => p.status === "waiting");
+  const positionByPatientId = new Map<string, number>(
+    waitingOnly.map((p, i) => [p.id, i + 1]),
+  );
+
   const handleOpen = (patientId: string, currentStatus: string) => {
     if (currentStatus === "waiting") {
       patchPatient.mutate(
@@ -100,7 +106,8 @@ export default function WaitingListPage() {
           </div>
 
           <div className="rounded-xl border border-border bg-card overflow-hidden">
-            <div className="grid grid-cols-[110px_1fr_70px_1fr_auto_auto_auto] gap-4 px-6 py-3 border-b border-border bg-muted/30 text-xs font-medium text-muted-foreground uppercase tracking-wider">
+            <div className="grid grid-cols-[60px_110px_1fr_70px_1fr_auto_auto_auto] gap-4 px-6 py-3 border-b border-border bg-muted/30 text-xs font-medium text-muted-foreground uppercase tracking-wider">
+              <span className="text-center">#</span>
               <span>ID</span>
               <span>Name</span>
               <span>Age</span>
@@ -125,15 +132,28 @@ export default function WaitingListPage() {
                 </p>
               </div>
             ) : (
-              active.map((p) => (
+              active.map((p) => {
+                const queuePos = positionByPatientId.get(p.id);
+                return (
                 <div
                   key={p.id}
                   data-testid={`waiting-row-${p.id}`}
                   className={cn(
-                    "grid grid-cols-[110px_1fr_70px_1fr_auto_auto_auto] gap-4 items-center px-6 py-4 border-b border-border last:border-0 hover:bg-muted/30 transition-colors",
+                    "grid grid-cols-[60px_110px_1fr_70px_1fr_auto_auto_auto] gap-4 items-center px-6 py-4 border-b border-border last:border-0 hover:bg-muted/30 transition-colors",
                     p.status === "in-progress" && "bg-primary/[0.04]",
                   )}
                 >
+                  <span
+                    data-testid={`queue-position-${p.id}`}
+                    className={cn(
+                      "inline-flex items-center justify-center w-9 h-9 rounded-full text-sm font-bold mx-auto",
+                      p.status === "in-progress"
+                        ? "bg-primary text-primary-foreground"
+                        : "bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/30",
+                    )}
+                  >
+                    {p.status === "in-progress" ? "•" : queuePos}
+                  </span>
                   <span className="text-sm font-mono font-semibold px-2.5 py-1 rounded bg-primary/10 text-primary border border-primary/20 text-center">
                     {p.code ?? "—"}
                   </span>
@@ -165,7 +185,8 @@ export default function WaitingListPage() {
                     Open
                   </Button>
                 </div>
-              ))
+                );
+              })
             )}
           </div>
         </div>

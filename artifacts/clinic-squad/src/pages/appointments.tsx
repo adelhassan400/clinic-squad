@@ -4,7 +4,8 @@ import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import {
   useListAppointments, useCreateAppointment, useUpdateAppointment, useDeleteAppointment,
-  useListPatients, getListAppointmentsQueryKey, getListPatientsQueryKey
+  useListPatients, usePatchPatient,
+  getListAppointmentsQueryKey, getListPatientsQueryKey
 } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
@@ -21,7 +22,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import {
   Plus, Calendar, Trash2, CheckCircle, XCircle, Loader2,
-  ChevronsUpDown, Check, Users, List, ChevronLeft, ChevronRight, Pill, MessageCircle
+  ChevronsUpDown, Check, Users, List, ChevronLeft, ChevronRight, Pill, MessageCircle, LogIn
 } from "lucide-react";
 import { Link } from "wouter";
 import { cn } from "@/lib/utils";
@@ -78,6 +79,12 @@ const STATUS_STYLES: Record<string, { bar: string; bg: string; text: string; bad
     bg: "bg-primary/10 border-primary/30",
     text: "text-primary",
     badge: "bg-primary/10 text-primary",
+  },
+  checked_in: {
+    bar: "bg-accent",
+    bg: "bg-accent/15 border-accent/40",
+    text: "text-accent-foreground",
+    badge: "bg-accent/20 text-accent-foreground",
   },
   completed: {
     bar: "bg-green-500",
@@ -207,12 +214,14 @@ interface DayCalendarProps {
   onComplete: (id: string) => void;
   onCancel: (id: string) => void;
   onDelete: (id: string) => void;
+  onCheckIn: (id: string, patientId: string, patientName: string) => void;
+  checkingInId: string | null;
   currencyCode: string;
 }
 
 function DayCalendar({
   appointments, date, onPrevDay, onNextDay, onToday,
-  onClickSlot, onComplete, onCancel, onDelete, currencyCode
+  onClickSlot, onComplete, onCancel, onDelete, onCheckIn, checkingInId, currencyCode
 }: DayCalendarProps) {
   const hours = Array.from({ length: DAY_END - DAY_START }, (_, i) => DAY_START + i);
   const totalHeight = hours.length * HOUR_HEIGHT;
@@ -352,6 +361,21 @@ function DayCalendar({
                         </div>
                       </div>
                       <div className="flex items-center gap-0.5 shrink-0">
+                        {appt.status === "scheduled" && isToday(date) && (
+                          <button
+                            onClick={(e) => { e.stopPropagation(); onCheckIn(appt.id, (appt as any).patientId, appt.patientName); }}
+                            disabled={checkingInId === appt.id}
+                            title="Check in — adds to waiting list"
+                            data-testid={`cal-checkin-${appt.id}`}
+                            className="w-5 h-5 rounded flex items-center justify-center hover:bg-primary/20 text-primary transition-colors disabled:opacity-50"
+                          >
+                            {checkingInId === appt.id ? (
+                              <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                            ) : (
+                              <LogIn className="w-3.5 h-3.5" />
+                            )}
+                          </button>
+                        )}
                         {appt.status === "scheduled" && (
                           <>
                             <button
@@ -414,7 +438,7 @@ export default function AppointmentsPage() {
   // In day view we always filter by the selected day
   const listParams = {
     ...(filterDate ? { date: filterDate } : {}),
-    ...(filterStatus && filterStatus !== "all" ? { status: filterStatus as "scheduled" | "completed" | "cancelled" | "no_show" } : {}),
+    ...(filterStatus && filterStatus !== "all" ? { status: filterStatus as "scheduled" | "checked_in" | "completed" | "cancelled" | "no_show" } : {}),
   };
 
   const dayParams = { date: dayDate };
@@ -434,8 +458,11 @@ export default function AppointmentsPage() {
   const createMutation = useCreateAppointment();
   const updateMutation = useUpdateAppointment();
   const deleteMutation = useDeleteAppointment();
+  const patchPatient = usePatchPatient();
 
   const { prices: visitPrices } = useVisitTypePrices(clinicId);
+
+  const [checkingInId, setCheckingInId] = useState<string | null>(null);
 
   const form = useForm<ApptForm>({
     resolver: zodResolver(apptSchema),
@@ -465,13 +492,52 @@ export default function AppointmentsPage() {
   };
 
   const handleStatus = (appointmentId: string, status: string) => {
-    updateMutation.mutate({ clinicId, appointmentId, data: { status: status as "scheduled" | "completed" | "cancelled" | "no_show" } }, {
+    updateMutation.mutate({ clinicId, appointmentId, data: { status: status as "scheduled" | "checked_in" | "completed" | "cancelled" | "no_show" } }, {
       onSuccess: () => {
-        toast({ title: `Appointment marked as ${status}` });
+        toast({ title: `Appointment marked as ${status.replace("_", " ")}` });
         qc.invalidateQueries({ queryKey: getListAppointmentsQueryKey(clinicId) });
       },
       onError: () => toast({ title: "Update failed", variant: "destructive" }),
     });
+  };
+
+  const handleCheckIn = (appointmentId: string, patientId: string, patientName: string) => {
+    setCheckingInId(appointmentId);
+    // Patch the appointment first, then the patient.
+    updateMutation.mutate(
+      { clinicId, appointmentId, data: { status: "checked_in" } },
+      {
+        onSuccess: () => {
+          patchPatient.mutate(
+            {
+              clinicId,
+              patientId,
+              data: { status: "waiting", diagnosis: null, clinicalNotes: null },
+            },
+            {
+              onSuccess: () => {
+                toast({ title: `${patientName} checked in`, description: "Added to the waiting list." });
+                qc.invalidateQueries({ queryKey: getListAppointmentsQueryKey(clinicId) });
+                qc.invalidateQueries({ queryKey: getListPatientsQueryKey(clinicId) });
+                setCheckingInId(null);
+              },
+              onError: () => {
+                toast({
+                  title: "Check-in partially failed",
+                  description: "Appointment marked checked in, but waiting-list update failed.",
+                  variant: "destructive",
+                });
+                setCheckingInId(null);
+              },
+            },
+          );
+        },
+        onError: () => {
+          toast({ title: "Check-in failed", variant: "destructive" });
+          setCheckingInId(null);
+        },
+      },
+    );
   };
 
   const handleDelete = (appointmentId: string) => {
@@ -553,6 +619,7 @@ export default function AppointmentsPage() {
                 <SelectContent>
                   <SelectItem value="all">All Statuses</SelectItem>
                   <SelectItem value="scheduled">Scheduled</SelectItem>
+                  <SelectItem value="checked_in">Checked In</SelectItem>
                   <SelectItem value="completed">Completed</SelectItem>
                   <SelectItem value="cancelled">Cancelled</SelectItem>
                   <SelectItem value="no_show">No Show</SelectItem>
@@ -611,6 +678,23 @@ export default function AppointmentsPage() {
                     <VisitTypeBadge type={appt.type} />
                     <StatusBadge status={appt.status} />
                     <div className="flex items-center gap-1">
+                      {appt.status === "scheduled" && isToday(appt.date) && (
+                        <Button
+                          size="sm"
+                          className="h-7 px-2.5 text-xs"
+                          onClick={() => handleCheckIn(appt.id, appt.patientId, appt.patientName)}
+                          disabled={checkingInId === appt.id}
+                          title="Check in — adds patient to waiting list"
+                          data-testid={`checkin-appt-${appt.id}`}
+                        >
+                          {checkingInId === appt.id ? (
+                            <Loader2 className="w-3 h-3 mr-1 animate-spin" />
+                          ) : (
+                            <LogIn className="w-3 h-3 mr-1" />
+                          )}
+                          Check In
+                        </Button>
+                      )}
                       {appt.status === "scheduled" && (
                         <>
                           <Button
@@ -695,6 +779,8 @@ export default function AppointmentsPage() {
                 onComplete={(id) => handleStatus(id, "completed")}
                 onCancel={(id) => handleStatus(id, "cancelled")}
                 onDelete={handleDelete}
+                onCheckIn={handleCheckIn}
+                checkingInId={checkingInId}
                 currencyCode={currencyCode}
               />
             )

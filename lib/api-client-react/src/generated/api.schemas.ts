@@ -486,6 +486,7 @@ export type AppointmentStatus =
 
 export const AppointmentStatus = {
   scheduled: "scheduled",
+  checked_in: "checked_in",
   completed: "completed",
   cancelled: "cancelled",
   no_show: "no_show",
@@ -521,6 +522,7 @@ export type UpdateAppointmentBodyStatus =
 
 export const UpdateAppointmentBodyStatus = {
   scheduled: "scheduled",
+  checked_in: "checked_in",
   completed: "completed",
   cancelled: "cancelled",
   no_show: "no_show",
@@ -664,6 +666,7 @@ export type ListAppointmentsStatus =
 
 export const ListAppointmentsStatus = {
   scheduled: "scheduled",
+  checked_in: "checked_in",
   completed: "completed",
   cancelled: "cancelled",
   no_show: "no_show",

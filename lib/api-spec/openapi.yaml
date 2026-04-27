@@ -492,7 +492,7 @@ paths:
           name: status
           schema:
             type: string
-            enum: [scheduled, completed, cancelled, no_show]
+            enum: [scheduled, checked_in, completed, cancelled, no_show]
         - in: query
           name: page
           schema:
@@ -1675,7 +1675,7 @@ components:
           type: string
         status:
           type: string
-          enum: [scheduled, completed, cancelled, no_show]
+          enum: [scheduled, checked_in, completed, cancelled, no_show]
         type:
           type: string
         notes:
@@ -1714,7 +1714,7 @@ components:
       properties:
         status:
           type: string
-          enum: [scheduled, completed, cancelled, no_show]
+          enum: [scheduled, checked_in, completed, cancelled, no_show]
         date:
           type: string
           format: date
