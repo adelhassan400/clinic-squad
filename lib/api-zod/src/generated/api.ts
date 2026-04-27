@@ -388,6 +388,7 @@ export const ListPatientsResponse = zod.object({
       status: zod.enum(["registered", "waiting", "in-progress", "completed"]),
       diagnosis: zod.string().nullish(),
       clinicalNotes: zod.string().nullish(),
+      chronicConditions: zod.string().nullish(),
       createdAt: zod.coerce.date(),
     }),
   ),
@@ -445,6 +446,7 @@ export const GetPatientResponse = zod.object({
   status: zod.enum(["registered", "waiting", "in-progress", "completed"]),
   diagnosis: zod.string().nullish(),
   clinicalNotes: zod.string().nullish(),
+  chronicConditions: zod.string().nullish(),
   createdAt: zod.coerce.date(),
 });
 
@@ -490,6 +492,7 @@ export const UpdatePatientResponse = zod.object({
   status: zod.enum(["registered", "waiting", "in-progress", "completed"]),
   diagnosis: zod.string().nullish(),
   clinicalNotes: zod.string().nullish(),
+  chronicConditions: zod.string().nullish(),
   createdAt: zod.coerce.date(),
 });
 
@@ -523,6 +526,7 @@ export const PatchPatientBody = zod
     status: zod.enum(["waiting", "in-progress", "completed"]).optional(),
     diagnosis: zod.string().nullish(),
     clinicalNotes: zod.string().nullish(),
+    chronicConditions: zod.string().nullish(),
   })
   .describe("Partial update — any subset of mutable patient fields.");
 
@@ -543,6 +547,7 @@ export const PatchPatientResponse = zod.object({
   status: zod.enum(["registered", "waiting", "in-progress", "completed"]),
   diagnosis: zod.string().nullish(),
   clinicalNotes: zod.string().nullish(),
+  chronicConditions: zod.string().nullish(),
   createdAt: zod.coerce.date(),
 });
 
@@ -552,6 +557,67 @@ export const PatchPatientResponse = zod.object({
 export const DeletePatientParams = zod.object({
   clinicId: zod.coerce.string(),
   patientId: zod.coerce.string(),
+});
+
+/**
+ * @summary List lab results for a patient
+ */
+export const ListLabResultsParams = zod.object({
+  clinicId: zod.coerce.string(),
+  patientId: zod.coerce.string(),
+});
+
+export const ListLabResultsResponse = zod.object({
+  data: zod.array(
+    zod.object({
+      id: zod.string(),
+      clinicId: zod.string(),
+      patientId: zod.string(),
+      testName: zod.string(),
+      testDate: zod.coerce.date(),
+      resultValue: zod.string().nullish(),
+      attachmentName: zod.string().nullish(),
+      attachmentMime: zod.string().nullish(),
+      attachmentData: zod
+        .string()
+        .nullish()
+        .describe(
+          'Base64-encoded data URL of the uploaded attachment (e.g. \"data:application\/pdf;base64,...\"). Limited to ~5 MB.',
+        ),
+      createdAt: zod.coerce.date(),
+    }),
+  ),
+});
+
+/**
+ * @summary Add a lab result for a patient
+ */
+export const CreateLabResultParams = zod.object({
+  clinicId: zod.coerce.string(),
+  patientId: zod.coerce.string(),
+});
+
+export const CreateLabResultBody = zod.object({
+  testName: zod.string().min(1),
+  testDate: zod.coerce.date(),
+  resultValue: zod.string().nullish(),
+  attachmentName: zod.string().nullish(),
+  attachmentMime: zod.string().nullish(),
+  attachmentData: zod
+    .string()
+    .nullish()
+    .describe(
+      'Base64-encoded data URL of the file (e.g. \"data:application\/pdf;base64,...\"). Limited to ~5 MB.',
+    ),
+});
+
+/**
+ * @summary Delete a lab result
+ */
+export const DeleteLabResultParams = zod.object({
+  clinicId: zod.coerce.string(),
+  patientId: zod.coerce.string(),
+  labResultId: zod.coerce.string(),
 });
 
 /**

@@ -22,6 +22,7 @@ function serialize(p: typeof patientsTable.$inferSelect) {
     status: p.status,
     diagnosis: p.diagnosis,
     clinicalNotes: p.clinicalNotes,
+    chronicConditions: p.chronicConditions,
     createdAt: p.createdAt.toISOString(),
   };
 }
@@ -152,6 +153,7 @@ router.patch("/:patientId", async (req, res) => {
   if (data.status !== undefined) update.status = data.status;
   if (data.diagnosis !== undefined) update.diagnosis = data.diagnosis ?? null;
   if (data.clinicalNotes !== undefined) update.clinicalNotes = data.clinicalNotes ?? null;
+  if (data.chronicConditions !== undefined) update.chronicConditions = data.chronicConditions ?? null;
 
   if (Object.keys(update).length > 0) {
     await db.update(patientsTable)

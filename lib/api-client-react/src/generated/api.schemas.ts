@@ -419,6 +419,7 @@ export interface Patient {
   status: PatientStatus;
   diagnosis?: string | null;
   clinicalNotes?: string | null;
+  chronicConditions?: string | null;
   createdAt: string;
 }
 
@@ -477,6 +478,7 @@ export interface UpdatePatientBody {
   status?: UpdatePatientBodyStatus;
   diagnosis?: string | null;
   clinicalNotes?: string | null;
+  chronicConditions?: string | null;
 }
 
 export interface PatientList {
@@ -484,6 +486,35 @@ export interface PatientList {
   total: number;
   page: number;
   limit: number;
+}
+
+export interface LabResult {
+  id: string;
+  clinicId: string;
+  patientId: string;
+  testName: string;
+  testDate: string;
+  resultValue?: string | null;
+  attachmentName?: string | null;
+  attachmentMime?: string | null;
+  /** Base64-encoded data URL of the uploaded attachment (e.g. "data:application/pdf;base64,..."). Limited to ~5 MB. */
+  attachmentData?: string | null;
+  createdAt: string;
+}
+
+export interface CreateLabResultBody {
+  /** @minLength 1 */
+  testName: string;
+  testDate: string;
+  resultValue?: string | null;
+  attachmentName?: string | null;
+  attachmentMime?: string | null;
+  /** Base64-encoded data URL of the file (e.g. "data:application/pdf;base64,..."). Limited to ~5 MB. */
+  attachmentData?: string | null;
+}
+
+export interface LabResultList {
+  data: LabResult[];
 }
 
 export type AppointmentStatus =

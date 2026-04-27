@@ -4,7 +4,7 @@ import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { PrescriptionsContent } from "@/pages/prescriptions";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import {
-  useGetPatient, useListAppointments, useListPrescriptions, usePatchPatient,
+  useGetPatient, useListAppointments, useListPrescriptions, useListPatients, usePatchPatient,
   getGetPatientQueryKey, getListAppointmentsQueryKey, getListPrescriptionsQueryKey,
   getListPatientsQueryKey,
 } from "@workspace/api-client-react";
@@ -19,11 +19,14 @@ import { useToast } from "@/hooks/use-toast";
 import {
   ArrowLeft, Phone, Calendar, Droplets, MessageCircle,
   Pill, Stethoscope, History, CheckCircle2, Loader2, Save,
+  Pencil, Activity, AlertTriangle, SkipForward,
 } from "lucide-react";
-import { Link } from "wouter";
+import { Link, useLocation } from "wouter";
 import { cn } from "@/lib/utils";
 import { openWhatsApp, whatsappPatientGreeting } from "@/lib/whatsapp";
 import { VisitTypeBadge } from "@/lib/visit-types";
+import { LabResultsSection } from "@/components/patient/LabResultsSection";
+import { EditPatientDialog } from "@/components/patient/EditPatientDialog";
 
 interface Props { params: { id: string } }
 
@@ -77,6 +80,8 @@ export default function PatientDetailPage({ params }: Props) {
   const patientId = params.id;
   const qc = useQueryClient();
   const { toast } = useToast();
+  const [, navigate] = useLocation();
+  const [editOpen, setEditOpen] = useState(false);
 
   const { data: patient, isLoading } = useGetPatient(clinicId, patientId, {
     query: { enabled: !!clinicId && !!patientId, queryKey: getGetPatientQueryKey(clinicId, patientId) }
@@ -145,7 +150,18 @@ export default function PatientDetailPage({ params }: Props) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [diagnosis, clinicalNotes]);
 
-  const handleFinish = () => {
+  // Waiting-list query for "Finish & Next".
+  const { data: allPatientsResp } = useListPatients(clinicId, undefined, {
+    query: {
+      enabled: !!clinicId,
+      queryKey: getListPatientsQueryKey(clinicId),
+    },
+  });
+  const nextWaiting = (allPatientsResp?.data ?? [])
+    .filter((p) => p.status === "waiting" && p.id !== patientId)
+    .sort((a, b) => a.createdAt.localeCompare(b.createdAt))[0];
+
+  const finishAndGo = (afterCompleteRedirect: () => void, successTitle: string) => {
     patchPatient.mutate(
       {
         clinicId,
@@ -158,13 +174,30 @@ export default function PatientDetailPage({ params }: Props) {
       },
       {
         onSuccess: () => {
-          toast({ title: "Session completed — patient sent to checkout" });
+          toast({ title: successTitle });
           qc.invalidateQueries({ queryKey: getGetPatientQueryKey(clinicId, patientId) });
           qc.invalidateQueries({ queryKey: getListPatientsQueryKey(clinicId) });
+          afterCompleteRedirect();
         },
         onError: () => toast({ title: "Failed to finish session", variant: "destructive" }),
       },
     );
+  };
+
+  const handleFinish = () => finishAndGo(() => {}, "Session completed — patient sent to checkout");
+
+  const handleFinishAndNext = () => {
+    if (nextWaiting) {
+      finishAndGo(
+        () => navigate(`/patients/${nextWaiting.id}`),
+        `Session completed — opening ${nextWaiting.name}`,
+      );
+    } else {
+      finishAndGo(
+        () => navigate("/waiting-list"),
+        "Session completed — waiting list is empty",
+      );
+    }
   };
 
   const { data: appts } = useListAppointments(clinicId, {}, {
@@ -182,7 +215,7 @@ export default function PatientDetailPage({ params }: Props) {
 
   type TimelineEntry =
     | { kind: "visit"; id: string; date: string; time?: string; type: string; status: string; fee?: number | null }
-    | { kind: "rx"; id: string; date: string; diagnosis: string | null; doctorName: string; drugs: string[] };
+    | { kind: "rx"; id: string; date: string; diagnosis: string | null | undefined; doctorName: string; drugs: string[] };
 
   const timeline: TimelineEntry[] = [
     ...patientAppts.map(a => ({
@@ -277,14 +310,32 @@ export default function PatientDetailPage({ params }: Props) {
                       )}
                     </div>
                   </div>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => setEditOpen(true)}
+                    data-testid="button-edit-patient"
+                    className="shrink-0"
+                  >
+                    <Pencil className="w-3.5 h-3.5 mr-1.5" />
+                    Edit Profile
+                  </Button>
                 </div>
 
-                {(patient.allergies || patient.notes) && (
-                  <div className="mt-5 pt-5 border-t border-border grid sm:grid-cols-2 gap-4">
+                {(patient.allergies || patient.notes || patient.chronicConditions) && (
+                  <div className="mt-5 pt-5 border-t border-border grid sm:grid-cols-3 gap-4">
                     {patient.allergies && (
                       <div>
                         <p className="text-xs font-medium text-muted-foreground mb-1">Allergies</p>
                         <p className="text-sm text-destructive">{patient.allergies}</p>
+                      </div>
+                    )}
+                    {patient.chronicConditions && (
+                      <div>
+                        <p className="text-xs font-medium text-muted-foreground mb-1 flex items-center gap-1">
+                          <Activity className="w-3 h-3" /> Chronic Conditions
+                        </p>
+                        <p className="text-sm text-amber-700 dark:text-amber-400">{patient.chronicConditions}</p>
                       </div>
                     )}
                     {patient.notes && (
@@ -320,15 +371,32 @@ export default function PatientDetailPage({ params }: Props) {
                       </span>
                     ) : null}
                     {patient.status !== "completed" && (
-                      <Button
-                        size="sm"
-                        onClick={handleFinish}
-                        disabled={patchPatient.isPending}
-                        data-testid="button-finish-session"
-                      >
-                        <CheckCircle2 className="w-4 h-4 mr-1.5" />
-                        Finish Session
-                      </Button>
+                      <>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={handleFinish}
+                          disabled={patchPatient.isPending}
+                          data-testid="button-finish-session"
+                        >
+                          <CheckCircle2 className="w-4 h-4 mr-1.5" />
+                          Finish Session
+                        </Button>
+                        <Button
+                          size="sm"
+                          onClick={handleFinishAndNext}
+                          disabled={patchPatient.isPending}
+                          data-testid="button-finish-and-next"
+                          title={
+                            nextWaiting
+                              ? `Open next: ${nextWaiting.name}`
+                              : "Waiting list is empty"
+                          }
+                        >
+                          <SkipForward className="w-4 h-4 mr-1.5" />
+                          {nextWaiting ? `Finish & Next (${nextWaiting.name})` : "Finish & Next"}
+                        </Button>
+                      </>
                     )}
                   </div>
                 </div>
@@ -359,8 +427,44 @@ export default function PatientDetailPage({ params }: Props) {
                 </div>
               </div>
 
+              {/* Lab Results */}
+              <LabResultsSection clinicId={clinicId} patientId={patient.id} />
+
               {/* Prescriptions */}
               <div className="rounded-xl border border-border bg-card p-6">
+                {(patient.allergies || patient.chronicConditions || patient.notes) && (
+                  <div
+                    data-testid="prescription-safety-banner"
+                    className="sticky top-2 z-10 mb-5 rounded-lg border border-amber-300/70 bg-amber-50/95 dark:bg-amber-950/40 dark:border-amber-700/60 backdrop-blur p-3 shadow-sm"
+                  >
+                    <div className="flex items-start gap-2.5">
+                      <AlertTriangle className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+                      <div className="flex-1 min-w-0 text-xs space-y-1">
+                        <p className="font-semibold text-amber-900 dark:text-amber-200 uppercase tracking-wide text-[10px]">
+                          Check before prescribing
+                        </p>
+                        {patient.allergies && (
+                          <p>
+                            <span className="font-medium text-amber-900 dark:text-amber-200">Allergies:</span>{" "}
+                            <span className="text-destructive font-medium">{patient.allergies}</span>
+                          </p>
+                        )}
+                        {patient.chronicConditions && (
+                          <p>
+                            <span className="font-medium text-amber-900 dark:text-amber-200">Chronic:</span>{" "}
+                            <span className="text-amber-900 dark:text-amber-100">{patient.chronicConditions}</span>
+                          </p>
+                        )}
+                        {patient.notes && (
+                          <p>
+                            <span className="font-medium text-amber-900 dark:text-amber-200">Notes:</span>{" "}
+                            <span className="text-amber-900 dark:text-amber-100">{patient.notes}</span>
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                )}
                 <PrescriptionsContent initialPatientId={patient.id} embedded />
               </div>
 
@@ -445,6 +549,15 @@ export default function PatientDetailPage({ params }: Props) {
                 )}
               </div>
             </div>
+          )}
+
+          {patient && (
+            <EditPatientDialog
+              patient={patient}
+              clinicId={clinicId}
+              open={editOpen}
+              onOpenChange={setEditOpen}
+            />
           )}
         </div>
       </DashboardLayout>

@@ -472,6 +472,83 @@ paths:
         "204":
           description: Deleted
 
+  /clinics/{clinicId}/patients/{patientId}/lab-results:
+    get:
+      operationId: listLabResults
+      tags: [patients]
+      summary: List lab results for a patient
+      parameters:
+        - in: path
+          name: clinicId
+          required: true
+          schema:
+            type: string
+        - in: path
+          name: patientId
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: List of lab results
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LabResultList"
+    post:
+      operationId: createLabResult
+      tags: [patients]
+      summary: Add a lab result for a patient
+      parameters:
+        - in: path
+          name: clinicId
+          required: true
+          schema:
+            type: string
+        - in: path
+          name: patientId
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateLabResultBody"
+      responses:
+        "201":
+          description: Lab result created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LabResult"
+
+  /clinics/{clinicId}/patients/{patientId}/lab-results/{labResultId}:
+    delete:
+      operationId: deleteLabResult
+      tags: [patients]
+      summary: Delete a lab result
+      parameters:
+        - in: path
+          name: clinicId
+          required: true
+          schema:
+            type: string
+        - in: path
+          name: patientId
+          required: true
+          schema:
+            type: string
+        - in: path
+          name: labResultId
+          required: true
+          schema:
+            type: string
+      responses:
+        "204":
+          description: Deleted
+
   /clinics/{clinicId}/appointments:
     get:
       operationId: listAppointments
@@ -1580,6 +1657,9 @@ components:
         clinicalNotes:
           type: string
           nullable: true
+        chronicConditions:
+          type: string
+          nullable: true
         createdAt:
           type: string
           format: date-time
@@ -1650,6 +1730,9 @@ components:
         clinicalNotes:
           type: string
           nullable: true
+        chronicConditions:
+          type: string
+          nullable: true
 
     PatientList:
       type: object
@@ -1665,6 +1748,71 @@ components:
         limit:
           type: integer
       required: [data, total, page, limit]
+
+    LabResult:
+      type: object
+      properties:
+        id:
+          type: string
+        clinicId:
+          type: string
+        patientId:
+          type: string
+        testName:
+          type: string
+        testDate:
+          type: string
+          format: date
+        resultValue:
+          type: string
+          nullable: true
+        attachmentName:
+          type: string
+          nullable: true
+        attachmentMime:
+          type: string
+          nullable: true
+        attachmentData:
+          type: string
+          nullable: true
+          description: Base64-encoded data URL of the uploaded attachment (e.g. "data:application/pdf;base64,..."). Limited to ~5 MB.
+        createdAt:
+          type: string
+          format: date-time
+      required: [id, clinicId, patientId, testName, testDate, createdAt]
+
+    CreateLabResultBody:
+      type: object
+      properties:
+        testName:
+          type: string
+          minLength: 1
+        testDate:
+          type: string
+          format: date
+        resultValue:
+          type: string
+          nullable: true
+        attachmentName:
+          type: string
+          nullable: true
+        attachmentMime:
+          type: string
+          nullable: true
+        attachmentData:
+          type: string
+          nullable: true
+          description: Base64-encoded data URL of the file (e.g. "data:application/pdf;base64,..."). Limited to ~5 MB.
+      required: [testName, testDate]
+
+    LabResultList:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/LabResult"
+      required: [data]
 
     Appointment:
       type: object

@@ -17,6 +17,7 @@ export const patientsTable = pgTable("patients", {
   status: text("status").notNull().default("registered"),
   diagnosis: text("diagnosis"),
   clinicalNotes: text("clinical_notes"),
+  chronicConditions: text("chronic_conditions"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
 });

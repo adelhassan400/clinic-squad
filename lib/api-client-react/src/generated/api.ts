@@ -29,6 +29,7 @@ import type {
   CreateAppointmentBody,
   CreateFinanceBody,
   CreateInvitationBody,
+  CreateLabResultBody,
   CreatePatientBody,
   CreatePrescriptionBody,
   CreateSubscriptionBody,
@@ -42,6 +43,8 @@ import type {
   HealthStatus,
   Invitation,
   InvitationPublic,
+  LabResult,
+  LabResultList,
   ListAppointmentsParams,
   ListFinancesParams,
   ListPatientsParams,
@@ -1885,6 +1888,295 @@ export const useDeletePatient = <
   TContext
 > => {
   return useMutation(getDeletePatientMutationOptions(options));
+};
+
+/**
+ * @summary List lab results for a patient
+ */
+export const getListLabResultsUrl = (clinicId: string, patientId: string) => {
+  return `/api/clinics/${clinicId}/patients/${patientId}/lab-results`;
+};
+
+export const listLabResults = async (
+  clinicId: string,
+  patientId: string,
+  options?: RequestInit,
+): Promise<LabResultList> => {
+  return customFetch<LabResultList>(getListLabResultsUrl(clinicId, patientId), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getListLabResultsQueryKey = (
+  clinicId: string,
+  patientId: string,
+) => {
+  return [
+    `/api/clinics/${clinicId}/patients/${patientId}/lab-results`,
+  ] as const;
+};
+
+export const getListLabResultsQueryOptions = <
+  TData = Awaited<ReturnType<typeof listLabResults>>,
+  TError = ErrorType<unknown>,
+>(
+  clinicId: string,
+  patientId: string,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof listLabResults>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getListLabResultsQueryKey(clinicId, patientId);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof listLabResults>>> = ({
+    signal,
+  }) => listLabResults(clinicId, patientId, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: !!(clinicId && patientId),
+    ...queryOptions,
+  } as UseQueryOptions<
+    Awaited<ReturnType<typeof listLabResults>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type ListLabResultsQueryResult = NonNullable<
+  Awaited<ReturnType<typeof listLabResults>>
+>;
+export type ListLabResultsQueryError = ErrorType<unknown>;
+
+/**
+ * @summary List lab results for a patient
+ */
+
+export function useListLabResults<
+  TData = Awaited<ReturnType<typeof listLabResults>>,
+  TError = ErrorType<unknown>,
+>(
+  clinicId: string,
+  patientId: string,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof listLabResults>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getListLabResultsQueryOptions(
+    clinicId,
+    patientId,
+    options,
+  );
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Add a lab result for a patient
+ */
+export const getCreateLabResultUrl = (clinicId: string, patientId: string) => {
+  return `/api/clinics/${clinicId}/patients/${patientId}/lab-results`;
+};
+
+export const createLabResult = async (
+  clinicId: string,
+  patientId: string,
+  createLabResultBody: CreateLabResultBody,
+  options?: RequestInit,
+): Promise<LabResult> => {
+  return customFetch<LabResult>(getCreateLabResultUrl(clinicId, patientId), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(createLabResultBody),
+  });
+};
+
+export const getCreateLabResultMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createLabResult>>,
+    TError,
+    {
+      clinicId: string;
+      patientId: string;
+      data: BodyType<CreateLabResultBody>;
+    },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof createLabResult>>,
+  TError,
+  { clinicId: string; patientId: string; data: BodyType<CreateLabResultBody> },
+  TContext
+> => {
+  const mutationKey = ["createLabResult"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof createLabResult>>,
+    { clinicId: string; patientId: string; data: BodyType<CreateLabResultBody> }
+  > = (props) => {
+    const { clinicId, patientId, data } = props ?? {};
+
+    return createLabResult(clinicId, patientId, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type CreateLabResultMutationResult = NonNullable<
+  Awaited<ReturnType<typeof createLabResult>>
+>;
+export type CreateLabResultMutationBody = BodyType<CreateLabResultBody>;
+export type CreateLabResultMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Add a lab result for a patient
+ */
+export const useCreateLabResult = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createLabResult>>,
+    TError,
+    {
+      clinicId: string;
+      patientId: string;
+      data: BodyType<CreateLabResultBody>;
+    },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof createLabResult>>,
+  TError,
+  { clinicId: string; patientId: string; data: BodyType<CreateLabResultBody> },
+  TContext
+> => {
+  return useMutation(getCreateLabResultMutationOptions(options));
+};
+
+/**
+ * @summary Delete a lab result
+ */
+export const getDeleteLabResultUrl = (
+  clinicId: string,
+  patientId: string,
+  labResultId: string,
+) => {
+  return `/api/clinics/${clinicId}/patients/${patientId}/lab-results/${labResultId}`;
+};
+
+export const deleteLabResult = async (
+  clinicId: string,
+  patientId: string,
+  labResultId: string,
+  options?: RequestInit,
+): Promise<void> => {
+  return customFetch<void>(
+    getDeleteLabResultUrl(clinicId, patientId, labResultId),
+    {
+      ...options,
+      method: "DELETE",
+    },
+  );
+};
+
+export const getDeleteLabResultMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof deleteLabResult>>,
+    TError,
+    { clinicId: string; patientId: string; labResultId: string },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof deleteLabResult>>,
+  TError,
+  { clinicId: string; patientId: string; labResultId: string },
+  TContext
+> => {
+  const mutationKey = ["deleteLabResult"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof deleteLabResult>>,
+    { clinicId: string; patientId: string; labResultId: string }
+  > = (props) => {
+    const { clinicId, patientId, labResultId } = props ?? {};
+
+    return deleteLabResult(clinicId, patientId, labResultId, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type DeleteLabResultMutationResult = NonNullable<
+  Awaited<ReturnType<typeof deleteLabResult>>
+>;
+
+export type DeleteLabResultMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Delete a lab result
+ */
+export const useDeleteLabResult = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof deleteLabResult>>,
+    TError,
+    { clinicId: string; patientId: string; labResultId: string },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof deleteLabResult>>,
+  TError,
+  { clinicId: string; patientId: string; labResultId: string },
+  TContext
+> => {
+  return useMutation(getDeleteLabResultMutationOptions(options));
 };
 
 /**
