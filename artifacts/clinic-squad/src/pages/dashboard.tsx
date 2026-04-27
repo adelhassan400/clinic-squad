@@ -268,8 +268,8 @@ export default function DashboardPage() {
                     data-testid={`tomorrow-row-${a.id}`}
                     className="flex items-center gap-4 p-3 rounded-lg hover:bg-muted/50 transition-colors"
                   >
-                    <div className="w-10 h-10 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center shrink-0">
-                      <span className="text-xs font-bold text-green-700 dark:text-green-400">
+                    <div className="w-10 h-10 rounded-full bg-primary/15 flex items-center justify-center shrink-0">
+                      <span className="text-xs font-bold text-primary">
                         {a.patientName.charAt(0)}
                       </span>
                     </div>
