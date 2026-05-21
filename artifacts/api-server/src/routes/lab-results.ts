@@ -3,8 +3,11 @@ import { eq, and, desc } from "drizzle-orm";
 import { db, labResultsTable, patientsTable } from "@workspace/db";
 import { CreateLabResultBody } from "@workspace/api-zod";
 import { randomUUID } from "crypto";
+import { requireClinicAccess } from "../middlewares/auth";
 
 const router = Router({ mergeParams: true });
+
+router.use(requireClinicAccess);
 
 const MAX_ATTACHMENT_BYTES = 5 * 1024 * 1024; // 5 MB on the raw payload string
 

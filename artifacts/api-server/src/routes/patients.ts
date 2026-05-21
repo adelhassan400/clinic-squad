@@ -3,8 +3,11 @@ import { eq, and } from "drizzle-orm";
 import { db, patientsTable } from "@workspace/db";
 import { CreatePatientBody, PatchPatientBody } from "@workspace/api-zod";
 import { randomUUID } from "crypto";
+import { requireClinicAccess } from "../middlewares/auth";
 
 const router = Router({ mergeParams: true });
+
+router.use(requireClinicAccess);
 
 function serialize(p: typeof patientsTable.$inferSelect) {
   return {

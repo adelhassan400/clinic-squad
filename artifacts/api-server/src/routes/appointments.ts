@@ -3,8 +3,11 @@ import { eq, and } from "drizzle-orm";
 import { db, appointmentsTable, patientsTable } from "@workspace/db";
 import { CreateAppointmentBody, UpdateAppointmentBody } from "@workspace/api-zod";
 import { randomUUID } from "crypto";
+import { requireClinicAccess } from "../middlewares/auth";
 
 const router = Router({ mergeParams: true });
+
+router.use(requireClinicAccess);
 
 async function buildPatientVisitTypeMap(clinicId: string, patientIds: string[]) {
   const unique = Array.from(new Set(patientIds));

@@ -3,11 +3,11 @@ import { eq, and, desc } from "drizzle-orm";
 import { db, prescriptionsTable, patientsTable, clinicsTable, usersTable } from "@workspace/db";
 import { CreatePrescriptionBody } from "@workspace/api-zod";
 import { randomUUID } from "crypto";
-import { requireAuth, requireRole } from "../middlewares/auth";
+import { requireClinicAccess, requireRole } from "../middlewares/auth";
 
 const router = Router({ mergeParams: true });
 
-router.use(requireAuth);
+router.use(requireClinicAccess);
 
 async function loadClinic(clinicId: string) {
   const rows = await db.select().from(clinicsTable).where(eq(clinicsTable.id, clinicId)).limit(1);

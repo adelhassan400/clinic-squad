@@ -3,8 +3,24 @@ import { eq } from "drizzle-orm";
 import { db, clinicsTable, usersTable, subscriptionsTable, patientsTable, appointmentsTable, financesTable } from "@workspace/db";
 import { CreateSubscriptionBody, UpdateClinicBody } from "@workspace/api-zod";
 import { randomUUID } from "crypto";
+import { requireAuth } from "../middlewares/auth";
+import type { Request, Response, NextFunction } from "express";
 
 const router = Router();
+
+router.use(requireAuth);
+
+// After requireAuth resolves req.authUser, ensure the user can only access
+// their own clinic (superadmins may access any clinic).
+router.param("clinicId", (req: Request, res: Response, next: NextFunction) => {
+  const { clinicId } = req.params;
+  const user = req.authUser!;
+  if (user.clinicId !== clinicId && user.role !== "superadmin") {
+    res.status(403).json({ error: "Forbidden" });
+    return;
+  }
+  next();
+});
 
 function serializeClinic(clinic: typeof clinicsTable.$inferSelect) {
   return {

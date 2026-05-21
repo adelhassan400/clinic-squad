@@ -28,40 +28,66 @@ function decodeToken(token: string): string | null {
   }
 }
 
-export async function requireAuth(
-  req: Request,
-  res: Response,
-  next: NextFunction
-): Promise<void> {
+async function resolveUser(req: Request, res: Response): Promise<AuthedUser | null> {
   const header = req.headers.authorization;
   if (!header?.startsWith("Bearer ")) {
     res.status(401).json({ error: "Unauthorized" });
-    return;
+    return null;
   }
   const userId = decodeToken(header.slice("Bearer ".length));
   if (!userId) {
     res.status(401).json({ error: "Invalid token" });
-    return;
+    return null;
   }
-
   const rows = await db.select().from(usersTable).where(eq(usersTable.id, userId)).limit(1);
   const user = rows[0];
   if (!user) {
     res.status(401).json({ error: "Invalid token" });
-    return;
+    return null;
   }
   if (user.isBlocked) {
     res.status(403).json({ error: "Account blocked" });
-    return;
+    return null;
   }
-
-  req.authUser = {
+  return {
     id: user.id,
     email: user.email,
     name: user.name,
     role: user.role,
     clinicId: user.clinicId,
   };
+}
+
+export async function requireAuth(
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> {
+  const user = await resolveUser(req, res);
+  if (!user) return;
+  req.authUser = user;
+  next();
+}
+
+/**
+ * Requires a valid Bearer token AND that the authenticated user belongs to
+ * the clinic referenced in req.params.clinicId (superadmins bypass the
+ * ownership check so they can manage all clinics).
+ */
+export async function requireClinicAccess(
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> {
+  const user = await resolveUser(req, res);
+  if (!user) return;
+  req.authUser = user;
+
+  const { clinicId } = req.params as { clinicId?: string };
+  if (clinicId && user.clinicId !== clinicId && user.role !== "superadmin") {
+    res.status(403).json({ error: "Forbidden" });
+    return;
+  }
   next();
 }
 

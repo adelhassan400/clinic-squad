@@ -3,8 +3,11 @@ import { eq } from "drizzle-orm";
 import { db, financesTable } from "@workspace/db";
 import { CreateFinanceRecordBody } from "@workspace/api-zod";
 import { randomUUID } from "crypto";
+import { requireClinicAccess } from "../middlewares/auth";
 
 const router = Router({ mergeParams: true });
+
+router.use(requireClinicAccess);
 
 router.get("/", async (req, res) => {
   const { clinicId } = req.params;
