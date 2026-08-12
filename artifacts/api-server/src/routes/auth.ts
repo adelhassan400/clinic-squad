@@ -91,7 +91,8 @@ router.post("/register", async (req, res) => {
   if (!parsed.success) {
     return res.status(400).json({ error: "Invalid input", details: parsed.error.issues });
   }
-  const { email, password, clinicName, ownerName, specialty, whatsappNumber } = parsed.data;
+  const { password, clinicName, ownerName, specialty, whatsappNumber } = parsed.data;
+  const email = parsed.data.email.trim().toLowerCase();
 
   const existing = await db.select().from(usersTable).where(eq(usersTable.email, email)).limit(1);
   if (existing.length > 0) {
@@ -281,7 +282,8 @@ router.post("/login", async (req, res) => {
   if (!parsed.success) {
     return res.status(400).json({ error: "Invalid input" });
   }
-  const { email, password } = parsed.data;
+  const { password } = parsed.data;
+  const email = parsed.data.email.trim().toLowerCase();
 
   const users = await db.select().from(usersTable).where(eq(usersTable.email, email)).limit(1);
   const user = users[0];

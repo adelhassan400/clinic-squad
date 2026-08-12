@@ -3,7 +3,7 @@ import { Link, useLocation } from "wouter";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { useRegisterUser } from "@workspace/api-client-react";
+import { ApiError, useRegisterUser } from "@workspace/api-client-react";
 import { useAuth, type AuthClinic, type AuthUser } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -51,8 +51,22 @@ export default function RegisterPage() {
         setLocation("/pending-activation");
       },
       onError: (err: Error) => {
-        const msg = err?.message?.includes("409") ? "An account with this email already exists." : "Registration failed. Please try again.";
-        toast({ title: "Registration failed", description: msg, variant: "destructive" });
+        const status = err instanceof ApiError ? err.status : (err as Error & { status?: number }).status;
+        const data = err instanceof ApiError ? err.data : (err as Error & { data?: unknown }).data;
+        const serverMessage =
+          data && typeof data === "object" && "error" in data && typeof data.error === "string"
+            ? data.error
+            : null;
+        const isDuplicate = status === 409 || err.message.includes("409");
+        const msg =
+          isDuplicate
+            ? "An account with this email already exists. Please sign in or use a different email."
+            : serverMessage ?? "Registration failed. Please try again.";
+        toast({
+          title: isDuplicate ? "Account already exists" : "Registration failed",
+          description: msg,
+          variant: "destructive",
+        });
       },
     });
   };
