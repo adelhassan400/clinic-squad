@@ -1572,6 +1572,9 @@ components:
         trialEndDate:
           type: string
           format: date-time
+        requestNumber:
+          type: string
+          nullable: true
       required: [clinicId, clinicName, ownerId, ownerName, ownerEmail, createdAt, trialEndDate]
 
     Clinic:
@@ -1598,6 +1601,9 @@ components:
         trialEndDate:
           type: string
           format: date-time
+        requestNumber:
+          type: string
+          nullable: true
         subscriptionPlan:
           type: string
           nullable: true

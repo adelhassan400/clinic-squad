@@ -72,6 +72,7 @@ export const VerifyEmailResponse = zod.object({
     ]),
     subscriptionStatus: zod.enum(["trial", "basic", "premium", "expired"]),
     trialEndDate: zod.coerce.date(),
+    requestNumber: zod.string().nullish(),
     subscriptionPlan: zod.string().nullish(),
     createdAt: zod.coerce.date(),
   }),
@@ -127,6 +128,7 @@ export const LoginUserResponse = zod.object({
     ]),
     subscriptionStatus: zod.enum(["trial", "basic", "premium", "expired"]),
     trialEndDate: zod.coerce.date(),
+    requestNumber: zod.string().nullish(),
     subscriptionPlan: zod.string().nullish(),
     createdAt: zod.coerce.date(),
   }),
@@ -322,6 +324,7 @@ export const GetClinicResponse = zod.object({
   ]),
   subscriptionStatus: zod.enum(["trial", "basic", "premium", "expired"]),
   trialEndDate: zod.coerce.date(),
+  requestNumber: zod.string().nullish(),
   subscriptionPlan: zod.string().nullish(),
   createdAt: zod.coerce.date(),
 });
@@ -360,6 +363,7 @@ export const UpdateClinicResponse = zod.object({
   ]),
   subscriptionStatus: zod.enum(["trial", "basic", "premium", "expired"]),
   trialEndDate: zod.coerce.date(),
+  requestNumber: zod.string().nullish(),
   subscriptionPlan: zod.string().nullish(),
   createdAt: zod.coerce.date(),
 });
@@ -1035,6 +1039,7 @@ export const AdminListClinicsResponseItem = zod.object({
   ]),
   subscriptionStatus: zod.enum(["trial", "basic", "premium", "expired"]),
   trialEndDate: zod.coerce.date(),
+  requestNumber: zod.string().nullish(),
   subscriptionPlan: zod.string().nullish(),
   createdAt: zod.coerce.date(),
 });
@@ -1053,6 +1058,7 @@ export const AdminListPendingClinicsResponseItem = zod.object({
   whatsappNumber: zod.string().nullish(),
   createdAt: zod.coerce.date(),
   trialEndDate: zod.coerce.date(),
+  requestNumber: zod.string().nullish(),
 });
 export const AdminListPendingClinicsResponse = zod.array(
   AdminListPendingClinicsResponseItem,
@@ -1080,6 +1086,7 @@ export const AdminActivateClinicResponse = zod.object({
   ]),
   subscriptionStatus: zod.enum(["trial", "basic", "premium", "expired"]),
   trialEndDate: zod.coerce.date(),
+  requestNumber: zod.string().nullish(),
   subscriptionPlan: zod.string().nullish(),
   createdAt: zod.coerce.date(),
 });
@@ -1106,6 +1113,7 @@ export const AdminBlockClinicResponse = zod.object({
   ]),
   subscriptionStatus: zod.enum(["trial", "basic", "premium", "expired"]),
   trialEndDate: zod.coerce.date(),
+  requestNumber: zod.string().nullish(),
   subscriptionPlan: zod.string().nullish(),
   createdAt: zod.coerce.date(),
 });
@@ -1241,6 +1249,7 @@ export const AcceptInvitationResponse = zod.object({
     ]),
     subscriptionStatus: zod.enum(["trial", "basic", "premium", "expired"]),
     trialEndDate: zod.coerce.date(),
+    requestNumber: zod.string().nullish(),
     subscriptionPlan: zod.string().nullish(),
     createdAt: zod.coerce.date(),
   }),

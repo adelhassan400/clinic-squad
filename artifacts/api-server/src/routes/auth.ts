@@ -27,6 +27,26 @@ function hashToken(token: string): string {
 const RESET_TOKEN_TTL_MS = 60 * 60 * 1000;
 const VERIFY_TOKEN_TTL_MS = 24 * 60 * 60 * 1000;
 
+async function createRequestNumber(): Promise<string> {
+  for (let attempt = 0; attempt < 5; attempt += 1) {
+    const now = new Date();
+    const datePart = [
+      now.getUTCFullYear(),
+      String(now.getUTCMonth() + 1).padStart(2, "0"),
+      String(now.getUTCDate()).padStart(2, "0"),
+    ].join("");
+    const candidate = `CS-${datePart}-${randomBytes(3).toString("hex").toUpperCase()}`;
+    const existing = await db
+      .select({ id: clinicsTable.id })
+      .from(clinicsTable)
+      .where(eq(clinicsTable.requestNumber, candidate))
+      .limit(1);
+    if (existing.length === 0) return candidate;
+  }
+
+  throw new Error("Unable to generate a unique trial request number");
+}
+
 type AuthEventType =
   | "login_success"
   | "login_failed"
@@ -101,6 +121,7 @@ router.post("/register", async (req, res) => {
 
   const clinicId = randomUUID();
   const userId = randomUUID();
+  const requestNumber = await createRequestNumber();
   const trialEndDate = new Date();
   trialEndDate.setDate(trialEndDate.getDate() + 15);
   const now = new Date();
@@ -111,6 +132,7 @@ router.post("/register", async (req, res) => {
   // /pending-activation page.
   await db.insert(clinicsTable).values({
     id: clinicId,
+    requestNumber,
     name: clinicName,
     ownerId: userId,
     status: "pending_approval",
@@ -145,6 +167,7 @@ router.post("/register", async (req, res) => {
   };
   const clinic = {
     id: clinicId,
+    requestNumber,
     name: clinicName,
     ownerId: userId,
     status: "pending_approval",
@@ -228,6 +251,7 @@ router.post("/verify-email", async (req, res) => {
   };
   const clinicObj = {
     id: clinic.id,
+    requestNumber: clinic.requestNumber ?? null,
     name: clinic.name,
     phone: clinic.phone ?? null,
     address: clinic.address ?? null,
@@ -321,6 +345,7 @@ router.post("/login", async (req, res) => {
   const userObj = { id: user.id, email: user.email, role: user.role, clinicId: user.clinicId, name: user.name, specialty: user.specialty, whatsappNumber: user.whatsappNumber, isBlocked: user.isBlocked, emailVerifiedAt: user.emailVerifiedAt?.toISOString() ?? null };
   const clinicObj = {
     id: clinic.id,
+    requestNumber: clinic.requestNumber ?? null,
     name: clinic.name,
     phone: clinic.phone ?? null,
     address: clinic.address ?? null,

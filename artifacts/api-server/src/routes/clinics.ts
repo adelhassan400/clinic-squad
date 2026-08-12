@@ -25,6 +25,7 @@ router.param("clinicId", (req: Request, res: Response, next: NextFunction) => {
 function serializeClinic(clinic: typeof clinicsTable.$inferSelect) {
   return {
     id: clinic.id,
+    requestNumber: clinic.requestNumber ?? null,
     name: clinic.name,
     phone: clinic.phone ?? null,
     address: clinic.address ?? null,

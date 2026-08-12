@@ -178,6 +178,7 @@ export interface Clinic {
   status: ClinicStatus;
   subscriptionStatus: ClinicSubscriptionStatus;
   trialEndDate: string;
+  requestNumber?: string | null;
   subscriptionPlan?: string | null;
   createdAt: string;
 }
@@ -342,6 +343,7 @@ export interface PendingClinic {
   whatsappNumber?: string | null;
   createdAt: string;
   trialEndDate: string;
+  requestNumber?: string | null;
 }
 
 export interface UpdateClinicBody {

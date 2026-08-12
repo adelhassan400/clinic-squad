@@ -6,10 +6,12 @@ import { Shield, Clock, MessageCircle, CheckCircle, LogOut, Loader2 } from "luci
 
 const SUPPORT_WHATSAPP = "201009360198";
 
-function buildWhatsappUrl(name: string | undefined): string {
+function buildWhatsappUrl(name: string | undefined, requestNumber: string | null | undefined): string {
   const safeName = (name ?? "").trim() || "there";
+  const safeRequestNumber = (requestNumber ?? "").trim() || "not available";
   const text =
-    `Hello, I want to activate my 15-day free trial for ClinicSquad. My Name: ${safeName}`;
+    `Hello, I want to activate my 15-day free trial for ClinicSquad. ` +
+    `Request Number: ${safeRequestNumber}. My Name: ${safeName}`;
   return `https://wa.me/${SUPPORT_WHATSAPP}?text=${encodeURIComponent(text)}`;
 }
 
@@ -40,7 +42,7 @@ export default function PendingActivationPage() {
     );
   }
 
-  const whatsappUrl = buildWhatsappUrl(user.name);
+  const whatsappUrl = buildWhatsappUrl(user.name, clinic.requestNumber);
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
@@ -106,6 +108,15 @@ export default function PendingActivationPage() {
                   <p className="text-xs text-muted-foreground uppercase tracking-wide">Account</p>
                   <p className="font-semibold text-foreground mt-1" data-testid="text-user-name">
                     {user.name}
+                  </p>
+                </div>
+                <div className="rounded-xl border border-primary/25 bg-primary/5 p-4 sm:col-span-2">
+                  <p className="text-xs text-muted-foreground uppercase tracking-wide">Request Number</p>
+                  <p className="font-mono font-bold text-primary mt-1 tracking-wide" data-testid="text-request-number">
+                    {clinic.requestNumber ?? "Assigned during activation"}
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Include this number when contacting support.
                   </p>
                 </div>
               </div>

@@ -14,6 +14,7 @@ export interface AuthUser {
 
 export interface AuthClinic {
   id: string;
+  requestNumber?: string | null;
   name: string;
   phone?: string | null;
   address?: string | null;

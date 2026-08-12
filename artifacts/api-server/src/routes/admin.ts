@@ -14,7 +14,7 @@ const router = Router();
 router.get("/clinics", async (_req, res) => {
   const clinics = await db.select().from(clinicsTable);
   return res.json(clinics.map(c => ({
-    id: c.id, name: c.name, ownerId: c.ownerId, status: c.status,
+    id: c.id, requestNumber: c.requestNumber ?? null, name: c.name, ownerId: c.ownerId, status: c.status,
     subscriptionStatus: c.subscriptionStatus, trialEndDate: c.trialEndDate.toISOString(),
     subscriptionPlan: c.subscriptionPlan, createdAt: c.createdAt.toISOString(),
   })));
@@ -250,6 +250,7 @@ router.get("/pending-clinics", async (_req, res) => {
   const rows = await db
     .select({
       clinicId: clinicsTable.id,
+      requestNumber: clinicsTable.requestNumber,
       clinicName: clinicsTable.name,
       ownerId: clinicsTable.ownerId,
       createdAt: clinicsTable.createdAt,
@@ -267,6 +268,7 @@ router.get("/pending-clinics", async (_req, res) => {
   return res.json(
     rows.map((r) => ({
       clinicId: r.clinicId,
+      requestNumber: r.requestNumber ?? null,
       clinicName: r.clinicName,
       ownerId: r.ownerId,
       ownerName: r.ownerName ?? "",
@@ -285,7 +287,7 @@ router.post("/clinics/:clinicId/activate", async (req, res) => {
   const clinic = (await db.select().from(clinicsTable).where(eq(clinicsTable.id, clinicId)).limit(1))[0];
   if (!clinic) return res.status(404).json({ error: "Clinic not found" });
   return res.json({
-    id: clinic.id, name: clinic.name, ownerId: clinic.ownerId, status: clinic.status,
+    id: clinic.id, requestNumber: clinic.requestNumber ?? null, name: clinic.name, ownerId: clinic.ownerId, status: clinic.status,
     subscriptionStatus: clinic.subscriptionStatus, trialEndDate: clinic.trialEndDate.toISOString(),
     subscriptionPlan: clinic.subscriptionPlan, createdAt: clinic.createdAt.toISOString(),
   });
@@ -297,7 +299,7 @@ router.post("/clinics/:clinicId/block", async (req, res) => {
   const clinic = (await db.select().from(clinicsTable).where(eq(clinicsTable.id, clinicId)).limit(1))[0];
   if (!clinic) return res.status(404).json({ error: "Clinic not found" });
   return res.json({
-    id: clinic.id, name: clinic.name, ownerId: clinic.ownerId, status: clinic.status,
+    id: clinic.id, requestNumber: clinic.requestNumber ?? null, name: clinic.name, ownerId: clinic.ownerId, status: clinic.status,
     subscriptionStatus: clinic.subscriptionStatus, trialEndDate: clinic.trialEndDate.toISOString(),
     subscriptionPlan: clinic.subscriptionPlan, createdAt: clinic.createdAt.toISOString(),
   });

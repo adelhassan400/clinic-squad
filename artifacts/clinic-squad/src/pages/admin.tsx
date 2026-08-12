@@ -1180,6 +1180,7 @@ function CountTile({
 
 interface PendingApprovalItem {
   clinicId: string;
+  requestNumber?: string | null;
   clinicName: string;
   ownerId: string;
   ownerName: string;
@@ -1201,9 +1202,16 @@ function PendingApprovalsPanel({
   onActivate: (clinicId: string) => void;
   activatingId: string | null;
 }) {
-  function whatsappUrl(name: string, number: string | null | undefined) {
+  function whatsappUrl(
+    name: string,
+    number: string | null | undefined,
+    requestNumber: string | null | undefined,
+  ) {
     const digits = (number ?? "").replace(/[^0-9]/g, "");
-    const text = `Hello Dr. ${name || "there"}, your ClinicSquad 15-day free trial has been activated. You can now sign in to your dashboard.`;
+    const reference = requestNumber || "your request";
+    const text =
+      `Hello Dr. ${name || "there"}, your ClinicSquad 15-day free trial ` +
+      `(${reference}) has been activated. You can now sign in to your dashboard.`;
     if (!digits) return null;
     return `https://wa.me/${digits}?text=${encodeURIComponent(text)}`;
   }
@@ -1237,7 +1245,7 @@ function PendingApprovalsPanel({
       ) : (
         <ul className="divide-y divide-border">
           {items.map((item) => {
-            const wa = whatsappUrl(item.ownerName, item.whatsappNumber);
+            const wa = whatsappUrl(item.ownerName, item.whatsappNumber, item.requestNumber);
             const isActivating = activatingId === item.clinicId;
             return (
               <li
@@ -1263,6 +1271,9 @@ function PendingApprovalsPanel({
                         {item.specialty}
                       </>
                     ) : null}
+                  </p>
+                  <p className="text-xs font-mono font-semibold text-primary">
+                    Request: {item.requestNumber ?? "Legacy request"}
                   </p>
                   <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
                     <span className="inline-flex items-center gap-1">
