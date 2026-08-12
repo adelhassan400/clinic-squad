@@ -10,6 +10,7 @@ import prescriptionsRouter from "./prescriptions";
 import adminRouter from "./admin";
 import teamRouter from "./team";
 import invitationsRouter from "./invitations";
+import adminToolsRouter from "./admin-tools";
 
 const router: IRouter = Router();
 
@@ -24,5 +25,6 @@ router.use("/clinics/:clinicId/appointments", appointmentsRouter);
 router.use("/clinics/:clinicId/finances", financesRouter);
 router.use("/clinics/:clinicId/prescriptions", prescriptionsRouter);
 router.use("/admin", adminRouter);
+router.use("/platform", adminToolsRouter);
 
 export default router;

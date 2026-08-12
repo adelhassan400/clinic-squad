@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { useLang } from "@/lib/lang";
@@ -23,7 +23,7 @@ import {
   Shield, CheckCircle, XCircle, CreditCard, Users, Building2,
   AlertTriangle, TrendingUp, Clock, Sparkles, Search, ChevronRight,
   Crown, Sparkle, Hourglass, Mail, Phone, Stethoscope, Loader2,
-  CalendarDays, UserCog, BarChart3, History,
+  CalendarDays, UserCog, BarChart3, History, Settings, Megaphone, Tag, Activity, Save, Plus, Power, Download,
 } from "lucide-react";
 import {
   ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid, Cell,
@@ -58,6 +58,11 @@ interface AdminSubscription {
   amount: number; paymentProof?: string | null; transactionReference?: string | null;
   createdAt: string;
 }
+interface PlatformSettings { basicMonthlyPrice: string; premiumMonthlyPrice: string; vodafoneCashNumber: string; instapayHandle: string; whatsappNumber: string; updatedAt?: string; }
+interface BroadcastMessage { id: string; title: string; message: string; active: boolean; createdAt: string; }
+interface PromoCode { id: string; code: string; discountPercent: number; active: boolean; expiresAt: string | null; createdAt: string; }
+interface EngagementRow { clinicId: string; clinicName: string; subscriptionStatus: string; patientCount: number; recentAppointments: number; engagementScore: number; }
+interface AuditLog { id: string; adminEmail: string; action: string; details: string; createdAt: string; }
 
 // ---------- Tiny UI helpers ----------
 function StatusBadge({ status }: { status: string }) {
@@ -126,6 +131,9 @@ export default function AdminPage() {
   const [planView, setPlanView] = useState<PlanKey | null>(null);
   const [selectedClinicId, setSelectedClinicId] = useState<string | null>(null);
   const [revenueYear, setRevenueYear] = useState<number | "rolling12">("rolling12");
+  const [settingsForm, setSettingsForm] = useState<PlatformSettings>({ basicMonthlyPrice: "200", premiumMonthlyPrice: "400", vodafoneCashNumber: "01000000000", instapayHandle: "clinicsquad@instapay", whatsappNumber: "201000000000" });
+  const [broadcastForm, setBroadcastForm] = useState({ title: "", message: "" });
+  const [promoForm, setPromoForm] = useState({ code: "", discountPercent: "10", expiresAt: "" });
 
   const PLAN_META: Record<PlanKey, { label: string; Icon: typeof Crown; tone: string; sub: string }> = {
     trial: { label: t("plan.trial"), Icon: Hourglass, tone: "from-blue-500/15 to-blue-500/5 text-blue-700 dark:text-blue-400 ring-blue-500/20", sub: t("plan.trial.desc") },
@@ -154,10 +162,36 @@ export default function AdminPage() {
     query: { queryKey: getAdminListPendingClinicsQueryKey() },
   });
   const pendingApprovals = pendingApprovalsQ.data ?? [];
+  const settingsQ = useQuery<PlatformSettings>({ queryKey: ["/api/platform/settings"], queryFn: () => customFetch<PlatformSettings>("/api/platform/settings") });
+  const messagesQ = useQuery<BroadcastMessage[]>({ queryKey: ["/api/platform/messages"], queryFn: () => customFetch<BroadcastMessage[]>("/api/platform/messages") });
+  const promoQ = useQuery<PromoCode[]>({ queryKey: ["/api/platform/promo-codes"], queryFn: () => customFetch<PromoCode[]>("/api/platform/promo-codes") });
+  const engagementQ = useQuery<EngagementRow[]>({ queryKey: ["/api/platform/engagement"], queryFn: () => customFetch<EngagementRow[]>("/api/platform/engagement") });
+  const auditQ = useQuery<AuditLog[]>({ queryKey: ["/api/platform/audit-logs"], queryFn: () => customFetch<AuditLog[]>("/api/platform/audit-logs") });
+  useEffect(() => { if (settingsQ.data) setSettingsForm({ basicMonthlyPrice: settingsQ.data.basicMonthlyPrice, premiumMonthlyPrice: settingsQ.data.premiumMonthlyPrice, vodafoneCashNumber: settingsQ.data.vodafoneCashNumber, instapayHandle: settingsQ.data.instapayHandle, whatsappNumber: settingsQ.data.whatsappNumber }); }, [settingsQ.data]);
 
   const activateMutation = useAdminActivateClinic();
   const blockMutation = useAdminBlockClinic();
   const confirmMutation = useAdminConfirmSubscription();
+  const [savingTools, setSavingTools] = useState(false);
+  const savePlatformSettings = async () => {
+    setSavingTools(true);
+    try { await customFetch("/api/platform/settings", { method: "PUT", body: JSON.stringify(settingsForm) }); toast({ title: "Global settings saved" }); qc.invalidateQueries({ queryKey: ["/api/platform/settings"] }); qc.invalidateQueries({ queryKey: ["/api/platform/audit-logs"] }); }
+    catch { toast({ title: "Could not save settings", variant: "destructive" }); } finally { setSavingTools(false); }
+  };
+  const createBroadcast = async () => {
+    if (!broadcastForm.title.trim() || !broadcastForm.message.trim()) return;
+    try { await customFetch("/api/platform/messages", { method: "POST", body: JSON.stringify(broadcastForm) }); setBroadcastForm({ title: "", message: "" }); toast({ title: "Broadcast published" }); qc.invalidateQueries({ queryKey: ["/api/platform/messages"] }); qc.invalidateQueries({ queryKey: ["/api/platform/audit-logs"] }); }
+    catch { toast({ title: "Could not publish broadcast", variant: "destructive" }); }
+  };
+  const createPromo = async () => {
+    if (!promoForm.code.trim()) return;
+    try { await customFetch("/api/platform/promo-codes", { method: "POST", body: JSON.stringify({ ...promoForm, discountPercent: Number(promoForm.discountPercent), expiresAt: promoForm.expiresAt || undefined }) }); setPromoForm({ code: "", discountPercent: "10", expiresAt: "" }); toast({ title: "Promo code created" }); qc.invalidateQueries({ queryKey: ["/api/platform/promo-codes"] }); qc.invalidateQueries({ queryKey: ["/api/platform/audit-logs"] }); }
+    catch { toast({ title: "Could not create promo code", variant: "destructive" }); }
+  };
+  const togglePlatformItem = async (kind: "messages" | "promo-codes", id: string, active: boolean) => {
+    try { await customFetch(`/api/platform/${kind}/${id}`, { method: "PATCH", body: JSON.stringify({ active: !active }) }); qc.invalidateQueries({ queryKey: [`/api/platform/${kind}`] }); qc.invalidateQueries({ queryKey: ["/api/platform/audit-logs"] }); }
+    catch { toast({ title: "Could not update item", variant: "destructive" }); }
+  };
 
   function refetchAll() {
     qc.invalidateQueries({ queryKey: getAdminListClinicsQueryKey() });
@@ -219,6 +253,14 @@ export default function AdminPage() {
     }
     return [...list].sort((a, b) => b.createdAt.localeCompare(a.createdAt));
   }, [clinics, tab, search]);
+
+  const exportClinics = () => {
+    const header = ["Clinic", "Status", "Subscription", "Created"];
+    const rows = filteredClinics.map((clinic) => [clinic.name, clinic.status, clinic.subscriptionStatus, clinic.createdAt]);
+    const csv = [header, ...rows].map((row) => row.map((value) => `"${String(value).replaceAll('"', '""')}"`).join(",")).join("\\n");
+    const url = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8" }));
+    const link = document.createElement("a"); link.href = url; link.download = "clinics.csv"; link.click(); URL.revokeObjectURL(url);
+  };
 
   const tabs: { key: FilterTab; label: string; count: number }[] = [
     { key: "all", label: t("common.all"), count: clinics?.length ?? 0 },
@@ -419,6 +461,71 @@ export default function AdminPage() {
               </div>
             </div>
           </div>
+
+          {/* Clinic directory */}
+          <section className="rounded-xl border border-border bg-card overflow-hidden">
+            <div className="px-5 py-3 border-b border-border bg-muted/30 flex flex-wrap items-center gap-3">
+              <div className="flex items-center gap-2"><Building2 className="w-4 h-4 text-primary" /><h2 className="text-sm font-semibold">{t("admin.clinics.title")}</h2></div>
+              <div className="flex items-center gap-2 ms-auto"><div className="relative"><Search className="absolute start-2 top-2.5 w-3.5 h-3.5 text-muted-foreground" /><Input className="h-8 w-48 ps-7 text-xs" placeholder={t("admin.clinics.searchPh")} value={search} onChange={(e) => setSearch(e.target.value)} /></div><Button size="sm" variant="outline" onClick={exportClinics}><Download className="w-3 h-3 me-1" />CSV</Button></div>
+            </div>
+            <div className="px-5 py-3 flex flex-wrap gap-2 border-b border-border/70">{tabs.map((item) => <Button key={item.key} size="sm" variant={tab === item.key ? "default" : "outline"} onClick={() => setTab(item.key)}>{item.label} <span className="ms-1 text-xs opacity-70">{item.count}</span></Button>)}</div>
+            <div className="divide-y divide-border max-h-80 overflow-y-auto">
+              {filteredClinics.length === 0 ? <p className="p-8 text-center text-sm text-muted-foreground">{t("admin.pending.empty")}</p> : filteredClinics.map((clinic) => <div key={clinic.id} className="px-5 py-3 flex items-center gap-3 hover:bg-muted/20"><div className="flex-1 min-w-0"><p className="text-sm font-medium truncate">{clinic.name}</p><p className="text-xs text-muted-foreground">{clinic.subscriptionStatus} · {formatDate(clinic.createdAt)}</p></div><StatusBadge status={clinic.status} /><Button size="sm" variant="outline" onClick={() => setSelectedClinicId(clinic.id)}>{t("admin.clinic.details")}</Button>{clinic.status === "active" && <Button size="sm" variant="ghost" onClick={() => handleBlock(clinic.id)}><XCircle className="w-3 h-3 me-1" />{t("admin.clinics.block")}</Button>}</div>)}
+            </div>
+          </section>
+
+          {/* Simple platform controls */}
+          <section className="space-y-4">
+            <div className="flex items-center gap-2">
+              <Settings className="w-4 h-4 text-primary" />
+              <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">{t("admin.tools.title")}</h2>
+            </div>
+            <div className="grid xl:grid-cols-2 gap-4">
+              <div className="rounded-xl border border-border bg-card p-5 space-y-4">
+                <div className="flex items-center gap-2"><Settings className="w-4 h-4 text-primary" /><h3 className="font-semibold">{t("admin.tools.settings")}</h3></div>
+                <div className="grid sm:grid-cols-2 gap-3">
+                  <label className="text-xs text-muted-foreground">{t("admin.tools.basicPrice")}<Input className="mt-1" value={settingsForm.basicMonthlyPrice} onChange={(e) => setSettingsForm({ ...settingsForm, basicMonthlyPrice: e.target.value })} /></label>
+                  <label className="text-xs text-muted-foreground">{t("admin.tools.premiumPrice")}<Input className="mt-1" value={settingsForm.premiumMonthlyPrice} onChange={(e) => setSettingsForm({ ...settingsForm, premiumMonthlyPrice: e.target.value })} /></label>
+                  <label className="text-xs text-muted-foreground">{t("admin.tools.vodafone")}<Input className="mt-1" value={settingsForm.vodafoneCashNumber} onChange={(e) => setSettingsForm({ ...settingsForm, vodafoneCashNumber: e.target.value })} /></label>
+                  <label className="text-xs text-muted-foreground">{t("admin.tools.instapay")}<Input className="mt-1" value={settingsForm.instapayHandle} onChange={(e) => setSettingsForm({ ...settingsForm, instapayHandle: e.target.value })} /></label>
+                  <label className="text-xs text-muted-foreground sm:col-span-2">{t("admin.tools.whatsapp")}<Input className="mt-1" value={settingsForm.whatsappNumber} onChange={(e) => setSettingsForm({ ...settingsForm, whatsappNumber: e.target.value })} /></label>
+                </div>
+                <Button size="sm" onClick={savePlatformSettings} disabled={savingTools}><Save className="w-3 h-3 me-1" />{t("admin.tools.save")}</Button>
+              </div>
+
+              <div className="rounded-xl border border-border bg-card p-5 space-y-4">
+                <div className="flex items-center gap-2"><Activity className="w-4 h-4 text-primary" /><h3 className="font-semibold">{t("admin.tools.engagement")}</h3></div>
+                <div className="space-y-2 max-h-56 overflow-y-auto">
+                  {(engagementQ.data ?? []).slice(0, 8).map((row) => (
+                    <div key={row.clinicId} className="flex items-center gap-3 rounded-lg border border-border/70 p-3">
+                      <div className="flex-1 min-w-0"><p className="text-sm font-medium truncate">{row.clinicName}</p><p className="text-xs text-muted-foreground">{row.patientCount} {t("admin.tools.patients")} · {row.recentAppointments} {t("admin.tools.weekAppointments")}</p></div>
+                      <span className={cn("text-xs font-semibold rounded-full px-2 py-1", row.engagementScore >= 50 ? "bg-green-500/10 text-green-600" : row.engagementScore > 0 ? "bg-yellow-500/10 text-yellow-600" : "bg-muted text-muted-foreground")}>{row.engagementScore}/100</span>
+                    </div>
+                  ))}
+                  {(engagementQ.data ?? []).length === 0 && <p className="text-sm text-muted-foreground">{t("admin.tools.noEngagement")}</p>}
+                </div>
+              </div>
+
+              <div className="rounded-xl border border-border bg-card p-5 space-y-4">
+                <div className="flex items-center gap-2"><Megaphone className="w-4 h-4 text-primary" /><h3 className="font-semibold">{t("admin.tools.broadcasts")}</h3></div>
+                <div className="grid gap-2"><Input placeholder={t("admin.tools.broadcastTitle")} value={broadcastForm.title} onChange={(e) => setBroadcastForm({ ...broadcastForm, title: e.target.value })} /><textarea className="min-h-20 rounded-md border border-input bg-background px-3 py-2 text-sm" placeholder={t("admin.tools.broadcastMessage")} value={broadcastForm.message} onChange={(e) => setBroadcastForm({ ...broadcastForm, message: e.target.value })} /></div>
+                <Button size="sm" onClick={createBroadcast}><Plus className="w-3 h-3 me-1" />{t("admin.tools.publish")}</Button>
+                <div className="space-y-2 max-h-36 overflow-y-auto">{(messagesQ.data ?? []).slice(0, 5).map((item) => <div key={item.id} className="flex items-center gap-2 text-sm"><div className="flex-1 min-w-0"><p className="font-medium truncate">{item.title}</p><p className="text-xs text-muted-foreground truncate">{item.message}</p></div><Button size="sm" variant="outline" onClick={() => togglePlatformItem("messages", item.id, item.active)}><Power className="w-3 h-3 me-1" />{item.active ? t("admin.tools.archive") : t("admin.tools.activate")}</Button></div>)}</div>
+              </div>
+
+              <div className="rounded-xl border border-border bg-card p-5 space-y-4">
+                <div className="flex items-center gap-2"><Tag className="w-4 h-4 text-primary" /><h3 className="font-semibold">{t("admin.tools.promos")}</h3></div>
+                <div className="grid sm:grid-cols-3 gap-2"><Input className="sm:col-span-1" placeholder={t("admin.tools.code")} value={promoForm.code} onChange={(e) => setPromoForm({ ...promoForm, code: e.target.value.toUpperCase() })} /><Input type="number" min="1" max="100" placeholder="%" value={promoForm.discountPercent} onChange={(e) => setPromoForm({ ...promoForm, discountPercent: e.target.value })} /><Input type="date" value={promoForm.expiresAt} onChange={(e) => setPromoForm({ ...promoForm, expiresAt: e.target.value })} /></div>
+                <Button size="sm" onClick={createPromo}><Plus className="w-3 h-3 me-1" />{t("admin.tools.createPromo")}</Button>
+                <div className="space-y-2 max-h-36 overflow-y-auto">{(promoQ.data ?? []).slice(0, 8).map((item) => <div key={item.id} className="flex items-center gap-2 text-sm"><div className="flex-1"><span className="font-mono font-semibold">{item.code}</span><span className="text-xs text-muted-foreground ms-2">{item.discountPercent}%</span></div><Button size="sm" variant="outline" onClick={() => togglePlatformItem("promo-codes", item.id, item.active)}><Power className="w-3 h-3 me-1" />{item.active ? t("admin.tools.disable") : t("admin.tools.activate")}</Button></div>)}</div>
+              </div>
+            </div>
+
+            <div className="grid lg:grid-cols-2 gap-4">
+              <div className="rounded-xl border border-border bg-card overflow-hidden"><div className="px-5 py-3 border-b border-border bg-muted/30 flex items-center gap-2"><History className="w-4 h-4 text-primary" /><h3 className="font-semibold">{t("admin.tools.audit")}</h3></div><div className="divide-y divide-border max-h-56 overflow-y-auto">{(auditQ.data ?? []).slice(0, 12).map((log) => <div key={log.id} className="px-5 py-3"><p className="text-xs font-semibold">{log.action}</p><p className="text-xs text-muted-foreground">{log.details}</p><p className="text-[10px] text-muted-foreground mt-1">{log.adminEmail} · {formatDate(log.createdAt)}</p></div>)}{(auditQ.data ?? []).length === 0 && <p className="p-5 text-sm text-muted-foreground">{t("admin.tools.noAudit")}</p>}</div></div>
+              <div className="rounded-xl border border-border bg-card p-5"><div className="flex items-center gap-2 mb-3"><BarChart3 className="w-4 h-4 text-primary" /><h3 className="font-semibold">{t("admin.tools.recommendations")}</h3></div><p className="text-sm text-muted-foreground">{t("admin.tools.recommendationsText")}</p></div>
+            </div>
+          </section>
         </div>
 
         {/* Plan subscribers list dialog */}
@@ -495,6 +602,19 @@ function ClinicDetailDialog({
   const { data, isLoading, isError } = useAdminGetClinicDetail(clinicId ?? "", {
     query: { enabled: !!clinicId },
   });
+  const [trialDays, setTrialDays] = useState("7");
+  const [extendingTrial, setExtendingTrial] = useState(false);
+  const extendTrial = async () => {
+    if (!clinicId) return;
+    setExtendingTrial(true);
+    try {
+      await customFetch(`/api/platform/clinics/${clinicId}/extend-trial`, { method: "POST", body: JSON.stringify({ days: Number(trialDays) }) });
+      window.alert(t("admin.tools.trialExtended"));
+      onClose();
+    } catch {
+      window.alert(t("admin.tools.trialFailed"));
+    } finally { setExtendingTrial(false); }
+  };
 
   return (
     <Dialog open={clinicId !== null} onOpenChange={(open) => !open && onClose()}>
@@ -548,6 +668,11 @@ function ClinicDetailDialog({
                     <p className="text-[10px] text-muted-foreground uppercase">{t("sidebar.appointments")}</p>
                   </div>
                 </div>
+              </section>
+
+              <section className="rounded-lg border border-border bg-muted/20 p-4">
+                <h3 className="text-sm font-semibold mb-2">{t("admin.tools.trialExtension")}</h3>
+                <div className="flex items-center gap-2"><Input type="number" min="1" max="90" className="w-28" value={trialDays} onChange={(e) => setTrialDays(e.target.value)} /><span className="text-sm text-muted-foreground">{t("admin.tools.days")}</span><Button size="sm" className="ms-auto" onClick={extendTrial} disabled={extendingTrial}>{extendingTrial ? <Loader2 className="w-3 h-3 animate-spin" /> : <Plus className="w-3 h-3 me-1" />}{t("admin.tools.extend")}</Button></div>
               </section>
             </>
           )}

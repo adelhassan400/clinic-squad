@@ -6,11 +6,13 @@ import { useLang } from "@/lib/lang";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { GlobalSearch } from "@/components/GlobalSearch";
 import { getTrialDaysLeft, getTrialUrgency } from "@/lib/utils";
+import { customFetch } from "@workspace/api-client-react";
+import { useQuery } from "@tanstack/react-query";
 import {
   LayoutDashboard, Users, Calendar, TrendingUp,
   Settings, LogOut, Menu, X, Sun, Moon,
   AlertTriangle, Crown, ChevronRight, Shield, BarChart2, UserPlus, Pill,
-  Stethoscope, Receipt
+  Stethoscope, Receipt, Megaphone
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -57,6 +59,13 @@ export function DashboardLayout({ children }: Props) {
     ? getTrialDaysLeft(clinic.trialEndDate)
     : null;
   const urgency = trialDaysLeft !== null ? getTrialUrgency(trialDaysLeft) : null;
+  const broadcastsQ = useQuery<Array<{ id: string; title: string; message: string; active: boolean }>>({
+    queryKey: ["/api/platform/messages"],
+    queryFn: () => customFetch("/api/platform/messages"),
+    enabled: !isSuperAdmin && !!user,
+    staleTime: 60_000,
+  });
+  const latestBroadcast = broadcastsQ.data?.[0];
 
   return (
     <div className="flex h-screen bg-background overflow-hidden">
@@ -267,6 +276,12 @@ export function DashboardLayout({ children }: Props) {
 
         {/* Content */}
         <main className="flex-1 overflow-y-auto">
+          {!isSuperAdmin && latestBroadcast && (
+            <div className="mx-4 mt-4 rounded-xl border border-primary/20 bg-primary/5 px-4 py-3 flex items-start gap-3">
+              <Megaphone className="w-4 h-4 text-primary mt-0.5 shrink-0" />
+              <div className="min-w-0"><p className="text-sm font-semibold">{latestBroadcast.title}</p><p className="text-sm text-muted-foreground mt-0.5">{latestBroadcast.message}</p></div>
+            </div>
+          )}
           {children}
         </main>
       </div>

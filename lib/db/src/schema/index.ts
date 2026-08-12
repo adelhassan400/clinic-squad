@@ -10,3 +10,4 @@ export * from "./prescriptions";
 export * from "./password-reset-tokens";
 export * from "./email-verification-tokens";
 export * from "./auth-events";
+export * from "./admin-tools";

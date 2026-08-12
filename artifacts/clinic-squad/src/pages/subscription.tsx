@@ -1,33 +1,14 @@
-import { useState, type ChangeEvent } from "react";
+import { useState, useMemo, type ChangeEvent } from "react";
 import { useAuth } from "@/lib/auth";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
-import { useCreateSubscription, getGetSubscriptionQueryKey, getGetClinicQueryKey } from "@workspace/api-client-react";
-import { useQueryClient } from "@tanstack/react-query";
+import { useCreateSubscription, getGetSubscriptionQueryKey, getGetClinicQueryKey, customFetch } from "@workspace/api-client-react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { CheckCircle, Crown, Shield, PhoneCall, Loader2, Upload, Image as ImageIcon, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-const plans = [
-  {
-    id: "basic" as const,
-    name: "Basic Plan",
-    monthlyPrice: 200,
-    annualPrice: 2000,
-    desc: "For small clinics getting started",
-    features: ["Up to 500 patients", "Appointment scheduling", "Patient records", "Staff accounts (2)", "Email support", "Basic reporting"],
-  },
-  {
-    id: "premium" as const,
-    name: "Premium Plan",
-    monthlyPrice: 400,
-    annualPrice: 4000,
-    desc: "Full-featured for growing clinics",
-    features: ["Unlimited patients", "Advanced scheduling", "Financial dashboard", "Analytics & reports", "Unlimited staff", "Priority support", "AI-ready modules (soon)"],
-    highlighted: true,
-  },
-];
 
 export default function SubscriptionPage() {
   const { clinic, updateClinic } = useAuth();
@@ -37,19 +18,31 @@ export default function SubscriptionPage() {
   const [billingPeriod, setBillingPeriod] = useState<"monthly" | "annual">("monthly");
   const [durationMonths, setDurationMonths] = useState<number>(1);
   const [transactionRef, setTransactionRef] = useState("");
+  const [promoCode, setPromoCode] = useState("");
   const [paymentProof, setPaymentProof] = useState("");
   const [receiptFileName, setReceiptFileName] = useState("");
   const [submitted, setSubmitted] = useState(false);
 
   const clinicId = clinic?.id ?? "";
   const createMutation = useCreateSubscription();
-
+  const settingsQ = useQuery<{ basicMonthlyPrice: string; premiumMonthlyPrice: string; vodafoneCashNumber: string; instapayHandle: string; whatsappNumber: string }>({ queryKey: ["/api/platform/settings"], queryFn: () => customFetch("/api/platform/settings") });
+  const promoQ = useQuery<Array<{ code: string; discountPercent: number; active: boolean; expiresAt: string | null }>>({ queryKey: ["/api/platform/promo-codes"], queryFn: () => customFetch("/api/platform/promo-codes") });
+  const plans = useMemo(() => {
+    const basic = Number(settingsQ.data?.basicMonthlyPrice ?? 200);
+    const premium = Number(settingsQ.data?.premiumMonthlyPrice ?? 400);
+    return [
+      { id: "basic" as const, name: "Basic Plan", monthlyPrice: basic, annualPrice: basic * 10, desc: "For small clinics getting started", features: ["Up to 500 patients", "Appointment scheduling", "Patient records", "Staff accounts (2)", "Email support", "Basic reporting"] },
+      { id: "premium" as const, name: "Premium Plan", monthlyPrice: premium, annualPrice: premium * 10, desc: "Full-featured for growing clinics", features: ["Unlimited patients", "Advanced scheduling", "Financial dashboard", "Analytics & reports", "Unlimited staff", "Priority support", "AI-ready modules (soon)"], highlighted: true },
+    ];
+  }, [settingsQ.data]);
   const currentPlanObj = plans.find(p => p.id === selected);
   const calculatedAmount = currentPlanObj
     ? billingPeriod === "annual"
       ? currentPlanObj.annualPrice * (durationMonths / 12)
       : currentPlanObj.monthlyPrice * durationMonths
     : 0;
+  const selectedPromo = promoQ.data?.find((item) => item.active && item.code === promoCode.trim().toUpperCase());
+  const finalAmount = selectedPromo ? Math.round(calculatedAmount * (1 - selectedPromo.discountPercent / 100)) : calculatedAmount;
 
   const handleReceiptChange = (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -99,7 +92,7 @@ export default function SubscriptionPage() {
         planType: plan,
         billingPeriod,
         durationMonths: durationMonths.toString(),
-        amount: calculatedAmount.toString(),
+        amount: finalAmount.toString(),
         transactionReference: transactionRef.trim() || undefined,
         paymentProof,
       } as any
@@ -233,7 +226,7 @@ export default function SubscriptionPage() {
               </div>
               <div className="flex items-center justify-between p-4 bg-muted/40 rounded-lg">
                 <span className="text-sm font-medium">Total Amount Due:</span>
-                <span className="text-2xl font-bold text-primary">{calculatedAmount} EGP</span>
+                <div className="text-end"><span className="text-2xl font-bold text-primary">{finalAmount} EGP</span>{selectedPromo && <p className="text-xs text-green-600">{selectedPromo.discountPercent}% promo discount applied</p>}</div>
               </div>
             </div>
 
@@ -241,9 +234,14 @@ export default function SubscriptionPage() {
             <div className="bg-card border border-border rounded-xl p-6">
               <h3 className="font-semibold mb-2">Payment Instructions & Proof</h3>
               <p className="text-sm text-muted-foreground mb-4">
-                Transfer the exact amount to Vodafone Cash: <strong>01000000000</strong> or InstaPay handle: <strong>clinicsquad@instapay</strong>. Then enter your transaction reference and attach your payment receipt screenshot below.
+                Transfer the exact amount to Vodafone Cash: <strong>{settingsQ.data?.vodafoneCashNumber ?? "01000000000"}</strong> or InstaPay handle: <strong>{settingsQ.data?.instapayHandle ?? "clinicsquad@instapay"}</strong>. Then enter your transaction reference and attach your payment receipt screenshot below.
               </p>
               <div className="space-y-4">
+                <div>
+                  <label className="text-xs font-medium mb-1.5 block">Promo Code (optional)</label>
+                  <input type="text" className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm uppercase" placeholder="e.g. SAVE20" value={promoCode} onChange={(e) => setPromoCode(e.target.value.toUpperCase())} />
+                  {promoCode && !selectedPromo && <p className="mt-1 text-xs text-muted-foreground">Promo code not found or expired.</p>}
+                </div>
                 <div>
                   <label className="text-xs font-medium mb-1.5 block">Transaction Reference / Receipt Notes</label>
                   <input
@@ -307,7 +305,7 @@ export default function SubscriptionPage() {
                 Submit Payment for {selected === "premium" ? "Premium" : "Basic"}
               </Button>
               <a
-                href={`https://wa.me/201000000000?text=Hi!%20I%20have%20paid%20${calculatedAmount}%20EGP%20for%20the%20${selected === "premium" ? "Premium" : "Basic"}%20Plan%20(${durationMonths}%20months)%20for%20clinic:%20${encodeURIComponent(clinic?.name ?? "")}.%20Ref:%20${encodeURIComponent(transactionRef || "N/A")}`}
+                href={`https://wa.me/${settingsQ.data?.whatsappNumber ?? "201000000000"}?text=Hi!%20I%20have%20paid%20${finalAmount}%20EGP%20for%20the%20${selected === "premium" ? "Premium" : "Basic"}%20Plan%20(${durationMonths}%20months)%20for%20clinic:%20${encodeURIComponent(clinic?.name ?? "")}.%20Ref:%20${encodeURIComponent(transactionRef || "N/A")}`}
                 target="_blank"
                 rel="noopener noreferrer"
               >
