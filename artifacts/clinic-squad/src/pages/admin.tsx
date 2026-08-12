@@ -12,6 +12,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { formatDate } from "@/lib/utils";
 import { useCurrency } from "@/lib/currency";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -1202,6 +1203,14 @@ function PendingApprovalsPanel({
   onActivate: (clinicId: string) => void;
   activatingId: string | null;
 }) {
+  const [requestSearch, setRequestSearch] = useState("");
+  const normalizedRequestSearch = requestSearch.trim().toLowerCase();
+  const visibleItems = normalizedRequestSearch
+    ? items.filter((item) =>
+        item.requestNumber?.toLowerCase().includes(normalizedRequestSearch),
+      )
+    : items;
+
   function whatsappUrl(
     name: string,
     number: string | null | undefined,
@@ -1225,11 +1234,22 @@ function PendingApprovalsPanel({
           className="text-xs font-semibold px-2 py-0.5 rounded-full bg-primary/15 text-primary"
           data-testid="text-pending-approvals-count"
         >
-          {items.length}
+          {normalizedRequestSearch ? `${visibleItems.length}/${items.length}` : items.length}
         </span>
         <span className="text-xs text-muted-foreground hidden sm:inline">
           New trial requests waiting for activation
         </span>
+        <div className="relative ms-auto w-full sm:w-56">
+          <Search className="absolute start-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
+          <Input
+            value={requestSearch}
+            onChange={(event) => setRequestSearch(event.target.value)}
+            placeholder="Search Request Number…"
+            aria-label="Search pending requests by Request Number"
+            data-testid="input-pending-request-search"
+            className="h-8 ps-8 text-xs bg-background"
+          />
+        </div>
       </div>
 
       {isLoading ? (
@@ -1237,14 +1257,16 @@ function PendingApprovalsPanel({
           <Skeleton className="h-12 w-full" />
           <Skeleton className="h-12 w-full" />
         </div>
-      ) : items.length === 0 ? (
+      ) : visibleItems.length === 0 ? (
         <div className="p-8 text-center text-sm text-muted-foreground">
           <CheckCircle className="w-8 h-8 mx-auto text-primary/60 mb-2" />
-          No pending approvals — you&apos;re all caught up.
+          {normalizedRequestSearch
+            ? "No pending requests match that Request Number."
+            : "No pending approvals — you&apos;re all caught up."}
         </div>
       ) : (
         <ul className="divide-y divide-border">
-          {items.map((item) => {
+          {visibleItems.map((item) => {
             const wa = whatsappUrl(item.ownerName, item.whatsappNumber, item.requestNumber);
             const isActivating = activatingId === item.clinicId;
             return (
