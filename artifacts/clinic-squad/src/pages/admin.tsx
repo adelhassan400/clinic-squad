@@ -23,7 +23,7 @@ import {
   Shield, CheckCircle, XCircle, CreditCard, Users, Building2,
   AlertTriangle, TrendingUp, Clock, Sparkles, Search, ChevronRight,
   Crown, Sparkle, Hourglass, Mail, Phone, Stethoscope, Loader2,
-  CalendarDays, UserCog, BarChart3,
+  CalendarDays, UserCog, BarChart3, History,
 } from "lucide-react";
 import {
   ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid, Cell,
@@ -126,9 +126,9 @@ export default function AdminPage() {
   const [revenueYear, setRevenueYear] = useState<number | "rolling12">("rolling12");
 
   const PLAN_META: Record<PlanKey, { label: string; Icon: typeof Crown; tone: string; sub: string }> = {
-    trial: { label: t("plan.trial"), Icon: Hourglass, tone: "from-blue-500/15 to-blue-500/5 text-blue-700 dark:text-blue-400 ring-blue-500/20", sub: "15-day evaluation" },
-    basic: { label: t("plan.basic"), Icon: Sparkle, tone: "from-emerald-500/15 to-emerald-500/5 text-emerald-700 dark:text-emerald-400 ring-emerald-500/20", sub: "200 EGP / month" },
-    premium: { label: t("plan.premium"), Icon: Crown, tone: "from-amber-500/15 to-amber-500/5 text-amber-700 dark:text-amber-400 ring-amber-500/20", sub: "400 EGP / month" },
+    trial: { label: t("plan.trial"), Icon: Hourglass, tone: "from-blue-500/15 to-blue-500/5 text-blue-700 dark:text-blue-400 ring-blue-500/20", sub: t("plan.trial.desc") },
+    basic: { label: t("plan.basic"), Icon: Sparkle, tone: "from-emerald-500/15 to-emerald-500/5 text-emerald-700 dark:text-emerald-400 ring-emerald-500/20", sub: t("plan.basic.desc") },
+    premium: { label: t("plan.premium"), Icon: Crown, tone: "from-amber-500/15 to-amber-500/5 text-amber-700 dark:text-amber-400 ring-amber-500/20", sub: t("plan.premium.desc") },
   };
 
   // Existing data + new endpoints (raw fetch)
@@ -238,9 +238,9 @@ export default function AdminPage() {
           {/* KPI grid */}
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
             <StatCard icon={Building2} label={t("insights.metric.clinics")} value={stats?.totalClinics ?? "—"}
-              sub={stats ? `${stats.byStatus.active} active` : undefined} />
+              sub={stats ? `${stats.byStatus.active} ${t("status.active")}` : undefined} />
             <StatCard icon={Users} label={t("insights.metric.users")} value={stats?.totalUsers ?? "—"}
-              sub={stats ? `${stats.totalPatients} patients` : undefined} />
+              sub={stats ? `${stats.totalPatients} ${t("status.patients")}` : undefined} />
             <StatCard icon={Sparkles} label={t("admin.metric.newSignups")} value={stats?.newSignupsWeek ?? "—"}
               tone="success" />
             <StatCard icon={Clock} label={t("admin.metric.trialEnding")} value={stats?.trialEndingSoon ?? "—"}
