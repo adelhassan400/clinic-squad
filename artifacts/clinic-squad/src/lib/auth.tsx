@@ -1,4 +1,5 @@
-import { createContext, useContext, useState, useEffect, ReactNode } from "react";
+import { createContext, useContext, useEffect, useState, ReactNode } from "react";
+import { setAuthTokenGetter } from "@workspace/api-client-react";
 
 export interface AuthUser {
   id: string;
@@ -54,6 +55,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const parsed = JSON.parse(stored) as AuthState;
         if (parsed.user && parsed.clinic && parsed.token) {
           setState(parsed);
+          setAuthTokenGetter(() => parsed.token);
         }
       }
     } catch {
@@ -61,6 +63,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
     setIsLoading(false);
   }, []);
+
+  useEffect(() => {
+    setAuthTokenGetter(() => state.token);
+  }, [state.token]);
 
   const login = (user: AuthUser, clinic: AuthClinic, token: string) => {
     const newState = { user, clinic, token };
