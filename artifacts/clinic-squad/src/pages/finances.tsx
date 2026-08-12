@@ -20,7 +20,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Plus, TrendingUp, TrendingDown, Loader2 } from "lucide-material";
+import { Plus, TrendingUp, TrendingDown, Loader2 } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from "recharts";
 
 const financeSchema = z.object({
