@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import { useAuth } from "@/lib/auth";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
+import { useLang } from "@/lib/lang";
 import {
   useGetDashboardSummary, useGetFinanceSummary, useListAppointments,
   getGetDashboardSummaryQueryKey, getGetFinanceSummaryQueryKey, getListAppointmentsQueryKey,
@@ -19,23 +20,6 @@ import {
 } from "lucide-react";
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
-
-// ─── Helpers ───────────────────────────────────────────────────────────────
-
-const MONTH_NAMES = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
-const DAY_NAMES = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
-
-const STATUS_COLORS: Record<string, string> = {
-  scheduled: "#6366f1",
-  completed:  "#22c55e",
-  cancelled:  "#ef4444",
-  no_show:    "#f97316",
-};
-
-function fmt(n: number) {
-  if (n >= 1000) return (n / 1000).toFixed(1) + "k";
-  return String(n);
-}
 
 // ─── Metric Card ───────────────────────────────────────────────────────────
 
@@ -77,27 +61,6 @@ function MetricCard({ label, value, sub, icon: Icon, color, loading, trend }: Me
   );
 }
 
-// ─── Custom Tooltip ────────────────────────────────────────────────────────
-
-function ChartTooltip({ active, payload, label, suffix = "" }: {
-  active?: boolean; payload?: Array<{ name: string; value: number; color: string }>;
-  label?: string; suffix?: string;
-}) {
-  if (!active || !payload?.length) return null;
-  return (
-    <div className="rounded-lg border border-border bg-popover shadow-lg px-3 py-2 text-sm">
-      <p className="font-semibold text-foreground mb-1">{label}</p>
-      {payload.map((p) => (
-        <p key={p.name} className="flex items-center gap-2 text-xs">
-          <span className="w-2 h-2 rounded-full shrink-0" style={{ background: p.color }} />
-          <span className="text-muted-foreground capitalize">{p.name}:</span>
-          <span className="font-semibold text-foreground">{p.value.toLocaleString()}{suffix}</span>
-        </p>
-      ))}
-    </div>
-  );
-}
-
 // ─── Section Shell ─────────────────────────────────────────────────────────
 
 function Section({ title, sub, children }: { title: string; sub?: React.ReactNode; children: React.ReactNode }) {
@@ -115,6 +78,7 @@ function Section({ title, sub, children }: { title: string; sub?: React.ReactNod
 // ─── Main Page ─────────────────────────────────────────────────────────────
 
 export default function InsightsPage() {
+  const { t, lang } = useLang();
   const { symbol: currencySymbol } = useCurrency();
   const { clinic } = useAuth();
   const clinicId = clinic?.id ?? "";
@@ -122,6 +86,30 @@ export default function InsightsPage() {
   const now = new Date();
   const currentYear = now.getFullYear();
   const [selectedYear, setSelectedYear] = useState(currentYear);
+
+  const MONTH_NAMES = useMemo(() => {
+    return lang === "ar" 
+      ? ["يناير", "فبراير", "مارس", "أبريل", "مايو", "يونيو", "يوليو", "أغسطس", "سبتمبر", "أكتوبر", "نوفمبر", "ديسمبر"]
+      : ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+  }, [lang]);
+
+  const DAY_NAMES = useMemo(() => {
+    return lang === "ar"
+      ? ["الأحد", "الاثنين", "الثلاثاء", "الأربعاء", "الخميس", "الجمعة", "السبت"]
+      : ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+  }, [lang]);
+
+  const STATUS_COLORS: Record<string, string> = {
+    scheduled: "#6366f1",
+    completed:  "#22c55e",
+    cancelled:  "#ef4444",
+    no_show:    "#f97316",
+  };
+
+  function fmt(n: number) {
+    if (n >= 1000) return (n / 1000).toFixed(1) + "k";
+    return String(n);
+  }
 
   // ── Data fetching (premium-gated) ──
   const { data: summary, isLoading: summaryLoading } = useGetDashboardSummary(clinicId, {
@@ -134,7 +122,6 @@ export default function InsightsPage() {
     { query: { enabled: !!clinicId && isPremium, queryKey: getGetFinanceSummaryQueryKey(clinicId, { year: selectedYear }) } }
   );
 
-  // Fetch all appointments (high limit) to compute busy-day and status charts
   const { data: allAppts, isLoading: apptsLoading } = useListAppointments(
     clinicId,
     { limit: 1000 } as Parameters<typeof useListAppointments>[1],
@@ -157,7 +144,7 @@ export default function InsightsPage() {
         return { date, day: d.getDate(), dayName: DAY_NAMES[d.getDay()], count };
       })
       .sort((a, b) => a.day - b.day);
-  }, [allAppts, currentYear, now]);
+  }, [allAppts, currentYear, now, DAY_NAMES]);
 
   const busiestDay = useMemo(() => {
     if (!busyDayData.length) return null;
@@ -172,11 +159,11 @@ export default function InsightsPage() {
       counts[a.status] = (counts[a.status] ?? 0) + 1;
     }
     return Object.entries(counts).map(([status, count]) => ({
-      name: status.replace("_", " "),
+      name: t(`status.${status.replace("_", "")}`) || status.replace("_", " "),
       value: count,
       color: STATUS_COLORS[status] ?? "#94a3b8",
     }));
-  }, [allAppts]);
+  }, [allAppts, t]);
 
   // ── Derived: weekday distribution (Sun–Sat) ──
   const weekdayData = useMemo(() => {
@@ -189,7 +176,7 @@ export default function InsightsPage() {
       }
     }
     return DAY_NAMES.map((d, i) => ({ day: d, count: counts[i] }));
-  }, [allAppts]);
+  }, [allAppts, DAY_NAMES]);
 
   const busiestWeekday = useMemo(() => {
     if (!weekdayData.length) return null;
@@ -205,7 +192,7 @@ export default function InsightsPage() {
       expense: m.expense,
       profit: m.income - m.expense,
     }));
-  }, [financeSummary]);
+  }, [financeSummary, MONTH_NAMES]);
 
   // ── Derived: completion rate ──
   const completionRate = useMemo(() => {
@@ -217,7 +204,7 @@ export default function InsightsPage() {
 
   const totalAppts = allAppts?.data.length ?? 0;
 
-  // Premium lock screen — placed after all hooks to respect rules of hooks
+  // Premium lock screen
   if (!isPremium) {
     return (
       <ProtectedRoute requireRole={["admin", "superadmin"]}>
@@ -225,20 +212,20 @@ export default function InsightsPage() {
           <div className="p-6 max-w-4xl mx-auto">
             <h1 className="text-2xl font-bold mb-2 flex items-center gap-2">
               <BarChart2 className="w-6 h-6 text-primary" />
-              Insights
+              {t("insights.title")}
             </h1>
             <div className="mt-8 rounded-2xl border border-border bg-card p-12 text-center">
               <div className="w-16 h-16 bg-accent/10 rounded-full flex items-center justify-center mx-auto mb-4">
                 <Lock className="w-8 h-8 text-accent" />
               </div>
-              <h2 className="text-xl font-bold mb-2">Premium Feature</h2>
+              <h2 className="text-xl font-bold mb-2">{t("insights.premium.title")}</h2>
               <p className="text-muted-foreground mb-6 max-w-sm mx-auto text-sm">
-                Insights and advanced analytics are available on the Premium plan. Upgrade to unlock performance dashboards, busy-day trends, and revenue charts.
+                {t("insights.premium.desc")}
               </p>
               <Link href="/subscription">
                 <Button>
                   <Crown className="w-4 h-4 mr-2" />
-                  Upgrade to Premium
+                  {t("insights.premium.upgrade")}
                 </Button>
               </Link>
             </div>
@@ -258,10 +245,10 @@ export default function InsightsPage() {
             <div>
               <h1 className="text-2xl font-bold flex items-center gap-2">
                 <BarChart2 className="w-6 h-6 text-primary" />
-                Insights
+                {t("insights.title")}
               </h1>
               <p className="text-sm text-muted-foreground mt-0.5">
-                Performance overview for {clinic?.name}
+                {t("insights.subtitle")}
               </p>
             </div>
           </div>
@@ -269,35 +256,35 @@ export default function InsightsPage() {
           {/* ── Metric Cards ── */}
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
             <MetricCard
-              label="Total Patients"
+              label={t("insights.metric.patients")}
               value={fmt(summary?.totalPatients ?? 0)}
-              sub={`+${summary?.newPatientsThisMonth ?? 0} this month`}
+              sub={`+${summary?.newPatientsThisMonth ?? 0} ${t("insights.metric.newPatients")}`}
               icon={Users}
               color="bg-blue-500"
               loading={summaryLoading}
               trend="up"
             />
             <MetricCard
-              label="Completion Rate"
+              label={t("insights.metric.completion")}
               value={`${completionRate}%`}
-              sub={`${allAppts?.data.filter(a => a.status === "completed").length ?? 0} of ${totalAppts} completed`}
+              sub={`${allAppts?.data.filter(a => a.status === "completed").length ?? 0} ${t("insights.metric.completedOf")} ${totalAppts}`}
               icon={CheckCircle}
               color="bg-green-500"
               loading={apptsLoading}
               trend={completionRate >= 70 ? "up" : "down"}
             />
             <MetricCard
-              label="Monthly Revenue"
+              label={t("insights.metric.revenue")}
               value={`${fmt(summary?.monthlyRevenue ?? 0)} ${currencySymbol}`}
-              sub={`${fmt(summary?.monthlyExpenses ?? 0)} ${currencySymbol} expenses`}
+              sub={`${fmt(summary?.monthlyExpenses ?? 0)} ${currencySymbol} ${t("insights.metric.expenses")}`}
               icon={DollarSign}
               color="bg-primary"
               loading={summaryLoading}
             />
             <MetricCard
-              label="Upcoming"
+              label={t("insights.metric.upcoming")}
               value={summary?.upcomingAppointments ?? 0}
-              sub={`${summary?.todayAppointments ?? 0} today`}
+              sub={`${summary?.todayAppointments ?? 0} ${t("insights.metric.today")}`}
               icon={Calendar}
               color="bg-orange-500"
               loading={summaryLoading}
@@ -313,11 +300,11 @@ export default function InsightsPage() {
                     <Flame className="w-5 h-5 text-orange-500" />
                   </div>
                   <div>
-                    <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider">Busiest Day This Month</p>
+                    <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider">{t("insights.busiest.dayTitle")}</p>
                     <p className="text-lg font-bold mt-0.5">
                       {busiestDay.dayName} {MONTH_NAMES[now.getMonth()]} {busiestDay.day}
                     </p>
-                    <p className="text-xs text-muted-foreground">{busiestDay.count} appointment{busiestDay.count !== 1 ? "s" : ""} — peak load</p>
+                    <p className="text-xs text-muted-foreground">{busiestDay.count} {t("sidebar.appointments")} — {t("insights.busiest.dayPeak")}</p>
                   </div>
                 </div>
               )}
@@ -327,239 +314,79 @@ export default function InsightsPage() {
                     <Star className="w-5 h-5 text-primary" />
                   </div>
                   <div>
-                    <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider">Busiest Weekday (All Time)</p>
+                    <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider">{t("insights.busiest.weekdayTitle")}</p>
                     <p className="text-lg font-bold mt-0.5">{busiestWeekday.day}s</p>
-                    <p className="text-xs text-muted-foreground">{busiestWeekday.count} appointment{busiestWeekday.count !== 1 ? "s" : ""} historically</p>
+                    <p className="text-xs text-muted-foreground">{busiestWeekday.count} {t("sidebar.appointments")} — {t("insights.busiest.weekdayHist")}</p>
                   </div>
                 </div>
               )}
             </div>
           )}
 
-          {/* ── Top row charts ── */}
+          {/* ── Charts ── */}
           <div className="grid lg:grid-cols-3 gap-6">
-
-            {/* Busy Days Bar Chart */}
             <div className="lg:col-span-2">
               <Section
-                title={`Appointments by Day — ${MONTH_NAMES[now.getMonth()]} ${currentYear}`}
-                sub="Number of appointments per calendar day this month"
+                title={`${t("insights.chart.appointmentsTitle")} — ${MONTH_NAMES[now.getMonth()]} ${currentYear}`}
+                sub={t("insights.chart.appointmentsSub")}
               >
-                {apptsLoading ? (
-                  <Skeleton className="h-48 w-full" />
-                ) : busyDayData.length === 0 ? (
-                  <div className="h-48 flex flex-col items-center justify-center text-muted-foreground gap-2">
-                    <Activity className="w-8 h-8 opacity-30" />
-                    <p className="text-sm">No appointments this month yet</p>
-                  </div>
-                ) : (
-                  <ResponsiveContainer width="100%" height={200}>
-                    <BarChart data={busyDayData} barCategoryGap="30%">
-                      <CartesianGrid vertical={false} strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                      <XAxis
-                        dataKey="day"
-                        tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }}
-                        axisLine={false}
-                        tickLine={false}
-                      />
-                      <YAxis
-                        allowDecimals={false}
-                        tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }}
-                        axisLine={false}
-                        tickLine={false}
-                        width={24}
-                      />
-                      <Tooltip content={<ChartTooltip suffix=" appts" />} cursor={{ fill: "hsl(var(--muted))" }} />
-                      <Bar dataKey="count" name="appointments" radius={[4, 4, 0, 0]}>
-                        {busyDayData.map((entry) => (
-                          <Cell
-                            key={entry.date}
-                            fill={entry.date === busiestDay?.date ? "#f97316" : "hsl(var(--primary))"}
-                          />
-                        ))}
-                      </Bar>
+                <div className="h-[300px] w-full mt-4">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={busyDayData}>
+                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
+                      <XAxis dataKey="day" axisLine={false} tickLine={false} tick={{ fontSize: 12 }} />
+                      <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12 }} />
+                      <Tooltip />
+                      <Bar dataKey="count" fill="#6366f1" radius={[4, 4, 0, 0]} />
                     </BarChart>
                   </ResponsiveContainer>
-                )}
+                </div>
               </Section>
             </div>
 
-            {/* Status Donut */}
-            <Section title="Appointment Status" sub="All-time breakdown">
-              {apptsLoading ? (
-                <Skeleton className="h-48 w-full" />
-              ) : statusData.length === 0 ? (
-                <div className="h-48 flex flex-col items-center justify-center text-muted-foreground gap-2">
-                  <Activity className="w-8 h-8 opacity-30" />
-                  <p className="text-sm">No data yet</p>
-                </div>
-              ) : (
-                <ResponsiveContainer width="100%" height={200}>
+            <Section
+              title={t("insights.chart.statusTitle")}
+              sub={t("insights.chart.statusSub")}
+            >
+              <div className="h-[300px] w-full mt-4">
+                <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
                     <Pie
                       data={statusData}
-                      cx="50%"
-                      cy="45%"
-                      innerRadius={55}
+                      innerRadius={60}
                       outerRadius={80}
-                      paddingAngle={3}
+                      paddingAngle={5}
                       dataKey="value"
                     >
-                      {statusData.map((entry, i) => (
-                        <Cell key={i} fill={entry.color} />
+                      {statusData.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={entry.color} />
                       ))}
                     </Pie>
-                    <Tooltip
-                      formatter={(v: number, name: string) => [`${v} appointments`, name]}
-                      contentStyle={{
-                        background: "hsl(var(--popover))",
-                        border: "1px solid hsl(var(--border))",
-                        borderRadius: 8,
-                        fontSize: 12,
-                      }}
-                    />
-                    <Legend
-                      iconType="circle"
-                      iconSize={8}
-                      formatter={(v) => <span style={{ fontSize: 11, color: "hsl(var(--muted-foreground))" }}>{v}</span>}
-                    />
+                    <Tooltip />
+                    <Legend />
                   </PieChart>
                 </ResponsiveContainer>
-              )}
+              </div>
             </Section>
           </div>
 
-          {/* ── Weekday Distribution ── */}
           <Section
-            title="Appointments by Day of Week"
-            sub="Which weekdays attract the most patients (all time)"
+            title={t("insights.chart.revenueTitle")}
+            sub={t("insights.chart.revenueSub")}
           >
-            {apptsLoading ? (
-              <Skeleton className="h-40 w-full" />
-            ) : (
-              <ResponsiveContainer width="100%" height={160}>
-                <BarChart data={weekdayData} barCategoryGap="35%">
-                  <CartesianGrid vertical={false} strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                  <XAxis
-                    dataKey="day"
-                    tick={{ fontSize: 12, fill: "hsl(var(--muted-foreground))" }}
-                    axisLine={false}
-                    tickLine={false}
-                  />
-                  <YAxis
-                    allowDecimals={false}
-                    tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }}
-                    axisLine={false}
-                    tickLine={false}
-                    width={24}
-                  />
-                  <Tooltip content={<ChartTooltip suffix=" appts" />} cursor={{ fill: "hsl(var(--muted))" }} />
-                  <Bar dataKey="count" name="appointments" radius={[4, 4, 0, 0]}>
-                    {weekdayData.map((entry) => (
-                      <Cell
-                        key={entry.day}
-                        fill={entry.day === busiestWeekday?.day ? "#6366f1" : "hsl(var(--primary) / 0.6)"}
-                      />
-                    ))}
-                  </Bar>
-                </BarChart>
+            <div className="h-[300px] w-full mt-4">
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={monthlyData}>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
+                  <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{ fontSize: 12 }} />
+                  <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12 }} />
+                  <Tooltip />
+                  <Area type="monotone" dataKey="income" stroke="#6366f1" fill="#6366f1" fillOpacity={0.1} />
+                  <Area type="monotone" dataKey="expense" stroke="#ef4444" fill="#ef4444" fillOpacity={0.1} />
+                </AreaChart>
               </ResponsiveContainer>
-            )}
+            </div>
           </Section>
-
-          {/* ── Monthly Revenue Chart ── */}
-          <Section
-            title="Monthly Revenue vs Expenses"
-            sub={
-              <span className="flex items-center gap-3">
-                <span>Year:</span>
-                <select
-                  value={selectedYear}
-                  onChange={e => setSelectedYear(Number(e.target.value))}
-                  className="text-xs bg-transparent border border-border rounded px-1.5 py-0.5 text-foreground cursor-pointer"
-                >
-                  {[currentYear - 1, currentYear].map(y => (
-                    <option key={y} value={y}>{y}</option>
-                  ))}
-                </select>
-              </span>
-            }
-          >
-            {financeLoading ? (
-              <Skeleton className="h-52 w-full" />
-            ) : monthlyData.length === 0 ? (
-              <div className="h-52 flex flex-col items-center justify-center text-muted-foreground gap-2">
-                <TrendingUp className="w-8 h-8 opacity-30" />
-                <p className="text-sm">No financial data for {selectedYear}</p>
-              </div>
-            ) : (
-              <>
-                {/* Summary row */}
-                <div className="grid grid-cols-3 gap-4 mb-5">
-                  {[
-                    { label: "Total Income", value: financeSummary?.totalIncome ?? 0, color: "text-green-500" },
-                    { label: "Total Expenses", value: financeSummary?.totalExpense ?? 0, color: "text-destructive" },
-                    { label: "Net Profit", value: financeSummary?.netProfit ?? 0, color: (financeSummary?.netProfit ?? 0) >= 0 ? "text-green-500" : "text-destructive" },
-                  ].map(({ label, value, color }) => (
-                    <div key={label} className="text-center p-3 rounded-lg bg-muted/30">
-                      <p className="text-xs text-muted-foreground">{label}</p>
-                      <p className={cn("text-lg font-bold tabular-nums mt-0.5", color)}>
-                        {value.toLocaleString()} {currencySymbol}
-                      </p>
-                    </div>
-                  ))}
-                </div>
-                <ResponsiveContainer width="100%" height={220}>
-                  <AreaChart data={monthlyData} margin={{ top: 4, right: 4, left: 0, bottom: 0 }}>
-                    <defs>
-                      <linearGradient id="incomeGrad" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="#22c55e" stopOpacity={0.3} />
-                        <stop offset="95%" stopColor="#22c55e" stopOpacity={0} />
-                      </linearGradient>
-                      <linearGradient id="expenseGrad" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="#ef4444" stopOpacity={0.25} />
-                        <stop offset="95%" stopColor="#ef4444" stopOpacity={0} />
-                      </linearGradient>
-                    </defs>
-                    <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                    <XAxis
-                      dataKey="month"
-                      tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }}
-                      axisLine={false}
-                      tickLine={false}
-                    />
-                    <YAxis
-                      tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }}
-                      axisLine={false}
-                      tickLine={false}
-                      width={50}
-                      tickFormatter={v => `${(v / 1000).toFixed(0)}k`}
-                    />
-                    <Tooltip content={<ChartTooltip suffix={` ${currencySymbol}`} />} />
-                    <Area
-                      type="monotone"
-                      dataKey="income"
-                      name="Income"
-                      stroke="#22c55e"
-                      strokeWidth={2}
-                      fill="url(#incomeGrad)"
-                      dot={false}
-                    />
-                    <Area
-                      type="monotone"
-                      dataKey="expense"
-                      name="Expense"
-                      stroke="#ef4444"
-                      strokeWidth={2}
-                      fill="url(#expenseGrad)"
-                      dot={false}
-                    />
-                  </AreaChart>
-                </ResponsiveContainer>
-              </>
-            )}
-          </Section>
-
         </div>
       </DashboardLayout>
     </ProtectedRoute>

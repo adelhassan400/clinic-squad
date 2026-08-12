@@ -402,28 +402,32 @@ export default function TeamPage() {
               {overview?.members.map((m) => (
                 <li
                   key={m.id}
-                  className="px-5 py-4 flex items-center gap-3"
+                  className="px-5 py-4 flex items-center gap-4"
                   data-testid={`member-${m.id}`}
                 >
-                  <div className="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center text-primary text-sm font-bold">
-                    {m.name.charAt(0).toUpperCase()}
+                  <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold shrink-0">
+                    {m.name.charAt(0)}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <span className="font-medium">{m.name}</span>
-                      <Badge variant="secondary" className="text-xs">
+                    <div className="flex items-center gap-2">
+                      <span className="font-medium truncate">{m.name}</span>
+                      <Badge variant="outline" className="text-xs capitalize">
                         {t(`team.role.${m.role}`)}
                       </Badge>
-                      {m.isOwner && (
-                        <Badge className="bg-accent/20 text-accent-foreground text-xs">
-                          <Crown className="w-3 h-3 me-1" />
-                          {t("team.owner")}
+                      {m.id === user.id && (
+                        <Badge className="bg-primary/20 text-primary hover:bg-primary/20 border-none text-[10px]">
+                          {t("team.role.you")}
                         </Badge>
                       )}
+                      {m.role === "admin" && (
+                        <span className="text-[10px] text-muted-foreground flex items-center gap-1">
+                          <Crown className="w-3 h-3" /> {t("team.role.owner")}
+                        </span>
+                      )}
                     </div>
-                    <p className="text-sm text-muted-foreground mt-0.5 truncate">{m.email}</p>
+                    <p className="text-sm text-muted-foreground truncate">{m.email}</p>
                   </div>
-                  {!m.isOwner && m.id !== user.id && (
+                  {m.id !== user.id && m.role !== "admin" && (
                     <Button
                       variant="ghost"
                       size="sm"
@@ -431,7 +435,7 @@ export default function TeamPage() {
                       disabled={removeMut.isPending}
                       data-testid={`button-remove-${m.id}`}
                     >
-                      <Trash2 className="w-3.5 h-3.5 text-destructive" />
+                      <Trash2 className="w-4 h-4 text-destructive" />
                     </Button>
                   )}
                 </li>
