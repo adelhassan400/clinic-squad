@@ -10,7 +10,6 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
-  Crown,
   Shield,
   Stethoscope,
   KeyRound,
@@ -296,39 +295,7 @@ export default function SettingsPage() {
               </div>
             )}
 
-            {/* Clinic Info */}
-            {user?.role !== "superadmin" && (
-              <div className="rounded-xl border border-border bg-card p-6">
-                <h2 className="font-semibold mb-4">{t("settings.info.title")}</h2>
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between py-2 border-b border-border">
-                    <span className="text-sm text-muted-foreground">{t("settings.info.name")}</span>
-                    <span className="text-sm font-medium">{clinic?.name}</span>
-                  </div>
-                  <div className="flex items-center justify-between py-2 border-b border-border">
-                    <span className="text-sm text-muted-foreground">{t("settings.info.status")}</span>
-                    <Badge className="capitalize text-xs">{clinic?.status}</Badge>
-                  </div>
-                  <div className="flex items-center justify-between py-2 border-b border-border">
-                    <span className="text-sm text-muted-foreground">{t("settings.info.sub")}</span>
-                    <div className="flex items-center gap-2">
-                      {clinic?.subscriptionStatus === "premium" && <Crown className="w-3.5 h-3.5 text-accent" />}
-                      <Badge className="capitalize text-xs">{clinic?.subscriptionStatus}</Badge>
-                    </div>
-                  </div>
-                  {clinic?.subscriptionStatus === "trial" && (
-                    <div className="flex items-center justify-between py-2 border-b border-border">
-                      <span className="text-sm text-muted-foreground">{t("settings.info.trialEnds")}</span>
-                      <span className="text-sm font-medium">{formatDate(clinic.trialEndDate)} ({trialDaysLeft} {t("common.days")} {t("dash.stats.daysLeft")})</span>
-                    </div>
-                  )}
-                  <div className="flex items-center justify-between py-2">
-                    <span className="text-sm text-muted-foreground">{t("settings.info.registered")}</span>
-                    <span className="text-sm font-medium">{formatDate(clinic?.createdAt ?? "")}</span>
-                  </div>
-                </div>
-              </div>
-            )}
+
 
             {/* Password */}
             <div className="rounded-xl border border-border bg-card p-6">

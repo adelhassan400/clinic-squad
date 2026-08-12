@@ -47,6 +47,7 @@ export function DashboardLayout({ children }: Props) {
               { href: "/prescriptions", labelKey: "sidebar.prescriptions", icon: Pill },
               { href: "/insights", labelKey: "sidebar.insights", icon: BarChart2 },
               { href: "/finances", labelKey: "sidebar.finances", icon: TrendingUp },
+              { href: "/subscription", labelKey: "sidebar.subscription", icon: Crown },
             ]
           : []),
         { href: "/settings", labelKey: "sidebar.settings", icon: Settings },

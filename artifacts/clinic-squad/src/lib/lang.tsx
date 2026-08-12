@@ -116,6 +116,8 @@ const translations: Record<string, Record<Lang, string>> = {
   "sidebar.admin": { en: "Admin Panel", ar: "لوحة الإدارة" },
   "sidebar.team": { en: "Team", ar: "الفريق" },
   "sidebar.prescriptions": { en: "ePrescription", ar: "الوصفة الإلكترونية" },
+  "sidebar.subscription": { en: "Subscription", ar: "الاشتراك" },
+  "sidebar.secure.title": { en: "Secure Access", ar: "الوصول الآمن" },
   "sidebar.signOut": { en: "Sign Out", ar: "تسجيل الخروج" },
 
   // Common
