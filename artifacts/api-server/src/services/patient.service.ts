@@ -91,10 +91,27 @@ export class PatientService {
   }
 
   static async updatePatient(clinicId: string, patientId: string, updates: any) {
-    await db
-      .update(patientsTable)
-      .set(updates)
-      .where(and(eq(patientsTable.id, patientId), eq(patientsTable.clinicId, clinicId)));
+    const dbUpdates: Record<string, any> = {};
+    
+    // Explicitly handle fields that might be null/undefined
+    const fields = [
+      'name', 'phone', 'age', 'dateOfBirth', 'bloodType', 
+      'allergies', 'notes', 'visitType', 'status', 
+      'diagnosis', 'clinicalNotes', 'chronicConditions'
+    ];
+
+    for (const field of fields) {
+      if (updates[field] !== undefined) {
+        dbUpdates[field] = updates[field] ?? null;
+      }
+    }
+
+    if (Object.keys(dbUpdates).length > 0) {
+      await db
+        .update(patientsTable)
+        .set(dbUpdates)
+        .where(and(eq(patientsTable.id, patientId), eq(patientsTable.clinicId, clinicId)));
+    }
 
     return this.getPatient(clinicId, patientId);
   }
