@@ -95,7 +95,7 @@ export default function SettingsPage() {
   const [specialty, setSpecialty] = useState(user?.specialty ?? "");
   useEffect(() => { setSpecialty(user?.specialty ?? ""); }, [user?.specialty]);
   const updateProfile = useUpdateProfile();
-  const isDoctor = user?.role === "admin" || user?.role === "superadmin";
+  const isDoctor = user?.role === "admin";
 
   const [showPw, setShowPw] = useState(false);
   const changePassword = useChangePassword();
@@ -142,7 +142,7 @@ export default function SettingsPage() {
 
   // Clinic identity (name, phone, address) — editable by admin/superadmin only
   const updateClinicMutation = useUpdateClinic();
-  const isAdminOrOwner = user?.role === "admin" || user?.role === "superadmin";
+  const isAdminOrOwner = user?.role === "admin";
   const [clinicName, setClinicName] = useState(clinic?.name ?? "");
   const [clinicPhone, setClinicPhone] = useState(clinic?.phone ?? "");
   const [clinicAddress, setClinicAddress] = useState(clinic?.address ?? "");
@@ -297,36 +297,38 @@ export default function SettingsPage() {
             )}
 
             {/* Clinic Info */}
-            <div className="rounded-xl border border-border bg-card p-6">
-              <h2 className="font-semibold mb-4">{t("settings.info.title")}</h2>
-              <div className="space-y-3">
-                <div className="flex items-center justify-between py-2 border-b border-border">
-                  <span className="text-sm text-muted-foreground">{t("settings.info.name")}</span>
-                  <span className="text-sm font-medium">{clinic?.name}</span>
-                </div>
-                <div className="flex items-center justify-between py-2 border-b border-border">
-                  <span className="text-sm text-muted-foreground">{t("settings.info.status")}</span>
-                  <Badge className="capitalize text-xs">{clinic?.status}</Badge>
-                </div>
-                <div className="flex items-center justify-between py-2 border-b border-border">
-                  <span className="text-sm text-muted-foreground">{t("settings.info.sub")}</span>
-                  <div className="flex items-center gap-2">
-                    {clinic?.subscriptionStatus === "premium" && <Crown className="w-3.5 h-3.5 text-accent" />}
-                    <Badge className="capitalize text-xs">{clinic?.subscriptionStatus}</Badge>
-                  </div>
-                </div>
-                {clinic?.subscriptionStatus === "trial" && (
+            {user?.role !== "superadmin" && (
+              <div className="rounded-xl border border-border bg-card p-6">
+                <h2 className="font-semibold mb-4">{t("settings.info.title")}</h2>
+                <div className="space-y-3">
                   <div className="flex items-center justify-between py-2 border-b border-border">
-                    <span className="text-sm text-muted-foreground">{t("settings.info.trialEnds")}</span>
-                    <span className="text-sm font-medium">{formatDate(clinic.trialEndDate)} ({trialDaysLeft} {t("common.days")} {t("dash.stats.daysLeft")})</span>
+                    <span className="text-sm text-muted-foreground">{t("settings.info.name")}</span>
+                    <span className="text-sm font-medium">{clinic?.name}</span>
                   </div>
-                )}
-                <div className="flex items-center justify-between py-2">
-                  <span className="text-sm text-muted-foreground">{t("settings.info.registered")}</span>
-                  <span className="text-sm font-medium">{formatDate(clinic?.createdAt ?? "")}</span>
+                  <div className="flex items-center justify-between py-2 border-b border-border">
+                    <span className="text-sm text-muted-foreground">{t("settings.info.status")}</span>
+                    <Badge className="capitalize text-xs">{clinic?.status}</Badge>
+                  </div>
+                  <div className="flex items-center justify-between py-2 border-b border-border">
+                    <span className="text-sm text-muted-foreground">{t("settings.info.sub")}</span>
+                    <div className="flex items-center gap-2">
+                      {clinic?.subscriptionStatus === "premium" && <Crown className="w-3.5 h-3.5 text-accent" />}
+                      <Badge className="capitalize text-xs">{clinic?.subscriptionStatus}</Badge>
+                    </div>
+                  </div>
+                  {clinic?.subscriptionStatus === "trial" && (
+                    <div className="flex items-center justify-between py-2 border-b border-border">
+                      <span className="text-sm text-muted-foreground">{t("settings.info.trialEnds")}</span>
+                      <span className="text-sm font-medium">{formatDate(clinic.trialEndDate)} ({trialDaysLeft} {t("common.days")} {t("dash.stats.daysLeft")})</span>
+                    </div>
+                  )}
+                  <div className="flex items-center justify-between py-2">
+                    <span className="text-sm text-muted-foreground">{t("settings.info.registered")}</span>
+                    <span className="text-sm font-medium">{formatDate(clinic?.createdAt ?? "")}</span>
+                  </div>
                 </div>
               </div>
-            </div>
+            )}
 
             {/* Password */}
             <div className="rounded-xl border border-border bg-card p-6">

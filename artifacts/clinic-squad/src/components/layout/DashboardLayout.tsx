@@ -28,7 +28,7 @@ export function DashboardLayout({ children }: Props) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   const isSuperAdmin = user?.role === "superadmin";
-  const isAdmin = user?.role === "admin" || isSuperAdmin;
+  const isAdmin = user?.role === "admin";
 
   // Super admin gets a platform-only nav, no clinic-management pages
   const navItems = isSuperAdmin
