@@ -136,10 +136,14 @@ router.get("/subscriptions", async (req, res) => {
       id: subscriptionsTable.id,
       clinicId: subscriptionsTable.clinicId,
       planType: subscriptionsTable.planType,
+      billingPeriod: subscriptionsTable.billingPeriod,
+      durationMonths: subscriptionsTable.durationMonths,
       startDate: subscriptionsTable.startDate,
       endDate: subscriptionsTable.endDate,
       paymentStatus: subscriptionsTable.paymentStatus,
       amount: subscriptionsTable.amount,
+      paymentProof: subscriptionsTable.paymentProof,
+      transactionReference: subscriptionsTable.transactionReference,
       createdAt: subscriptionsTable.createdAt,
       clinicName: clinicsTable.name,
     })
@@ -154,10 +158,14 @@ router.get("/subscriptions", async (req, res) => {
     clinicId: r.clinicId,
     clinicName: r.clinicName ?? "(deleted)",
     planType: r.planType,
+    billingPeriod: r.billingPeriod,
+    durationMonths: r.durationMonths,
     startDate: r.startDate.toISOString(),
     endDate: r.endDate.toISOString(),
     paymentStatus: r.paymentStatus,
     amount: parseFloat(r.amount ?? "0"),
+    paymentProof: r.paymentProof ?? null,
+    transactionReference: r.transactionReference ?? null,
     createdAt: r.createdAt.toISOString(),
   })));
 });
@@ -307,17 +315,42 @@ router.post("/clinics/:clinicId/block", async (req, res) => {
 
 router.post("/subscriptions/:clinicId/confirm", async (req, res) => {
   const { clinicId } = req.params;
-  const sub = (await db.select().from(subscriptionsTable).where(eq(subscriptionsTable.clinicId, clinicId)).limit(1))[0];
+  const body = req.body as any;
+  const subscriptionId = body.subscriptionId;
+  const customMonths = body.durationMonths ? parseInt(body.durationMonths) : null;
+
+  let sub = subscriptionId
+    ? (await db.select().from(subscriptionsTable).where(eq(subscriptionsTable.id, subscriptionId)).limit(1))[0]
+    : (await db.select().from(subscriptionsTable).where(eq(subscriptionsTable.clinicId, clinicId)).orderBy(desc(subscriptionsTable.createdAt)).limit(1))[0];
+
   if (!sub) return res.status(404).json({ error: "Subscription not found" });
 
-  await db.update(subscriptionsTable).set({ paymentStatus: "confirmed" }).where(eq(subscriptionsTable.id, sub.id));
-  await db.update(clinicsTable).set({ subscriptionStatus: sub.planType as "basic" | "premium", status: "active" }).where(eq(clinicsTable.id, clinicId));
+  const months = customMonths || parseInt(sub.durationMonths) || 1;
+  const startDate = new Date();
+  const endDate = new Date();
+  endDate.setMonth(endDate.getMonth() + months);
+
+  await db.update(subscriptionsTable).set({
+    paymentStatus: "confirmed",
+    startDate,
+    endDate,
+    durationMonths: months.toString(),
+  }).where(eq(subscriptionsTable.id, sub.id));
+
+  await db.update(clinicsTable).set({
+    subscriptionStatus: sub.planType as "basic" | "premium",
+    status: "active",
+  }).where(eq(clinicsTable.id, clinicId));
 
   const updated = (await db.select().from(subscriptionsTable).where(eq(subscriptionsTable.id, sub.id)).limit(1))[0];
   return res.json({
-    id: updated.id, clinicId: updated.clinicId, planType: updated.planType,
-    startDate: updated.startDate.toISOString(), endDate: updated.endDate.toISOString(),
-    paymentStatus: updated.paymentStatus, amount: parseFloat(updated.amount ?? "0"),
+    id: updated.id,
+    clinicId: updated.clinicId,
+    planType: updated.planType,
+    startDate: updated.startDate.toISOString(),
+    endDate: updated.endDate.toISOString(),
+    paymentStatus: updated.paymentStatus,
+    amount: parseFloat(updated.amount ?? "0"),
     createdAt: updated.createdAt.toISOString(),
   });
 });

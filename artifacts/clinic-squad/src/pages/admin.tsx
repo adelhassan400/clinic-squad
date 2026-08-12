@@ -53,8 +53,10 @@ interface AdminStats {
 }
 interface AdminSubscription {
   id: string; clinicId: string; clinicName: string; planType: string;
+  billingPeriod?: string; durationMonths?: string;
   startDate: string; endDate: string; paymentStatus: string;
-  amount: number; createdAt: string;
+  amount: number; paymentProof?: string | null; transactionReference?: string | null;
+  createdAt: string;
 }
 
 // ---------- Tiny UI helpers ----------
@@ -176,11 +178,17 @@ export default function AdminPage() {
       onError: () => toast({ title: "Failed to block", variant: "destructive" }),
     });
   };
-  const handleConfirmPayment = (clinicId: string) =>
-    confirmMutation.mutate({ clinicId }, {
+  const [approvalDurations, setApprovalDurations] = useState<Record<string, number>>({});
+  const handleConfirmPayment = (clinicId: string, subscriptionId: string) => {
+    const months = approvalDurations[subscriptionId] || 1;
+    confirmMutation.mutate({
+      clinicId,
+      data: { subscriptionId, durationMonths: months } as any
+    }, {
       onSuccess: () => { toast({ title: "Payment confirmed & subscription activated" }); refetchAll(); },
       onError: () => toast({ title: "Failed to confirm payment", variant: "destructive" }),
     });
+  };
 
   const stats = statsQ.data;
   const subs = subsQ.data ?? [];
@@ -340,19 +348,45 @@ export default function AdminPage() {
               ) : (
                 <div className="divide-y divide-border">
                   {pendingSubs.map(s => (
-                    <div key={s.id} className="px-5 py-3 flex items-center gap-4 hover:bg-muted/20">
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium truncate">{s.clinicName}</p>
-                        <p className="text-xs text-muted-foreground">{s.planType} · {s.amount} {currencyCode}</p>
+                    <div key={s.id} className="px-5 py-4 space-y-3 hover:bg-muted/20">
+                      <div className="flex items-start justify-between gap-3">
+                        <div>
+                          <p className="text-sm font-bold">{s.clinicName}</p>
+                          <p className="text-xs text-muted-foreground capitalize">Plan: {s.planType} ({s.billingPeriod || "monthly"}) · Amount: <strong>{s.amount} {currencyCode}</strong></p>
+                          {s.transactionReference && (
+                            <p className="text-xs text-primary mt-1 font-mono">Ref: {s.transactionReference}</p>
+                          )}
+                          {s.paymentProof && (
+                            <p className="text-xs text-muted-foreground mt-0.5 truncate max-w-xs">Proof: {s.paymentProof}</p>
+                          )}
+                        </div>
+                        <span className="text-xs bg-yellow-500/10 text-yellow-600 px-2 py-0.5 rounded font-medium">Pending Verification</span>
                       </div>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => handleConfirmPayment(s.clinicId)}
-                        disabled={confirmMutation.isPending}
-                      >
-                        {t("admin.payments.confirm")}
-                      </Button>
+
+                      <div className="flex items-center gap-2 pt-2 border-t border-border/50">
+                        <div className="flex-1 flex items-center gap-2">
+                          <label className="text-xs text-muted-foreground shrink-0">Grant Duration:</label>
+                          <select
+                            className="flex h-8 rounded-md border border-input bg-background px-2 py-1 text-xs"
+                            value={approvalDurations[s.id] || parseInt(s.durationMonths || "1")}
+                            onChange={(e) => setApprovalDurations({ ...approvalDurations, [s.id]: Number(e.target.value) })}
+                          >
+                            <option value={1}>1 Month</option>
+                            <option value={3}>3 Months</option>
+                            <option value={6}>6 Months</option>
+                            <option value={12}>1 Year (12M)</option>
+                            <option value={24}>2 Years (24M)</option>
+                          </select>
+                        </div>
+                        <Button
+                          size="sm"
+                          onClick={() => handleConfirmPayment(s.clinicId, s.id)}
+                          disabled={confirmMutation.isPending}
+                        >
+                          {confirmMutation.isPending ? <Loader2 className="w-3 h-3 animate-spin mr-1" /> : <CheckCircle className="w-3 h-3 mr-1" />}
+                          Approve & Activate
+                        </Button>
+                      </div>
                     </div>
                   ))}
                 </div>

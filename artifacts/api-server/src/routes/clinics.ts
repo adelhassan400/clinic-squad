@@ -103,25 +103,31 @@ router.get("/:clinicId/subscription", async (req, res) => {
 
 router.post("/:clinicId/subscription", async (req, res) => {
   const { clinicId } = req.params;
-  const parsed = CreateSubscriptionBody.safeParse(req.body);
-  if (!parsed.success) return res.status(400).json({ error: "Invalid input", details: parsed.error.issues });
+  const body = req.body as any;
+  const planType = body.planType;
+  const billingPeriod = body.billingPeriod || "monthly";
+  const durationMonths = parseInt(body.durationMonths) || 1;
+  const amount = body.amount !== undefined ? parseFloat(body.amount) : (planType === "basic" ? 200 : 400) * durationMonths;
+  const paymentProof = body.paymentProof;
+  const transactionReference = body.transactionReference;
 
-  const { planType, paymentProof } = parsed.data;
-  const amount = planType === "basic" ? 200 : 400;
   const startDate = new Date();
   const endDate = new Date();
-  endDate.setFullYear(endDate.getFullYear() + 1);
+  endDate.setMonth(endDate.getMonth() + durationMonths);
 
   const subId = randomUUID();
   await db.insert(subscriptionsTable).values({
     id: subId,
     clinicId,
     planType,
+    billingPeriod,
+    durationMonths: durationMonths.toString(),
     startDate,
     endDate,
     paymentStatus: "pending",
     amount: amount.toString(),
     paymentProof: paymentProof ?? null,
+    transactionReference: transactionReference ?? null,
   });
 
   // Update clinic subscription plan
@@ -132,6 +138,8 @@ router.post("/:clinicId/subscription", async (req, res) => {
     id: sub.id,
     clinicId: sub.clinicId,
     planType: sub.planType,
+    billingPeriod: sub.billingPeriod,
+    durationMonths: sub.durationMonths,
     startDate: sub.startDate.toISOString(),
     endDate: sub.endDate.toISOString(),
     paymentStatus: sub.paymentStatus,

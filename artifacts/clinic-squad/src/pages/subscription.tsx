@@ -13,16 +13,16 @@ const plans = [
   {
     id: "basic" as const,
     name: "Basic Plan",
-    price: 200,
-    period: "EGP / month",
+    monthlyPrice: 200,
+    annualPrice: 2000,
     desc: "For small clinics getting started",
     features: ["Up to 500 patients", "Appointment scheduling", "Patient records", "Staff accounts (2)", "Email support", "Basic reporting"],
   },
   {
     id: "premium" as const,
     name: "Premium Plan",
-    price: 400,
-    period: "EGP / month",
+    monthlyPrice: 400,
+    annualPrice: 4000,
     desc: "Full-featured for growing clinics",
     features: ["Unlimited patients", "Advanced scheduling", "Financial dashboard", "Analytics & reports", "Unlimited staff", "Priority support", "AI-ready modules (soon)"],
     highlighted: true,
@@ -34,14 +34,35 @@ export default function SubscriptionPage() {
   const { toast } = useToast();
   const qc = useQueryClient();
   const [selected, setSelected] = useState<"basic" | "premium" | null>(null);
+  const [billingPeriod, setBillingPeriod] = useState<"monthly" | "annual">("monthly");
+  const [durationMonths, setDurationMonths] = useState<number>(1);
+  const [transactionRef, setTransactionRef] = useState("");
+  const [paymentProof, setPaymentProof] = useState("");
   const [submitted, setSubmitted] = useState(false);
 
   const clinicId = clinic?.id ?? "";
   const createMutation = useCreateSubscription();
 
+  const currentPlanObj = plans.find(p => p.id === selected);
+  const calculatedAmount = currentPlanObj
+    ? billingPeriod === "annual"
+      ? currentPlanObj.annualPrice * (durationMonths / 12)
+      : currentPlanObj.monthlyPrice * durationMonths
+    : 0;
+
   const handleChoose = (plan: "basic" | "premium") => {
     setSelected(plan);
-    createMutation.mutate({ clinicId, data: { planType: plan } }, {
+    createMutation.mutate({
+      clinicId,
+      data: {
+        planType: plan,
+        billingPeriod,
+        durationMonths: durationMonths.toString(),
+        amount: calculatedAmount.toString(),
+        transactionReference: transactionRef.trim() || undefined,
+        paymentProof: paymentProof.trim() || undefined,
+      } as any
+    }, {
       onSuccess: () => {
         setSubmitted(true);
         qc.invalidateQueries({ queryKey: getGetSubscriptionQueryKey(clinicId) });
@@ -49,7 +70,7 @@ export default function SubscriptionPage() {
         if (clinic) {
           updateClinic({ ...clinic, subscriptionPlan: plan });
         }
-        toast({ title: "Subscription request submitted!", description: "Our team will confirm your payment within 24 hours." });
+        toast({ title: "Subscription request submitted!", description: "Our team will verify your payment shortly." });
       },
       onError: () => toast({ title: "Failed to submit", variant: "destructive" }),
     });
@@ -128,15 +149,80 @@ export default function SubscriptionPage() {
         </div>
 
         {selected && (
-          <div className="max-w-3xl mx-auto">
-            <div className="bg-card border border-border rounded-xl p-6 mb-6">
-              <h3 className="font-semibold mb-2">Payment Instructions</h3>
+          <div className="max-w-3xl mx-auto space-y-6">
+            {/* Billing period & duration */}
+            <div className="bg-card border border-border rounded-xl p-6">
+              <h3 className="font-semibold mb-4">Billing Period & Duration</h3>
+              <div className="grid sm:grid-cols-2 gap-4 mb-4">
+                <div>
+                  <label className="text-xs text-muted-foreground mb-1 block">Billing Frequency</label>
+                  <div className="flex gap-2">
+                    <Button
+                      type="button"
+                      variant={billingPeriod === "monthly" ? "default" : "outline"}
+                      className="flex-1"
+                      onClick={() => { setBillingPeriod("monthly"); setDurationMonths(1); }}
+                    >
+                      Monthly
+                    </Button>
+                    <Button
+                      type="button"
+                      variant={billingPeriod === "annual" ? "default" : "outline"}
+                      className="flex-1"
+                      onClick={() => { setBillingPeriod("annual"); setDurationMonths(12); }}
+                    >
+                      Annual (Save 15%)
+                    </Button>
+                  </div>
+                </div>
+                <div>
+                  <label className="text-xs text-muted-foreground mb-1 block">Duration (Months)</label>
+                  <select
+                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                    value={durationMonths}
+                    onChange={(e) => setDurationMonths(Number(e.target.value))}
+                  >
+                    <option value={1}>1 Month</option>
+                    <option value={3}>3 Months</option>
+                    <option value={6}>6 Months</option>
+                    <option value={12}>1 Year (12 Months)</option>
+                    <option value={24}>2 Years (24 Months)</option>
+                  </select>
+                </div>
+              </div>
+              <div className="flex items-center justify-between p-4 bg-muted/40 rounded-lg">
+                <span className="text-sm font-medium">Total Amount Due:</span>
+                <span className="text-2xl font-bold text-primary">{calculatedAmount} EGP</span>
+              </div>
+            </div>
+
+            {/* Payment & Receipt upload */}
+            <div className="bg-card border border-border rounded-xl p-6">
+              <h3 className="font-semibold mb-2">Payment Instructions & Proof</h3>
               <p className="text-sm text-muted-foreground mb-4">
-                Payment is confirmed manually. After clicking "Subscribe", you'll be directed to WhatsApp to send payment proof to our team.
+                Transfer the exact amount to Vodafone Cash: <strong>01000000000</strong> or InstaPay handle: <strong>clinicsquad@instapay</strong>. Then enter your transaction reference and attach your payment receipt screenshot below.
               </p>
-              <div className="flex items-center gap-3 p-3 bg-muted rounded-lg text-sm">
-                <Shield className="w-5 h-5 text-primary shrink-0" />
-                <span>Vodafone Cash: <strong>01000000000</strong> — Amount: <strong>{selected === "premium" ? "400" : "200"} EGP</strong></span>
+              <div className="space-y-4">
+                <div>
+                  <label className="text-xs font-medium mb-1.5 block">Transaction Reference / Receipt Notes</label>
+                  <input
+                    type="text"
+                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                    placeholder="e.g. Transfer ID #987654321"
+                    value={transactionRef}
+                    onChange={(e) => setTransactionRef(e.target.value)}
+                  />
+                </div>
+                <div>
+                  <label className="text-xs font-medium mb-1.5 block">Receipt Screenshot URL or Filename</label>
+                  <input
+                    type="text"
+                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                    placeholder="Paste receipt image URL or description"
+                    value={paymentProof}
+                    onChange={(e) => setPaymentProof(e.target.value)}
+                  />
+                </div>
               </div>
             </div>
 
@@ -149,16 +235,16 @@ export default function SubscriptionPage() {
                 data-testid="button-subscribe"
               >
                 {createMutation.isPending ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Crown className="w-4 h-4 mr-2" />}
-                Subscribe to {selected === "premium" ? "Premium" : "Basic"}
+                Submit Payment for {selected === "premium" ? "Premium" : "Basic"}
               </Button>
               <a
-                href={`https://wa.me/201000000000?text=I%20want%20to%20subscribe%20to%20the%20${selected === "premium" ? "Premium" : "Basic"}%20Plan%20for%20${encodeURIComponent(clinic?.name ?? "my clinic")}`}
+                href={`https://wa.me/201000000000?text=Hi!%20I%20have%20paid%20${calculatedAmount}%20EGP%20for%20the%20${selected === "premium" ? "Premium" : "Basic"}%20Plan%20(${durationMonths}%20months)%20for%20clinic:%20${encodeURIComponent(clinic?.name ?? "")}.%20Ref:%20${encodeURIComponent(transactionRef || "N/A")}`}
                 target="_blank"
                 rel="noopener noreferrer"
               >
-                <Button size="lg" variant="outline" className="px-10 w-full sm:w-auto">
+                <Button size="lg" variant="outline" className="px-10 w-full sm:w-auto bg-green-600 text-white hover:bg-green-700">
                   <PhoneCall className="w-4 h-4 mr-2" />
-                  Contact via WhatsApp
+                  Send Proof via WhatsApp
                 </Button>
               </a>
             </div>
