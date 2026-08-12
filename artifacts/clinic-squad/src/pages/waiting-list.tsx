@@ -1,4 +1,5 @@
 import { useAuth } from "@/lib/auth";
+import { useLang } from "@/lib/lang";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import {
@@ -20,23 +21,25 @@ function displayAge(age: number | null | undefined): string {
 }
 
 function StatusPill({ status }: { status: string }) {
+  const { t } = useLang();
   if (status === "in-progress") {
     return (
       <span className="inline-flex items-center gap-1.5 text-xs font-medium px-2 py-0.5 rounded-full border border-primary/40 bg-primary/15 text-primary">
         <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
-        In progress
+        {t("status.inProgress")}
       </span>
     );
   }
   return (
     <span className="inline-flex items-center gap-1.5 text-xs font-medium px-2 py-0.5 rounded-full border border-amber-500/40 bg-amber-500/15 text-amber-700 dark:text-amber-300">
-      <Clock className="w-3 h-3" /> Waiting
+      <Clock className="w-3 h-3" /> {t("status.waiting")}
     </span>
   );
 }
 
 export default function WaitingListPage() {
   const { clinic } = useAuth();
+  const { t } = useLang();
   const clinicId = clinic?.id ?? "";
   const [, navigate] = useLocation();
   const qc = useQueryClient();
@@ -74,7 +77,7 @@ export default function WaitingListPage() {
             navigate(`/patients/${patientId}`);
           },
           onError: () => {
-            toast({ title: "Could not open patient", variant: "destructive" });
+            toast({ title: t("waiting.failedOpen"), variant: "destructive" });
           },
         },
       );
@@ -91,10 +94,10 @@ export default function WaitingListPage() {
             <div>
               <h1 className="text-2xl font-bold flex items-center gap-2">
                 <Stethoscope className="w-6 h-6 text-primary" />
-                Doctor's Waiting List
+                {t("waiting.title")}
               </h1>
               <p className="text-sm text-muted-foreground mt-0.5">
-                {active.length} patient{active.length !== 1 ? "s" : ""} waiting today
+                {active.length} {active.length === 1 ? t("waiting.count") : t("waiting.countPlural")}
               </p>
             </div>
           </div>
@@ -102,13 +105,13 @@ export default function WaitingListPage() {
           <div className="rounded-xl border border-border bg-card overflow-hidden">
             <div className="grid grid-cols-[60px_110px_1fr_70px_1fr_auto_auto_auto] gap-4 px-6 py-3 border-b border-border bg-muted/30 text-xs font-medium text-muted-foreground uppercase tracking-wider">
               <span className="text-center">#</span>
-              <span>ID</span>
-              <span>Name</span>
-              <span>Age</span>
-              <span>Phone</span>
-              <span>Visit Type</span>
-              <span>Status</span>
-              <span>Action</span>
+              <span>{t("patients.id")}</span>
+              <span>{t("patients.name")}</span>
+              <span>{t("patients.age")}</span>
+              <span>{t("patients.phone")}</span>
+              <span>{t("patients.visitType")}</span>
+              <span>{t("patients.status")}</span>
+              <span>{t("waiting.action")}</span>
             </div>
 
             {isLoading ? (
@@ -120,9 +123,9 @@ export default function WaitingListPage() {
             ) : !active.length ? (
               <div className="text-center py-16 text-muted-foreground">
                 <Clock className="w-10 h-10 mx-auto mb-3 opacity-30" />
-                <p className="font-medium text-sm">Waiting list is empty</p>
+                <p className="font-medium text-sm">{t("waiting.empty")}</p>
                 <p className="text-xs mt-1">
-                  Use the Check-in button on the Patients page to send a patient to today&apos;s queue.
+                  {t("waiting.emptyDesc")}
                 </p>
               </div>
             ) : (
@@ -176,7 +179,7 @@ export default function WaitingListPage() {
                     ) : (
                       <ArrowRight className="w-3.5 h-3.5 mr-1" />
                     )}
-                    Open
+                    {t("waiting.open")}
                   </Button>
                 </div>
                 );

@@ -51,7 +51,7 @@ const translations: Record<string, Record<Lang, string>> = {
   "pricing.premium.name": { en: "Premium Plan", ar: "الخطة المميزة" },
   "pricing.premium.desc": { en: "Full-featured for growing clinics", ar: "متكاملة للعيادات النامية" },
   "pricing.cta": { en: "Start Free Trial", ar: "ابدأ التجربة المجانية" },
-  // Testimonials
+  // How it works
   "how.title": { en: "How to Get Started with ClinicSquad?", ar: "كيف تبدأ مع كلينيك سكواد؟" },
   "how.subtitle": { en: "Four simple steps from sign-up to a fully running, data-driven clinic.", ar: "أربع خطوات بسيطة من التسجيل إلى عيادة متكاملة تعمل بالبيانات." },
   "how.step1.title": { en: "Create Your Account", ar: "أنشئ حسابك" },
@@ -62,7 +62,6 @@ const translations: Record<string, Record<Lang, string>> = {
   "how.step3.desc": { en: "Start adding patient records and booking appointments. The system handles the waitlist, visit history, and billing automatically.", ar: "ابدأ بإضافة سجلات المرضى وحجز المواعيد. النظام يتولى قائمة الانتظار وسجل الزيارات والفواتير تلقائياً." },
   "how.step4.title": { en: "Track & Grow", ar: "تابع وانمُ" },
   "how.step4.desc": { en: "Monitor clinic performance, revenue trends, and patient statistics from a beautiful analytics dashboard.", ar: "تابع أداء عيادتك واتجاهات الإيرادات وإحصائيات المرضى من لوحة تحليلات أنيقة." },
-
   "test.title": { en: "Trusted by Egyptian Doctors", ar: "موثوق به من الأطباء المصريين" },
   // CTA Section
   "cta.title": { en: "Ready to Transform Your Clinic?", ar: "مستعد لتحويل عيادتك؟" },
@@ -117,145 +116,196 @@ const translations: Record<string, Record<Lang, string>> = {
   "sidebar.admin": { en: "Admin Panel", ar: "لوحة الإدارة" },
   "sidebar.team": { en: "Team", ar: "الفريق" },
   "sidebar.prescriptions": { en: "ePrescription", ar: "الوصفة الإلكترونية" },
-  // Team management
-  "team.title": { en: "Team Management", ar: "إدارة الفريق" },
-  "team.subtitle": { en: "Invite secretaries and nurses to help run your clinic.", ar: "ادعُ السكرتارية والممرضين للمساعدة في تشغيل عيادتك." },
-  "team.plan.trial": { en: "Trial", ar: "تجريبي" },
-  "team.plan.basic": { en: "Basic", ar: "أساسي" },
-  "team.plan.premium": { en: "Premium", ar: "مميز" },
-  "team.plan.expired": { en: "Expired", ar: "منتهي" },
-  "team.capacity.title": { en: "Member capacity", ar: "سعة الأعضاء" },
-  "team.capacity.note.prefix": { en: "Your", ar: "خطتك" },
-  "team.capacity.note.suffix": { en: "plan allows up to", ar: "تسمح بحد أقصى" },
-  "team.capacity.members": { en: "team members", ar: "أعضاء فريق" },
-  "team.capacity.upgrade": { en: "Upgrade to Premium for 10 members.", ar: "قم بالترقية إلى المميز لـ 10 أعضاء." },
-  "team.invite.title": { en: "Invite a team member", ar: "دعوة عضو فريق" },
-  "team.invite.name": { en: "Full name", ar: "الاسم الكامل" },
-  "team.invite.namePh": { en: "e.g. Mona Hassan", ar: "مثال: منى حسن" },
-  "team.invite.email": { en: "Email", ar: "البريد الإلكتروني" },
-  "team.invite.role": { en: "Role", ar: "الدور" },
-  "team.invite.send": { en: "Send Invite", ar: "إرسال الدعوة" },
-  "team.invite.limitMsg": { en: "You've reached your plan's member limit. Upgrade or remove a member to add more.", ar: "لقد وصلت إلى الحد الأقصى لخطتك. قم بالترقية أو إزالة عضو لإضافة المزيد." },
-  "team.role.admin": { en: "Admin", ar: "مدير" },
-  "team.role.secretary": { en: "Secretary", ar: "سكرتير" },
-  "team.role.nurse": { en: "Nurse", ar: "ممرض" },
-  "team.pending.title": { en: "Pending invitations", ar: "الدعوات المعلقة" },
-  "team.pending.empty": { en: "No pending invitations.", ar: "لا توجد دعوات معلقة." },
-  "team.members.title": { en: "Active members", ar: "الأعضاء النشطون" },
-  "team.owner": { en: "Owner", ar: "المالك" },
-  "team.copyLink": { en: "Copy link", ar: "نسخ الرابط" },
-  "team.copied": { en: "Copied!", ar: "تم النسخ!" },
-  "team.confirm.remove": { en: "Remove this member from the clinic?", ar: "هل تريد إزالة هذا العضو من العيادة؟" },
-  "team.toast.inviteCreated": { en: "Invitation created. Share the link with your team member.", ar: "تم إنشاء الدعوة. شارك الرابط مع عضو الفريق." },
-  "team.toast.copied": { en: "Invite link copied to clipboard.", ar: "تم نسخ رابط الدعوة." },
-  "team.toast.copyFailed": { en: "Could not copy. Use the link below.", ar: "تعذر النسخ. استخدم الرابط أدناه." },
-  "team.toast.revoked": { en: "Invitation revoked.", ar: "تم إلغاء الدعوة." },
-  "team.toast.removed": { en: "Member removed.", ar: "تمت إزالة العضو." },
-  "team.toast.failedTitle": { en: "Could not invite", ar: "تعذر الدعوة" },
-  "team.toast.failed": { en: "Please try again.", ar: "يرجى المحاولة مرة أخرى." },
-  "team.toast.limitReached": { en: "Plan member limit reached.", ar: "تم الوصول إلى الحد الأقصى للأعضاء." },
-  "team.toast.duplicate": { en: "Email already on team or already invited.", ar: "البريد موجود بالفعل في الفريق أو تمت دعوته." },
-  // Accept invite page
-  "invite.title": { en: "Join the team", ar: "انضم إلى الفريق" },
-  "invite.subtitle.prefix": { en: "You've been invited to join", ar: "لقد تمت دعوتك للانضمام إلى" },
-  "invite.subtitle.as": { en: "as a", ar: "كـ" },
-  "invite.email": { en: "Email", ar: "البريد" },
-  "invite.fullName": { en: "Full name", ar: "الاسم الكامل" },
-  "invite.password": { en: "Choose a password", ar: "اختر كلمة المرور" },
-  "invite.accept": { en: "Accept & Sign In", ar: "قبول وتسجيل الدخول" },
-  "invite.invalid.title": { en: "Invitation not valid", ar: "الدعوة غير صالحة" },
-  "invite.invalid.body": { en: "This invitation may have expired or been revoked. Please ask your clinic admin for a new one.", ar: "قد تكون هذه الدعوة منتهية أو ملغاة. يرجى طلب دعوة جديدة من مدير العيادة." },
-  "invite.toast.welcome": { en: "Welcome to the team!", ar: "مرحباً بك في الفريق!" },
-  "invite.toast.failed": { en: "Could not accept invitation", ar: "تعذر قبول الدعوة" },
-  "invite.toast.failedDesc": { en: "The invitation may have expired or the email is already in use.", ar: "قد تكون الدعوة منتهية أو البريد مستخدم بالفعل." },
-  "sidebar.signOut": { en: "Sign out", ar: "تسجيل الخروج" },
-  // Common
-  "common.upgrade": { en: "Upgrade", ar: "ترقية" },
-  "common.upgradeNow": { en: "Upgrade now", ar: "قم بالترقية الآن" },
-  "common.upgradePlan": { en: "Upgrade Plan", ar: "ترقية الخطة" },
-  "common.trialLeft": { en: "d trial left", ar: "يوم متبقي في التجربة" },
-  "common.trialExpires": { en: "Trial expires in", ar: "تنتهي التجربة خلال" },
-  "common.day": { en: "day", ar: "يوم" },
-  "common.days": { en: "days", ar: "أيام" },
-  "common.subExpired": { en: "Subscription Expired", ar: "انتهى الاشتراك" },
-  // Dashboard
-  "dash.title": { en: "Dashboard", ar: "لوحة التحكم" },
-  "dash.trial.days": { en: "Free trial: d days remaining", ar: "تجربة مجانية: متبقي d يوم" },
-  "dash.trial.note": { en: "Choose a plan to continue using ClinicSquad after your trial ends.", ar: "اختر خطة لمواصلة استخدام كلينيك سكواد بعد انتهاء تجربتك." },
-  "dash.stats.patients": { en: "Total Patients", ar: "إجمالي المرضى" },
-  "dash.stats.todayAppts": { en: "Today's Appointments", ar: "مواعيد اليوم" },
-  "dash.stats.revenue": { en: "Monthly Revenue", ar: "الإيرادات الشهرية" },
-  "dash.stats.completed": { en: "Completed", ar: "المكتملة" },
-  "dash.stats.newThisMonth": { en: "this month", ar: "هذا الشهر" },
-  "dash.stats.upcoming": { en: "upcoming", ar: "قادمة" },
-  "dash.stats.expenses": { en: "Expenses", ar: "المصروفات" },
-  "dash.stats.total": { en: "appointments total", ar: "إجمالي المواعيد" },
-  "dash.today.title": { en: "Today's Appointments", ar: "مواعيد اليوم" },
-  "dash.today.viewAll": { en: "View all", ar: "عرض الكل" },
-  "dash.today.empty": { en: "No appointments today", ar: "لا توجد مواعيد اليوم" },
-  "dash.today.schedule": { en: "Schedule appointment", ar: "جدولة موعد" },
-  "dash.today.checkin": { en: "Check-in", ar: "تسجيل دخول" },
-  "dash.today.checkedIn": { en: "checked in", ar: "تم تسجيل الدخول" },
-  "dash.tomorrow.title": { en: "Tomorrow's Reminders", ar: "تذكيرات الغد" },
-  "dash.tomorrow.subtitle": { en: "One-click WhatsApp reminders to reduce no-shows", ar: "تذكيرات واتساب بنقرة واحدة لتقليل عدم الحضور" },
-  "dash.tomorrow.empty": { en: "No appointments tomorrow", ar: "لا توجد مواعيد غداً" },
-  "dash.tomorrow.send": { en: "Send reminder", ar: "إرسال تذكير" },
-  "dash.tomorrow.noPhone": { en: "No phone", ar: "لا يوجد رقم" },
-  "dash.tomorrow.scheduled": { en: "scheduled", ar: "مجدولة" },
+  "sidebar.signOut": { en: "Sign Out", ar: "تسجيل الخروج" },
+
+  // Statuses
+  "status.inProgress": { en: "In progress", ar: "قيد الكشف" },
+  "status.waiting": { en: "Waiting", ar: "في الانتظار" },
+  "status.completed": { en: "Completed", ar: "مكتمل" },
+  "status.registered": { en: "Registered", ar: "مسجل" },
+  "status.scheduled": { en: "Scheduled", ar: "مجدول" },
+  "status.cancelled": { en: "Cancelled", ar: "ملغي" },
+  "status.noShow": { en: "No Show", ar: "لم يحضر" },
+  "status.checkedIn": { en: "Checked-in", ar: "تم الدخول" },
+
+  // Prescriptions
+  "presc.title": { en: "ePrescription", ar: "الوصفة الإلكترونية" },
+  "presc.subtitle": { en: "Write, print, and send prescriptions to your patients.", ar: "اكتب واطبع وأرسل الوصفات الطبية لمرضاك." },
+  "presc.new": { en: "New Prescription", ar: "وصفة جديدة" },
+  "presc.cancel": { en: "Cancel", ar: "إلغاء" },
+  "presc.selectPatient": { en: "Select a patient", ar: "اختر مريضاً" },
+  "presc.addMedication": { en: "Add at least one medication", ar: "أضف دواءً واحداً على الأقل" },
+  "presc.created": { en: "Prescription created", ar: "تم إنشاء الوصفة" },
+  "presc.failed": { en: "Failed to create prescription", ar: "فشل إنشاء الوصفة" },
+  "presc.confirmDelete": { en: "Delete this prescription?", ar: "حذف هذه الوصفة؟" },
+  "presc.deleted": { en: "Deleted", ar: "تم الحذف" },
+  "presc.failedDelete": { en: "Failed to delete", ar: "فشل الحذف" },
+  "presc.patient": { en: "Patient", ar: "المريض" },
+  "presc.selectPatientPh": { en: "Select patient", ar: "اختر المريض" },
+  "presc.date": { en: "Date", ar: "التاريخ" },
+  "presc.diagnosis": { en: "Diagnosis", ar: "التشخيص" },
+  "presc.diagnosisPh": { en: "e.g. Acute pharyngitis", ar: "مثال: التهاب الحلق الحاد" },
+  "presc.medications": { en: "Medications", ar: "الأدوية" },
+  "presc.addMedBtn": { en: "Add medication", ar: "أضف دواء" },
+  "presc.drugName": { en: "Drug name", ar: "اسم الدواء" },
+  "presc.drugNamePh": { en: "e.g. Amoxicillin 500mg", ar: "مثال: أموكسيسيلين 500 مجم" },
+  "presc.dosage": { en: "Dosage", ar: "الجرعة" },
+  "presc.dosagePh": { en: "1 capsule", ar: "كبسولة واحدة" },
+  "presc.frequency": { en: "Frequency", ar: "التكرار" },
+  "presc.frequencyPh": { en: "3× daily", ar: "3 مرات يومياً" },
+  "presc.duration": { en: "Duration", ar: "المدة" },
+  "presc.durationPh": { en: "7 days", ar: "7 أيام" },
+  "presc.clinicalNotes": { en: "Clinical Notes", ar: "ملاحظات سريرية" },
+  "presc.clinicalNotesPh": { en: "e.g. Take after meals, complete the course", ar: "مثال: تؤخذ بعد الوجبات، أكمل الجرعة" },
+  "presc.save": { en: "Save Prescription", ar: "حفظ الوصفة" },
+  "presc.searchPh": { en: "Search by patient, diagnosis, or drug name", ar: "البحث بالمريض أو التشخيص أو اسم الدواء" },
+  "presc.empty": { en: "No prescriptions found", ar: "لم يتم العثور على وصفات" },
+  "presc.print": { en: "Print / PDF", ar: "طباعة / PDF" },
+  "presc.whatsapp": { en: "Send via WhatsApp", ar: "إرسال عبر واتساب" },
+  "presc.delete": { en: "Delete", ar: "حذف" },
+  "presc.view": { en: "View", ar: "عرض" },
+  "presc.preview": { en: "Live preview", ar: "معاينة مباشرة" },
+
+  // Dashboard Stats
+  "dash.stats.totalPatients": { en: "Total Patients", ar: "إجمالي المرضى" },
+  "dash.stats.waiting": { en: "In Waiting List", ar: "في قائمة الانتظار" },
+  "dash.stats.revenue": { en: "Total Revenue", ar: "إجمالي الإيرادات" },
+  "dash.stats.activeTrial": { en: "Active Trial", ar: "تجربة نشطة" },
+  "dash.stats.daysLeft": { en: "days left", ar: "أيام متبقية" },
+  "dash.recentAppts": { en: "Recent Appointments", ar: "المواعيد الأخيرة" },
+  "dash.viewAll": { en: "View All", ar: "عرض الكل" },
+  "dash.noAppts": { en: "No appointments today", ar: "لا توجد مواعيد اليوم" },
+  "dash.revenueOverview": { en: "Revenue Overview", ar: "نظرة عامة على الإيرادات" },
+
+  // Patients
+  "patients.title": { en: "Patients", ar: "المرضى" },
+  "patients.subtitle": { en: "Manage your patient records and medical history.", ar: "أدِر سجلات مرضاك وتاريخهم الطبي." },
+  "patients.new": { en: "New Patient", ar: "مريض جديد" },
+  "patients.searchPh": { en: "Search patients (PT-0001, name, phone)...", ar: "البحث عن المرضى (PT-0001، الاسم، الهاتف)..." },
+  "patients.id": { en: "ID", ar: "المعرف" },
+  "patients.name": { en: "Name", ar: "الاسم" },
+  "patients.phone": { en: "Phone", ar: "الهاتف" },
+  "patients.visitType": { en: "Visit Type", ar: "نوع الزيارة" },
+  "patients.status": { en: "Status", ar: "الحالة" },
+  "patients.actions": { en: "Actions", ar: "الإجراءات" },
+  "patients.notFound": { en: "No patients found", ar: "لم يتم العثور على مرضى" },
+  "patients.toast.created": { en: "Patient created successfully", ar: "تم إنشاء المريض بنجاح" },
+  "patients.toast.failed": { en: "Failed to create patient", ar: "فشل إنشاء المريض" },
+  "patients.toast.sentToQueue": { en: "sent to waiting list", ar: "تم إرساله لقائمة الانتظار" },
+  "patients.toast.checkInFailed": { en: "Failed to check in", ar: "فشل الدخول" },
+  "patients.checkIn": { en: "Check-in", ar: "دخول" },
+
+  // Waiting List
+  "waiting.title": { en: "Waiting List", ar: "قائمة الانتظار" },
+  "waiting.subtitle": { en: "Manage patients currently waiting for their consultation.", ar: "أدِر المرضى الذين ينتظرون كشفهم حالياً." },
+  "waiting.count": { en: "patient", ar: "مريض" },
+  "waiting.countPlural": { en: "patients", ar: "مرضى" },
+  "waiting.inQueue": { en: "in queue", ar: "في الانتظار" },
+  "waiting.action": { en: "Action", ar: "الإجراء" },
+  "waiting.callNext": { en: "Call Next Patient", ar: "استدعاء المريض التالي" },
+  "waiting.startSession": { en: "Start Session", ar: "بدأ الكشف" },
+  "waiting.empty": { en: "Waiting list is empty", ar: "قائمة الانتظار فارغة" },
+
+  // Checkout
+  "checkout.title": { en: "Reception · Checkout", ar: "السكرتارية · الحساب" },
+  "checkout.subtitle": { en: "ready for billing.", ar: "جاهزون للحساب." },
+  "checkout.totalDue": { en: "Total due now", ar: "إجمالي المستحق الآن" },
+  "checkout.amountDue": { en: "Amount Due", ar: "المبلغ المستحق" },
+  "checkout.markPaid": { en: "Mark Paid", ar: "تم الدفع" },
+  "checkout.requeue": { en: "Re-queue", ar: "إعادة للانتظار" },
+  "checkout.confirmRequeue": { en: "Send back to the waiting list?", ar: "إعادة إلى قائمة الانتظار؟" },
+  "checkout.toast.paid": { en: "marked as paid", ar: "تم وضع علامة مدفوع" },
+  "checkout.toast.requeued": { en: "sent back to waiting list", ar: "تمت إعادته لقائمة الانتظار" },
+  "checkout.empty": { en: "Nothing to bill yet", ar: "لا يوجد شيء للحساب بعد" },
+  "checkout.emptyDesc": { en: "Patients show up here once the doctor finishes their session.", ar: "يظهر المرضى هنا بمجرد انتهاء الطبيب من جلستهم." },
+  "checkout.setInSettings": { en: "Set in Settings", ar: "حدد في الإعدادات" },
+
+  // Finances
+  "finances.title": { en: "Finances", ar: "المالية" },
+  "finances.overview": { en: "Financial overview for", ar: "نظرة عامة مالية لعام" },
+  "finances.add": { en: "Add Record", ar: "أضف سجلاً" },
+  "finances.income": { en: "Total Income", ar: "إجمالي الدخل" },
+  "finances.expenses": { en: "Total Expenses", ar: "إجمالي المصروفات" },
+  "finances.profit": { en: "Net Profit", ar: "صافي الربح" },
+  "finances.chartTitle": { en: "Monthly Overview", ar: "نظرة عامة شهرية" },
+  "finances.type": { en: "Type", ar: "النوع" },
+  "finances.description": { en: "Description", ar: "الوصف" },
+  "finances.category": { en: "Category", ar: "الفئة" },
+  "finances.date": { en: "Date", ar: "التاريخ" },
+  "finances.amount": { en: "Amount", ar: "المبلغ" },
+  "finances.empty": { en: "No financial records yet", ar: "لا توجد سجلات مالية بعد" },
+  "finances.incomeLabel": { en: "Income", ar: "دخل" },
+  "finances.expenseLabel": { en: "Expense", ar: "مصروف" },
+  "finances.addDialog.title": { en: "Add Financial Record", ar: "إضافة سجل مالي" },
+  "finances.save": { en: "Save Record", ar: "حفظ السجل" },
+  "finances.toast.added": { en: "Record added", ar: "تم إضافة السجل" },
+  "finances.toast.failed": { en: "Failed to add record", ar: "فشل إضافة السجل" },
+
+  // Appointments
+  "appt.title": { en: "Appointments", ar: "المواعيد" },
+  "appt.today": { en: "today", ar: "اليوم" },
+  "appt.viewList": { en: "List View", ar: "عرض القائمة" },
+  "appt.viewDay": { en: "Day View", ar: "عرض اليوم" },
+  "appt.new": { en: "New Appointment", ar: "موعد جديد" },
+  "appt.searchPh": { en: "Search patient name or phone...", ar: "البحث عن اسم المريض أو الهاتف..." },
+  "appt.noAppts": { en: "No appointments scheduled", ar: "لا توجد مواعيد مجدولة" },
+  "appt.date": { en: "Date", ar: "التاريخ" },
+  "appt.time": { en: "Time", ar: "الوقت" },
+  "appt.whatsapp": { en: "Send Reminder", ar: "إرسال تذكير" },
+  "appt.edit": { en: "Edit Appointment", ar: "تعديل الموعد" },
+  "appt.typePh": { en: "Select patient", ar: "اختر المريض" },
+  "appt.scheduleAt": { en: "Schedule at", ar: "جدولة في" },
+  "appt.notes": { en: "Notes", ar: "ملاحظات" },
+  "appt.save": { en: "Save Appointment", ar: "حفظ الموعد" },
+  "appt.confirmDelete": { en: "Delete this appointment?", ar: "حذف هذا الموعد؟" },
+  "appt.toast.created": { en: "Appointment created", ar: "تم إنشاء الموعد" },
+  "appt.toast.updated": { en: "Appointment updated", ar: "تم تحديث الموعد" },
+  "appt.toast.deleted": { en: "Appointment deleted", ar: "تم حذف الموعد" },
+  "appt.toast.failed": { en: "Failed to save appointment", ar: "فشل حفظ الموعد" },
+
   // Pending Activation
-  "pending.status": { en: "Pending Activation", ar: "في انتظار التفعيل" },
-  "pending.title": { en: "Your request has been received!", ar: "تم استلام طلبك بنجاح!" },
-  "pending.body": { en: "To activate your 15-day free trial, please contact our technical support. We'll verify your details and unlock your dashboard within minutes.", ar: "لتفعيل تجربتك المجانية لمدة 15 يوماً، يرجى التواصل مع الدعم الفني. سنقوم بالتحقق من بياناتك وفتح لوحة التحكم الخاصة بك في غضون دقائق." },
-  "pending.clinic": { en: "Clinic", ar: "العيادة" },
-  "pending.account": { en: "Account", ar: "الحساب" },
-  "pending.reqNum": { en: "Request Number", ar: "رقم الطلب" },
-  "pending.reqNumNote": { en: "Include this number when contacting support.", ar: "يرجى إدراج هذا الرقم عند التواصل مع الدعم." },
-  "pending.whatsapp": { en: "Activate via WhatsApp", ar: "تفعيل عبر واتساب" },
-  "pending.step1": { en: "Tap the button above to message our support team on WhatsApp.", ar: "اضغط على الزر أعلاه لمراسلة فريق الدعم عبر واتساب." },
-  "pending.step2": { en: "Once approved, refresh this page to enter your dashboard.", ar: "بمجرد الموافقة، قم بتحديث هذه الصفحة للدخول إلى لوحة التحكم." },
-  "pending.step3": { en: "No credit card required during your 15-day trial.", ar: "لا حاجة لبطاقة ائتمانية خلال فترة التجربة." },
-  "pending.footer": { en: "Activation is usually completed within a few minutes during business hours.", ar: "يتم التفعيل عادةً خلال بضع دقائق خلال ساعات العمل." },
+  "pending.title": { en: "Activating Your Clinic...", ar: "جاري تفعيل عيادتك..." },
+  "pending.subtitle": { en: "Welcome to ClinicSquad! Our team is currently reviewing your registration to set up your secure workspace.", ar: "مرحباً بك في كلينيك سكواد! يقوم فريقنا حالياً بمراجعة تسجيلك لإعداد مساحة عملك الآمنة." },
+  "pending.step1": { en: "Verification in progress", ar: "التحقق قيد التنفيذ" },
+  "pending.step2": { en: "Workspace provisioning", ar: "تجهيز مساحة العمل" },
+  "pending.step3": { en: "Ready to launch", ar: "جاهز للانطلاق" },
+  "pending.whatsapp": { en: "Speed up activation via WhatsApp", ar: "تسريع التفعيل عبر واتساب" },
+  "pending.refresh": { en: "Check Activation Status", ar: "تحقق من حالة التفعيل" },
 };
 
-export function t(lang: Lang, key: string): string {
-  return translations[key]?.[lang] ?? key;
-}
-
-const LangContext = createContext<LangContextType | null>(null);
+const LangContext = createContext<LangContextType | undefined>(undefined);
 
 export function LangProvider({ children }: { children: ReactNode }) {
   const [lang, setLangState] = useState<Lang>(() => {
-    const stored = localStorage.getItem("clinicsquad_lang");
-    return (stored === "ar" ? "ar" : "en") as Lang;
+    const saved = localStorage.getItem("clinic-lang");
+    return (saved as Lang) || "en";
   });
 
   const setLang = (l: Lang) => {
     setLangState(l);
-    localStorage.setItem("clinicsquad_lang", l);
+    localStorage.setItem("clinic-lang", l);
   };
 
-  useEffect(() => {
-    const root = document.documentElement;
-    root.setAttribute("dir", lang === "ar" ? "rtl" : "ltr");
-    root.setAttribute("lang", lang);
-    if (lang === "ar") {
-      root.style.setProperty("--app-font-sans", "'Cairo', 'Inter', sans-serif");
-    } else {
-      root.style.setProperty("--app-font-sans", "'Inter', sans-serif");
-    }
-  }, [lang]);
+  const t = (key: string) => {
+    return translations[key]?.[lang] || key;
+  };
 
-  const translate = (key: string) => t(lang, key);
+  const dir = lang === "ar" ? "rtl" : "ltr";
+
+  useEffect(() => {
+    document.documentElement.dir = dir;
+    document.documentElement.lang = lang;
+  }, [dir, lang]);
 
   return (
-    <LangContext.Provider value={{ lang, setLang, t: translate, dir: lang === "ar" ? "rtl" : "ltr" }}>
+    <LangContext.Provider value={{ lang, setLang, t, dir }}>
       {children}
     </LangContext.Provider>
   );
 }
 
 export function useLang() {
-  const ctx = useContext(LangContext);
-  if (!ctx) throw new Error("useLang must be used within LangProvider");
-  return ctx;
+  const context = useContext(LangContext);
+  if (!context) throw new Error("useLang must be used within LangProvider");
+  return context;
 }

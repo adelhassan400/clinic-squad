@@ -1,11 +1,12 @@
 import { useState } from "react";
 import { useAuth } from "@/lib/auth";
+import { useLang } from "@/lib/lang";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import {
   useListAppointments, useCreateAppointment, useUpdateAppointment, useDeleteAppointment,
   useListPatients, usePatchPatient,
-  getListAppointmentsQueryKey, getListPatientsQueryKey
+  getListAppointmentsQueryKey, getListPatientsQueryKey, getGetPatientQueryKey
 } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
@@ -22,14 +23,13 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import {
   Plus, Calendar, Trash2, CheckCircle, XCircle, Loader2,
-  ChevronsUpDown, Check, Users, List, ChevronLeft, ChevronRight, Pill, MessageCircle, LogIn
+  ChevronsUpDown, Check, Users, List, ChevronLeft, ChevronRight, Pill, MessageCircle, LogIn, Clock, User
 } from "lucide-react";
 import { Link } from "wouter";
-import { cn } from "@/lib/utils";
+import { cn, formatDate } from "@/lib/utils";
 import { useCurrency } from "@/lib/currency";
 import { openWhatsApp, whatsappAppointmentReminder } from "@/lib/whatsapp";
-import { VISIT_TYPES, VisitTypeBadge, getVisitTypeStyle, type VisitType } from "@/lib/visit-types";
-import { useVisitTypePrices } from "@/lib/visit-prices";
+import { PATIENT_VISIT_TYPES, VisitTypeBadge, getVisitTypeStyle } from "@/lib/visit-types";
 
 const apptSchema = z.object({
   patientId: z.string().min(1, "Select a patient"),
@@ -43,11 +43,9 @@ type ApptForm = z.infer<typeof apptSchema>;
 
 type ViewMode = "list" | "day";
 
-// --- Helpers ---
-
-const HOUR_HEIGHT = 72; // px per hour
-const DAY_START = 8;    // 8 AM
-const DAY_END = 21;     // 9 PM
+const HOUR_HEIGHT = 72;
+const DAY_START = 8;
+const DAY_END = 21;
 
 function timeToMinutes(time: string): number {
   const [h, m] = time.split(":").map(Number);
@@ -58,9 +56,9 @@ function minutesFromDayStart(time: string): number {
   return timeToMinutes(time) - DAY_START * 60;
 }
 
-function formatDayLabel(dateStr: string): string {
+function formatDayLabel(dateStr: string, lang: string): string {
   const d = new Date(dateStr + "T00:00:00");
-  return d.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" });
+  return d.toLocaleDateString(lang === "ar" ? "ar-EG" : "en-US", { weekday: "long", month: "long", day: "numeric" });
 }
 
 function isToday(dateStr: string): boolean {
@@ -106,17 +104,17 @@ const STATUS_STYLES: Record<string, { bar: string; bg: string; text: string; bad
   },
 };
 
-// --- Status Badge ---
 function StatusBadge({ status }: { status: string }) {
+  const { t } = useLang();
   const s = STATUS_STYLES[status];
+  const label = t(`status.${status.replace(/_([a-z])/g, (_, c) => c.toUpperCase())}`);
   return (
     <span className={cn("text-xs font-medium px-2 py-0.5 rounded capitalize", s?.badge ?? "bg-muted text-muted-foreground")}>
-      {status.replace("_", " ")}
+      {label || status.replace("_", " ")}
     </span>
   );
 }
 
-// --- Patient Combobox ---
 interface PatientSearchProps {
   value: string;
   onChange: (id: string) => void;
@@ -124,6 +122,7 @@ interface PatientSearchProps {
 }
 
 function PatientSearch({ value, onChange, patients }: PatientSearchProps) {
+  const { t } = useLang();
   const [open, setOpen] = useState(false);
   const selected = patients.find(p => p.id === value);
   return (
@@ -151,7 +150,7 @@ function PatientSearch({ value, onChange, patients }: PatientSearchProps) {
           ) : (
             <span className="flex items-center gap-2">
               <Users className="w-4 h-4 shrink-0" />
-              Search patient by name or phone...
+              {t("appt.searchPh")}
             </span>
           )}
           <ChevronsUpDown className="w-4 h-4 shrink-0 opacity-50" />
@@ -159,15 +158,15 @@ function PatientSearch({ value, onChange, patients }: PatientSearchProps) {
       </PopoverTrigger>
       <PopoverContent className="p-0 w-[360px]" align="start" sideOffset={4}>
         <Command>
-          <CommandInput placeholder="Type name or phone number..." className="h-10" />
+          <CommandInput placeholder={t("appt.typePh")} className="h-10" />
           <CommandList>
             <CommandEmpty>
               <div className="flex flex-col items-center gap-2 py-6 text-sm text-muted-foreground">
                 <Users className="w-8 h-8 opacity-30" />
-                <p>No patients found</p>
+                <p>{t("patients.notFound")}</p>
               </div>
             </CommandEmpty>
-            <CommandGroup heading={`${patients.length} patient${patients.length !== 1 ? "s" : ""}`}>
+            <CommandGroup heading={`${patients.length} ${t("patients.title")}`}>
               {patients.map(patient => (
                 <CommandItem
                   key={patient.id}
@@ -193,7 +192,6 @@ function PatientSearch({ value, onChange, patients }: PatientSearchProps) {
   );
 }
 
-// --- Day Calendar ---
 interface Appointment {
   id: string;
   patientName: string;
@@ -223,16 +221,15 @@ function DayCalendar({
   appointments, date, onPrevDay, onNextDay, onToday,
   onClickSlot, onComplete, onCancel, onDelete, onCheckIn, checkingInId, currencyCode
 }: DayCalendarProps) {
+  const { t, lang } = useLang();
   const hours = Array.from({ length: DAY_END - DAY_START }, (_, i) => DAY_START + i);
   const totalHeight = hours.length * HOUR_HEIGHT;
 
-  // Only show appointments that fall within the visible range
   const visibleAppts = appointments.filter(a => {
     const mins = minutesFromDayStart(a.time);
     return mins >= 0 && mins < (DAY_END - DAY_START) * 60;
   });
 
-  // Current time indicator
   const now = new Date();
   const nowMins = now.getHours() * 60 + now.getMinutes() - DAY_START * 60;
   const showNowLine = isToday(date) && nowMins >= 0 && nowMins < (DAY_END - DAY_START) * 60;
@@ -245,44 +242,40 @@ function DayCalendar({
 
   return (
     <div className="rounded-xl border border-border bg-card overflow-hidden">
-      {/* Day nav header */}
       <div className="flex items-center justify-between px-5 py-3.5 border-b border-border bg-muted/20">
         <div className="flex items-center gap-2">
           <Button variant="ghost" size="icon" className="h-8 w-8" onClick={onPrevDay}>
-            <ChevronLeft className="w-4 h-4" />
+            {lang === "ar" ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />}
           </Button>
           <div className="text-center min-w-[200px]">
-            <p className="text-sm font-semibold">{formatDayLabel(date)}</p>
+            <p className="text-sm font-semibold">{formatDayLabel(date, lang)}</p>
             {isToday(date) && (
-              <p className="text-xs text-primary font-medium">Today</p>
+              <p className="text-xs text-primary font-medium">{t("appt.today")}</p>
             )}
           </div>
           <Button variant="ghost" size="icon" className="h-8 w-8" onClick={onNextDay}>
-            <ChevronRight className="w-4 h-4" />
+            {lang === "ar" ? <ChevronLeft className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
           </Button>
         </div>
         <div className="flex items-center gap-2">
           <span className="text-xs text-muted-foreground">
-            {visibleAppts.length} appointment{visibleAppts.length !== 1 ? "s" : ""}
+            {visibleAppts.length} {visibleAppts.length === 1 ? t("waiting.count") : t("waiting.countPlural")}
           </span>
           {!isToday(date) && (
             <Button variant="outline" size="sm" className="h-7 text-xs" onClick={onToday}>
-              Today
+              {t("appt.today")}
             </Button>
           )}
         </div>
       </div>
 
-      {/* Timeline */}
       <div className="overflow-y-auto" style={{ maxHeight: "calc(100vh - 280px)" }}>
         <div className="flex" style={{ minHeight: totalHeight }}>
-
-          {/* Time gutter */}
           <div className="w-16 shrink-0 relative select-none" style={{ height: totalHeight }}>
             {hours.map((hour) => (
               <div
                 key={hour}
-                className="absolute w-full flex items-start justify-end pr-3 pt-1"
+                className={cn("absolute w-full flex items-start justify-end pr-3 pt-1", lang === "ar" ? "pr-0 pl-3" : "pr-3")}
                 style={{ top: (hour - DAY_START) * HOUR_HEIGHT, height: HOUR_HEIGHT }}
               >
                 <span className="text-xs text-muted-foreground/60 font-mono leading-none">
@@ -292,24 +285,19 @@ function DayCalendar({
             ))}
           </div>
 
-          {/* Grid + appointments */}
           <div className="flex-1 relative border-l border-border" style={{ height: totalHeight }}>
-
-            {/* Hour rows (clickable) */}
             {hours.map((hour) => (
               <div
                 key={hour}
                 onClick={() => handleSlotClick(hour)}
-                title={`Schedule at ${String(hour).padStart(2, "0")}:00`}
+                title={`${t("appt.scheduleAt")} ${String(hour).padStart(2, "0")}:00`}
                 className="absolute w-full border-b border-border/50 cursor-pointer hover:bg-primary/[0.03] transition-colors group"
                 style={{ top: (hour - DAY_START) * HOUR_HEIGHT, height: HOUR_HEIGHT }}
               >
-                {/* Half-hour tick */}
                 <div
                   className="absolute w-full border-b border-border/20 border-dashed"
                   style={{ top: HOUR_HEIGHT / 2 }}
                 />
-                {/* Click hint */}
                 <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
                   <span className="text-xs text-primary/50 flex items-center gap-1">
                     <Plus className="w-3 h-3" />
@@ -319,18 +307,16 @@ function DayCalendar({
               </div>
             ))}
 
-            {/* Now indicator */}
             {showNowLine && (
               <div
                 className="absolute w-full flex items-center pointer-events-none z-20"
                 style={{ top: nowTop }}
               >
-                <div className="w-2.5 h-2.5 rounded-full bg-red-500 -ml-1.5 shrink-0 shadow-sm" />
+                <div className={cn("w-2.5 h-2.5 rounded-full bg-red-500 shrink-0 shadow-sm", lang === "ar" ? "-mr-1.5" : "-ml-1.5")} />
                 <div className="flex-1 border-t-2 border-red-500" />
               </div>
             )}
 
-            {/* Appointment blocks */}
             {visibleAppts.map((appt) => {
               const topMins = minutesFromDayStart(appt.time);
               const top = (topMins / 60) * HOUR_HEIGHT;
@@ -344,14 +330,12 @@ function DayCalendar({
                   data-testid={`cal-appt-${appt.id}`}
                   className={cn(
                     "absolute left-2 right-2 rounded-lg border px-3 py-2 flex gap-2 overflow-hidden z-10 shadow-sm",
-                    s.bg
+                    s.bg,
+                    lang === "ar" && "flex-row-reverse"
                   )}
                   style={{ top: top + 2, minHeight }}
                 >
-                  {/* Color bar — visit type */}
                   <div className={cn("w-1 rounded-full shrink-0 self-stretch", vt.bar)} />
-
-                  {/* Content */}
                   <div className="flex-1 min-w-0">
                     <div className="flex items-start justify-between gap-2">
                       <div className="min-w-0">
@@ -364,50 +348,20 @@ function DayCalendar({
                         {appt.status === "scheduled" && isToday(date) && (
                           <button
                             onClick={(e) => { e.stopPropagation(); onCheckIn(appt.id, (appt as any).patientId, appt.patientName); }}
-                            disabled={checkingInId === appt.id}
-                            title="Check in — adds to waiting list"
-                            data-testid={`cal-checkin-${appt.id}`}
-                            className="w-5 h-5 rounded flex items-center justify-center hover:bg-primary/20 text-primary transition-colors disabled:opacity-50"
+                            className="p-1 rounded-md hover:bg-accent/20 text-accent-foreground"
+                            title={t("patients.checkIn")}
                           >
-                            {checkingInId === appt.id ? (
-                              <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                            ) : (
-                              <LogIn className="w-3.5 h-3.5" />
-                            )}
+                            {checkingInId === appt.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <LogIn className="w-3.5 h-3.5" />}
                           </button>
-                        )}
-                        {appt.status === "scheduled" && (
-                          <>
-                            <button
-                              onClick={(e) => { e.stopPropagation(); onComplete(appt.id); }}
-                              title="Mark completed"
-                              className="w-5 h-5 rounded flex items-center justify-center hover:bg-green-500/20 text-green-600 dark:text-green-400 transition-colors"
-                            >
-                              <CheckCircle className="w-3.5 h-3.5" />
-                            </button>
-                            <button
-                              onClick={(e) => { e.stopPropagation(); onCancel(appt.id); }}
-                              title="Cancel"
-                              className="w-5 h-5 rounded flex items-center justify-center hover:bg-destructive/20 text-destructive transition-colors"
-                            >
-                              <XCircle className="w-3.5 h-3.5" />
-                            </button>
-                          </>
                         )}
                         <button
                           onClick={(e) => { e.stopPropagation(); onDelete(appt.id); }}
-                          title="Delete"
-                          className="w-5 h-5 rounded flex items-center justify-center hover:bg-destructive/20 text-muted-foreground hover:text-destructive transition-colors"
+                          className="p-1 rounded-md hover:bg-destructive/10 text-destructive/70 hover:text-destructive"
+                          title={t("presc.delete")}
                         >
-                          <Trash2 className="w-3 h-3" />
+                          <Trash2 className="w-3.5 h-3.5" />
                         </button>
                       </div>
-                    </div>
-                    <div className="flex items-center justify-between mt-1">
-                      <span className={cn("text-xs font-mono font-medium", s.text)}>{appt.time}</span>
-                      {appt.fee && (
-                        <span className="text-xs text-muted-foreground">{appt.fee} {currencyCode}</span>
-                      )}
                     </div>
                   </div>
                 </div>
@@ -420,339 +374,189 @@ function DayCalendar({
   );
 }
 
-// --- Main Page ---
 export default function AppointmentsPage() {
-  const { currency: { code: currencyCode } } = useCurrency();
   const { clinic } = useAuth();
+  const { t, lang } = useLang();
   const clinicId = clinic?.id ?? "";
   const { toast } = useToast();
   const qc = useQueryClient();
+  const { format: formatCurrency } = useCurrency();
 
-  const todayStr = new Date().toISOString().split("T")[0];
-  const [viewMode, setViewMode] = useState<ViewMode>("list");
-  const [filterDate, setFilterDate] = useState("");
-  const [filterStatus, setFilterStatus] = useState("all");
-  const [dayDate, setDayDate] = useState(todayStr);
+  const [view, setView] = useState<ViewMode>("day");
+  const [currentDate, setCurrentDate] = useState(() => new Date().toISOString().split("T")[0]);
   const [addOpen, setAddOpen] = useState(false);
+  const [checkingInId, setCheckingInId] = useState<string | null>(null);
 
-  // In day view we always filter by the selected day
-  const listParams = {
-    ...(filterDate ? { date: filterDate } : {}),
-    ...(filterStatus && filterStatus !== "all" ? { status: filterStatus as "scheduled" | "checked_in" | "completed" | "cancelled" | "no_show" } : {}),
-  };
-
-  const dayParams = { date: dayDate };
-
-  const { data: listData, isLoading: listLoading } = useListAppointments(clinicId, listParams, {
-    query: { enabled: !!clinicId && viewMode === "list", queryKey: getListAppointmentsQueryKey(clinicId, listParams) }
+  const { data: appointments, isLoading } = useListAppointments(clinicId, {}, {
+    query: { enabled: !!clinicId, queryKey: getListAppointmentsQueryKey(clinicId, {}) }
   });
 
-  const { data: dayData, isLoading: dayLoading } = useListAppointments(clinicId, dayParams, {
-    query: { enabled: !!clinicId && viewMode === "day", queryKey: getListAppointmentsQueryKey(clinicId, dayParams) }
-  });
-
-  const { data: patients } = useListPatients(clinicId, {}, {
-    query: { enabled: !!clinicId, queryKey: getListPatientsQueryKey(clinicId, {}) }
+  const { data: patients } = useListPatients(clinicId, { limit: 1000 }, {
+    query: { enabled: !!clinicId, queryKey: getListPatientsQueryKey(clinicId, { limit: 1000 }) }
   });
 
   const createMutation = useCreateAppointment();
-  const updateMutation = useUpdateAppointment();
   const deleteMutation = useDeleteAppointment();
   const patchPatient = usePatchPatient();
 
-  const { prices: visitPrices } = useVisitTypePrices(clinicId);
-
-  const [checkingInId, setCheckingInId] = useState<string | null>(null);
-
   const form = useForm<ApptForm>({
     resolver: zodResolver(apptSchema),
-    defaultValues: { patientId: "", date: todayStr, time: "", type: "" },
+    defaultValues: {
+      patientId: "",
+      date: currentDate,
+      time: "10:00",
+      type: "New Consultation",
+      notes: "",
+    },
   });
 
-  function openSchedule(prefillDate?: string, prefillTime?: string) {
-    form.reset({
-      patientId: "",
-      date: prefillDate ?? (viewMode === "day" ? dayDate : todayStr),
-      time: prefillTime ?? "",
-      type: "",
-    });
-    setAddOpen(true);
-  }
-
   const onSubmit = (values: ApptForm) => {
-    createMutation.mutate({ clinicId, data: { ...values, fee: values.fee ?? undefined } }, {
+    createMutation.mutate({ clinicId, data: values }, {
       onSuccess: () => {
-        toast({ title: "Appointment scheduled" });
+        toast({ title: t("appt.toast.created") });
         qc.invalidateQueries({ queryKey: getListAppointmentsQueryKey(clinicId) });
         setAddOpen(false);
-        form.reset();
+        form.reset({ ...form.getValues(), patientId: "", notes: "" });
       },
-      onError: () => toast({ title: "Failed to schedule appointment", variant: "destructive" }),
-    });
-  };
-
-  const handleStatus = (appointmentId: string, status: string) => {
-    updateMutation.mutate({ clinicId, appointmentId, data: { status: status as "scheduled" | "checked_in" | "completed" | "cancelled" | "no_show" } }, {
-      onSuccess: () => {
-        toast({ title: `Appointment marked as ${status.replace("_", " ")}` });
-        qc.invalidateQueries({ queryKey: getListAppointmentsQueryKey(clinicId) });
-      },
-      onError: () => toast({ title: "Update failed", variant: "destructive" }),
+      onError: () => toast({ title: t("appt.toast.failed"), variant: "destructive" }),
     });
   };
 
   const handleCheckIn = (appointmentId: string, patientId: string, patientName: string) => {
     setCheckingInId(appointmentId);
-    // Patch the appointment first, then the patient.
-    updateMutation.mutate(
-      { clinicId, appointmentId, data: { status: "checked_in" } },
+    patchPatient.mutate(
+      { clinicId, patientId, data: { status: "waiting" } },
       {
         onSuccess: () => {
-          patchPatient.mutate(
-            {
-              clinicId,
-              patientId,
-              data: { status: "waiting", diagnosis: null, clinicalNotes: null },
-            },
-            {
-              onSuccess: () => {
-                toast({ title: `${patientName} checked in`, description: "Added to the waiting list." });
-                qc.invalidateQueries({ queryKey: getListAppointmentsQueryKey(clinicId) });
-                qc.invalidateQueries({ queryKey: getListPatientsQueryKey(clinicId) });
-                setCheckingInId(null);
-              },
-              onError: () => {
-                toast({
-                  title: "Check-in partially failed",
-                  description: "Appointment marked checked in, but waiting-list update failed.",
-                  variant: "destructive",
-                });
-                setCheckingInId(null);
-              },
-            },
-          );
+          toast({ title: `${patientName} ${t("patients.toast.sentToQueue")}` });
+          qc.invalidateQueries({ queryKey: getListPatientsQueryKey(clinicId) });
+          qc.invalidateQueries({ queryKey: getGetPatientQueryKey(clinicId, patientId) });
+          qc.invalidateQueries({ queryKey: getListAppointmentsQueryKey(clinicId) });
         },
-        onError: () => {
-          toast({ title: "Check-in failed", variant: "destructive" });
-          setCheckingInId(null);
-        },
-      },
+        onError: () => toast({ title: t("patients.toast.checkInFailed"), variant: "destructive" }),
+        onSettled: () => setCheckingInId(null),
+      }
     );
   };
 
-  const handleDelete = (appointmentId: string) => {
-    if (!confirm("Delete this appointment?")) return;
-    deleteMutation.mutate({ clinicId, appointmentId }, {
+  const handleDelete = (id: string) => {
+    if (!confirm(t("appt.confirmDelete"))) return;
+    deleteMutation.mutate({ clinicId, appointmentId: id }, {
       onSuccess: () => {
-        toast({ title: "Appointment deleted" });
+        toast({ title: t("appt.toast.deleted") });
         qc.invalidateQueries({ queryKey: getListAppointmentsQueryKey(clinicId) });
       },
-      onError: () => toast({ title: "Failed to delete", variant: "destructive" }),
+      onError: () => toast({ title: t("appt.toast.failed"), variant: "destructive" }),
     });
   };
 
-  const patientList = patients?.data ?? [];
+  const dayAppts = appointments?.data.filter(a => a.date.split("T")[0] === currentDate) ?? [];
 
   return (
     <ProtectedRoute>
       <DashboardLayout>
         <div className="p-6 max-w-6xl mx-auto">
-
-          {/* Header */}
-          <div className="flex items-center justify-between mb-5">
+          <div className="flex items-center justify-between mb-6">
             <div>
-              <h1 className="text-2xl font-bold">Appointments</h1>
-              <p className="text-sm text-muted-foreground mt-0.5">
-                {viewMode === "list" ? `${listData?.total ?? 0} total` : `${dayData?.data.length ?? 0} today`}
-              </p>
+              <h1 className="text-2xl font-bold">{t("appt.title")}</h1>
+              <p className="text-sm text-muted-foreground mt-0.5">{t("appt.scheduleAt")} {formatDayLabel(currentDate, lang)}</p>
             </div>
             <div className="flex items-center gap-2">
-              {/* View toggle */}
-              <div className="flex rounded-lg border border-border overflow-hidden">
-                <button
-                  onClick={() => setViewMode("list")}
-                  data-testid="view-list"
-                  className={cn(
-                    "flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium transition-colors",
-                    viewMode === "list"
-                      ? "bg-primary text-primary-foreground"
-                      : "text-muted-foreground hover:bg-muted"
-                  )}
+              <div className="flex items-center border border-border rounded-lg p-1 bg-muted/20 mr-2">
+                <Button
+                  variant={view === "day" ? "secondary" : "ghost"}
+                  size="sm"
+                  className="h-7 text-xs px-3"
+                  onClick={() => setView("day")}
                 >
-                  <List className="w-3.5 h-3.5" />
-                  List
-                </button>
-                <button
-                  onClick={() => setViewMode("day")}
-                  data-testid="view-day"
-                  className={cn(
-                    "flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium border-l border-border transition-colors",
-                    viewMode === "day"
-                      ? "bg-primary text-primary-foreground"
-                      : "text-muted-foreground hover:bg-muted"
-                  )}
+                  {t("appt.viewDay")}
+                </Button>
+                <Button
+                  variant={view === "list" ? "secondary" : "ghost"}
+                  size="sm"
+                  className="h-7 text-xs px-3"
+                  onClick={() => setView("list")}
                 >
-                  <Calendar className="w-3.5 h-3.5" />
-                  Day
-                </button>
+                  {t("appt.viewList")}
+                </Button>
               </div>
-              <Button onClick={() => openSchedule()} data-testid="button-add-appointment">
-                <Plus className="w-4 h-4 mr-2" />Schedule
+              <Button onClick={() => setAddOpen(true)} data-testid="button-add-appt">
+                <Plus className="w-4 h-4 mr-2" />{t("appt.new")}
               </Button>
             </div>
           </div>
 
-          {/* List view filters */}
-          {viewMode === "list" && (
-            <div className="flex flex-wrap gap-3 mb-5">
-              <Input
-                type="date"
-                value={filterDate}
-                onChange={e => setFilterDate(e.target.value)}
-                className="w-44"
-                data-testid="filter-date"
-              />
-              <Select value={filterStatus} onValueChange={setFilterStatus}>
-                <SelectTrigger className="w-40" data-testid="filter-status">
-                  <SelectValue placeholder="All statuses" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Statuses</SelectItem>
-                  <SelectItem value="scheduled">Scheduled</SelectItem>
-                  <SelectItem value="checked_in">Checked In</SelectItem>
-                  <SelectItem value="completed">Completed</SelectItem>
-                  <SelectItem value="cancelled">Cancelled</SelectItem>
-                  <SelectItem value="no_show">No Show</SelectItem>
-                </SelectContent>
-              </Select>
-              {(filterDate || filterStatus !== "all") && (
-                <Button variant="ghost" size="sm" onClick={() => { setFilterDate(""); setFilterStatus("all"); }}>
-                  Clear filters
-                </Button>
-              )}
-            </div>
-          )}
-
-          {/* LIST VIEW */}
-          {viewMode === "list" && (
+          {view === "day" ? (
+            <DayCalendar
+              appointments={dayAppts}
+              date={currentDate}
+              onPrevDay={() => setCurrentDate(d => addDays(d, -1))}
+              onNextDay={() => setCurrentDate(d => addDays(d, 1))}
+              onToday={() => setCurrentDate(new Date().toISOString().split("T")[0])}
+              onClickSlot={(time) => { form.setValue("time", time); form.setValue("date", currentDate); setAddOpen(true); }}
+              onComplete={() => {}}
+              onCancel={() => {}}
+              onDelete={handleDelete}
+              onCheckIn={handleCheckIn}
+              checkingInId={checkingInId}
+              currencyCode="EGP"
+            />
+          ) : (
             <div className="rounded-xl border border-border bg-card overflow-hidden">
-              <div className="hidden sm:grid grid-cols-[1fr_1fr_auto_auto_auto] gap-4 px-6 py-3 border-b border-border bg-muted/30 text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                <span>Patient</span>
-                <span>Date & Time</span>
-                <span>Type</span>
-                <span>Status</span>
-                <span>Actions</span>
+              <div className="grid grid-cols-[120px_80px_1fr_120px_auto_auto] gap-4 px-6 py-3 border-b border-border bg-muted/30 text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                <span>{t("appt.date")}</span>
+                <span>{t("appt.time")}</span>
+                <span>{t("patients.name")}</span>
+                <span>{t("patients.visitType")}</span>
+                <span>{t("patients.status")}</span>
+                <span className="text-right">{t("patients.actions")}</span>
               </div>
-              {listLoading ? (
+              {isLoading ? (
                 Array.from({ length: 5 }).map((_, i) => (
                   <div key={i} className="px-6 py-4 border-b border-border"><Skeleton className="h-5 w-full" /></div>
                 ))
-              ) : !listData?.data.length ? (
-                <div className="text-center py-16 text-muted-foreground">
-                  <Calendar className="w-10 h-10 mx-auto mb-3 opacity-30" />
-                  <p className="font-medium text-sm">No appointments found</p>
-                  <Button size="sm" className="mt-4" onClick={() => openSchedule()}>
-                    <Plus className="w-3 h-3 mr-1" />Schedule appointment
-                  </Button>
+              ) : !appointments?.data.length ? (
+                <div className="text-center py-14 text-muted-foreground">
+                  <p className="font-medium text-sm">{t("appt.noAppts")}</p>
                 </div>
               ) : (
-                listData.data.map(appt => (
+                appointments.data.map(appt => (
                   <div
                     key={appt.id}
                     data-testid={`appt-row-${appt.id}`}
-                    className="grid sm:grid-cols-[1fr_1fr_auto_auto_auto] gap-4 items-center px-6 py-4 border-b border-border last:border-0 hover:bg-muted/30 transition-colors"
+                    className="grid grid-cols-[120px_80px_1fr_120px_auto_auto] gap-4 items-center px-6 py-4 border-b border-border last:border-0 hover:bg-muted/30 transition-colors"
                   >
-                    <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
-                        <span className="text-xs font-bold text-primary">{appt.patientName.charAt(0)}</span>
+                    <span className="text-sm">{formatDate(appt.date, lang === "ar" ? "ar-EG" : "en-US")}</span>
+                    <span className="text-sm font-mono text-muted-foreground">{appt.time}</span>
+                    <div className="flex items-center gap-2">
+                      <div className="w-7 h-7 rounded-full bg-primary/10 flex items-center justify-center shrink-0 text-[10px] font-bold text-primary">
+                        {appt.patientName.charAt(0)}
                       </div>
-                      <div>
-                        <p className="text-sm font-medium">{appt.patientName}</p>
-                        {appt.fee && <p className="text-xs text-muted-foreground">{appt.fee} {currencyCode}</p>}
-                      </div>
+                      <span className="text-sm font-medium truncate">{appt.patientName}</span>
                     </div>
-                    <div>
-                      <p className="text-sm">{appt.date}</p>
-                      <p className="text-xs text-muted-foreground font-mono">{appt.time}</p>
-                    </div>
-                    <VisitTypeBadge type={appt.type} />
+                    <span><VisitTypeBadge type={appt.type} /></span>
                     <StatusBadge status={appt.status} />
-                    <div className="flex items-center gap-1">
-                      {appt.status === "scheduled" && isToday(appt.date) && (
-                        <Button
-                          size="sm"
-                          className="h-7 px-2.5 text-xs"
-                          onClick={() => handleCheckIn(appt.id, appt.patientId, appt.patientName)}
-                          disabled={checkingInId === appt.id}
-                          title="Check in — adds patient to waiting list"
-                          data-testid={`checkin-appt-${appt.id}`}
-                        >
-                          {checkingInId === appt.id ? (
-                            <Loader2 className="w-3 h-3 mr-1 animate-spin" />
-                          ) : (
-                            <LogIn className="w-3 h-3 mr-1" />
-                          )}
-                          Check In
-                        </Button>
-                      )}
-                      {appt.status === "scheduled" && (
-                        <>
-                          <Button
-                            variant="ghost" size="icon" className="h-7 w-7 text-green-600 hover:bg-green-100 dark:hover:bg-green-900/30"
-                            onClick={() => handleStatus(appt.id, "completed")}
-                            title="Mark completed"
-                            data-testid={`complete-appt-${appt.id}`}
-                          >
-                            <CheckCircle className="w-3.5 h-3.5" />
-                          </Button>
-                          <Button
-                            variant="ghost" size="icon" className="h-7 w-7 text-red-600 hover:bg-red-100 dark:hover:bg-red-900/30"
-                            onClick={() => handleStatus(appt.id, "cancelled")}
-                            title="Cancel"
-                            data-testid={`cancel-appt-${appt.id}`}
-                          >
-                            <XCircle className="w-3.5 h-3.5" />
-                          </Button>
-                        </>
-                      )}
-                      <Link href={`/prescriptions?patientId=${appt.patientId}`}>
-                        <Button
-                          variant="ghost" size="icon" className="h-7 w-7 text-primary hover:bg-primary/10"
-                          title="Write prescription"
-                          data-testid={`prescribe-appt-${appt.id}`}
-                        >
-                          <Pill className="w-3.5 h-3.5" />
-                        </Button>
-                      </Link>
+                    <div className="flex items-center justify-end gap-1">
                       <Button
-                        variant="ghost" size="icon" className="h-7 w-7 text-green-600 hover:bg-green-100 dark:hover:bg-green-900/30"
-                        onClick={() => {
-                          const phone = patientList.find(p => p.id === appt.patientId)?.phone ?? "";
-                          if (!phone) {
-                            toast({ title: "No phone number on file", variant: "destructive" });
-                            return;
-                          }
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 text-green-600 hover:bg-green-100 dark:hover:bg-green-900/30"
+                        onClick={() => 
                           openWhatsApp(
-                            phone,
+                            appt.patientPhone, 
                             whatsappAppointmentReminder({
                               patientName: appt.patientName,
                               clinicName: clinic?.name ?? "the clinic",
                               date: appt.date,
-                              time: appt.time,
-                              type: appt.type,
+                              time: appt.time
                             })
-                          );
-                        }}
-                        title="Send WhatsApp reminder"
-                        data-testid={`whatsapp-appt-${appt.id}`}
+                          )
+                        }
+                        title={t("appt.whatsapp")}
                       >
                         <MessageCircle className="w-3.5 h-3.5" />
                       </Button>
-                      <Button
-                        variant="ghost" size="icon" className="h-7 w-7 text-destructive hover:bg-destructive/10"
-                        onClick={() => handleDelete(appt.id)}
-                        data-testid={`delete-appt-${appt.id}`}
-                      >
+                      <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:bg-destructive/10" onClick={() => handleDelete(appt.id)}>
                         <Trash2 className="w-3.5 h-3.5" />
                       </Button>
                     </div>
@@ -761,126 +565,63 @@ export default function AppointmentsPage() {
               )}
             </div>
           )}
-
-          {/* DAY VIEW */}
-          {viewMode === "day" && (
-            dayLoading ? (
-              <div className="rounded-xl border border-border bg-card p-6 space-y-3">
-                {Array.from({ length: 6 }).map((_, i) => <Skeleton key={i} className="h-12 w-full rounded-lg" />)}
-              </div>
-            ) : (
-              <DayCalendar
-                appointments={dayData?.data ?? []}
-                date={dayDate}
-                onPrevDay={() => setDayDate(d => addDays(d, -1))}
-                onNextDay={() => setDayDate(d => addDays(d, 1))}
-                onToday={() => setDayDate(todayStr)}
-                onClickSlot={(time) => openSchedule(dayDate, time)}
-                onComplete={(id) => handleStatus(id, "completed")}
-                onCancel={(id) => handleStatus(id, "cancelled")}
-                onDelete={handleDelete}
-                onCheckIn={handleCheckIn}
-                checkingInId={checkingInId}
-                currencyCode={currencyCode}
-              />
-            )
-          )}
         </div>
 
-        {/* Schedule Dialog */}
-        <Dialog open={addOpen} onOpenChange={(open) => { setAddOpen(open); if (!open) form.reset(); }}>
+        <Dialog open={addOpen} onOpenChange={setAddOpen}>
           <DialogContent className="max-w-md">
             <DialogHeader>
-              <DialogTitle>Schedule Appointment</DialogTitle>
+              <DialogTitle>{t("appt.new")}</DialogTitle>
             </DialogHeader>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
               <div>
-                <Label className="mb-1.5 block">Patient *</Label>
+                <Label>{t("presc.patient")} *</Label>
                 <Controller
                   control={form.control}
                   name="patientId"
                   render={({ field }) => (
-                    <PatientSearch value={field.value} onChange={field.onChange} patients={patientList} />
+                    <PatientSearch value={field.value} onChange={field.onChange} patients={patients?.data ?? []} />
                   )}
                 />
-                {form.formState.errors.patientId && (
-                  <p className="text-xs text-destructive mt-1">{form.formState.errors.patientId.message}</p>
-                )}
+                {form.formState.errors.patientId && <p className="text-xs text-destructive mt-1">{form.formState.errors.patientId.message}</p>}
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <Label>Date *</Label>
+                  <Label>{t("appt.date")} *</Label>
                   <Input {...form.register("date")} type="date" className="mt-1" />
                 </div>
                 <div>
-                  <Label>Time *</Label>
+                  <Label>{t("appt.time")} *</Label>
                   <Input {...form.register("time")} type="time" className="mt-1" />
                 </div>
               </div>
               <div>
-                <Label>Visit Type *</Label>
+                <Label>{t("patients.visitType")} *</Label>
                 <Controller
                   control={form.control}
                   name="type"
                   render={({ field }) => (
-                    <Select
-                      value={field.value || ""}
-                      onValueChange={(val) => {
-                        field.onChange(val);
-                        const price = visitPrices[val as VisitType];
-                        if (typeof price === "number") {
-                          form.setValue("fee", price, { shouldDirty: true, shouldValidate: false });
-                        }
-                      }}
-                    >
-                      <SelectTrigger className="mt-1" data-testid="select-visit-type">
-                        <SelectValue placeholder="Select visit type" />
+                    <Select value={field.value} onValueChange={field.onChange}>
+                      <SelectTrigger className="mt-1">
+                        <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        {VISIT_TYPES.map((vt) => {
-                          const style = getVisitTypeStyle(vt);
-                          return (
-                            <SelectItem key={vt} value={vt} data-testid={`visit-type-option-${vt}`}>
-                              <span className="inline-flex items-center gap-2">
-                                <span className={cn("w-2 h-2 rounded-full", style.dot)} />
-                                {vt}
-                                <span className="text-xs text-muted-foreground ml-1">
-                                  · {visitPrices[vt]} {currencyCode}
-                                </span>
-                              </span>
-                            </SelectItem>
-                          );
-                        })}
+                        {PATIENT_VISIT_TYPES.map(t => (
+                          <SelectItem key={t} value={t}>{t}</SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
                   )}
                 />
-                {form.formState.errors.type && (
-                  <p className="text-xs text-destructive mt-1">{form.formState.errors.type.message}</p>
-                )}
               </div>
               <div>
-                <Label>Amount to Pay ({currencyCode})</Label>
-                <Input
-                  {...form.register("fee")}
-                  type="number"
-                  placeholder="Auto-filled from visit type"
-                  className="mt-1"
-                  data-testid="input-fee"
-                />
-                <p className="text-xs text-muted-foreground mt-1">
-                  Auto-filled from the selected visit type. You can override it.
-                </p>
-              </div>
-              <div>
-                <Label>Notes</Label>
-                <Input {...form.register("notes")} placeholder="Any special notes..." className="mt-1" />
+                <Label>{t("appt.notes")}</Label>
+                <Input {...form.register("notes")} placeholder="Optional..." className="mt-1" />
               </div>
               <div className="flex gap-3 justify-end pt-2">
-                <Button type="button" variant="outline" onClick={() => { setAddOpen(false); form.reset(); }}>Cancel</Button>
-                <Button type="submit" disabled={createMutation.isPending} data-testid="button-save-appointment">
+                <Button type="button" variant="outline" onClick={() => setAddOpen(false)}>{t("presc.cancel")}</Button>
+                <Button type="submit" disabled={createMutation.isPending} data-testid="button-save-appt">
                   {createMutation.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-                  Schedule
+                  {t("appt.save")}
                 </Button>
               </div>
             </form>

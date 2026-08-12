@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useAuth } from "@/lib/auth";
+import { useLang } from "@/lib/lang";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import {
@@ -52,38 +53,40 @@ function displayAge(age: number | null | undefined): string {
 }
 
 function StatusPill({ status }: { status: string }) {
+  const { t } = useLang();
   if (status === "in-progress") {
     return (
       <span className="inline-flex items-center gap-1.5 text-xs font-medium px-2 py-0.5 rounded-full border border-primary/40 bg-primary/15 text-primary">
         <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
-        In progress
+        {t("status.inProgress")}
       </span>
     );
   }
   if (status === "waiting") {
     return (
       <span className="inline-flex items-center gap-1.5 text-xs font-medium px-2 py-0.5 rounded-full border border-amber-500/40 bg-amber-500/15 text-amber-700 dark:text-amber-300">
-        <Clock className="w-3 h-3" /> Waiting
+        <Clock className="w-3 h-3" /> {t("status.waiting")}
       </span>
     );
   }
   if (status === "completed") {
     return (
       <span className="inline-flex items-center gap-1.5 text-xs font-medium px-2 py-0.5 rounded-full border border-emerald-500/40 bg-emerald-500/15 text-emerald-700 dark:text-emerald-300">
-        Completed
+        {t("status.completed")}
       </span>
     );
   }
   // registered (default for newly created records)
   return (
     <span className="inline-flex items-center gap-1.5 text-xs font-medium px-2 py-0.5 rounded-full border border-border bg-muted/50 text-muted-foreground">
-      Registered
+      {t("status.registered")}
     </span>
   );
 }
 
 export default function PatientsPage() {
   const { clinic } = useAuth();
+  const { t, lang } = useLang();
   const clinicId = clinic?.id ?? "";
   const { toast } = useToast();
   const qc = useQueryClient();
@@ -112,12 +115,12 @@ export default function PatientsPage() {
   const onSubmit = (values: PatientForm) => {
     createMutation.mutate({ clinicId, data: values }, {
       onSuccess: () => {
-        toast({ title: "Patient added to records" });
+        toast({ title: t("patients.toast.added") });
         qc.invalidateQueries({ queryKey: getListPatientsQueryKey(clinicId) });
         setAddOpen(false);
         form.reset({ name: "", phone: "" });
       },
-      onError: () => toast({ title: "Failed to add patient", variant: "destructive" }),
+      onError: () => toast({ title: t("patients.toast.addFailed"), variant: "destructive" }),
     });
   };
 
@@ -132,24 +135,24 @@ export default function PatientsPage() {
       { clinicId, patientId: checkInPatient.id, data: { status: "waiting", visitType: values.visitType } },
       {
         onSuccess: () => {
-          toast({ title: `${checkInPatient.name} sent to the Doctor's Waiting List` });
+          toast({ title: `${checkInPatient.name} ${t("patients.toast.sentToQueue")}` });
           qc.invalidateQueries({ queryKey: getListPatientsQueryKey(clinicId) });
           qc.invalidateQueries({ queryKey: getGetPatientQueryKey(clinicId, checkInPatient.id) });
           setCheckInPatient(null);
         },
-        onError: () => toast({ title: "Failed to check in patient", variant: "destructive" }),
+        onError: () => toast({ title: t("patients.toast.checkInFailed"), variant: "destructive" }),
       },
     );
   };
 
   const handleDelete = (patientId: string, name: string) => {
-    if (!confirm(`Delete patient "${name}"?`)) return;
+    if (!confirm(`${t("patients.confirmDelete")} "${name}"?`)) return;
     deleteMutation.mutate({ clinicId, patientId }, {
       onSuccess: () => {
-        toast({ title: "Patient deleted" });
+        toast({ title: t("patients.toast.deleted") });
         qc.invalidateQueries({ queryKey: getListPatientsQueryKey(clinicId) });
       },
-      onError: () => toast({ title: "Failed to delete patient", variant: "destructive" }),
+      onError: () => toast({ title: t("patients.toast.deleteFailed"), variant: "destructive" }),
     });
   };
 
@@ -159,12 +162,12 @@ export default function PatientsPage() {
         <div className="p-6 max-w-6xl mx-auto">
           <div className="flex items-center justify-between mb-6">
             <div>
-              <h1 className="text-2xl font-bold">Patients</h1>
-              <p className="text-sm text-muted-foreground mt-0.5">{data?.total ?? 0} patients on file</p>
+              <h1 className="text-2xl font-bold">{t("patients.title")}</h1>
+              <p className="text-sm text-muted-foreground mt-0.5">{data?.total ?? 0} {t("patients.onFile")}</p>
             </div>
             <Button onClick={() => setAddOpen(true)} data-testid="button-add-patient">
               <Plus className="w-4 h-4 mr-2" />
-              Add Patient
+              {t("patients.add")}
             </Button>
           </div>
 
@@ -172,7 +175,7 @@ export default function PatientsPage() {
           <div className="relative mb-6">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
             <Input
-              placeholder="Search by code (PT-0001), name, or phone..."
+              placeholder={t("patients.searchPh")}
               value={search}
               onChange={e => setSearch(e.target.value)}
               className="pl-10"
@@ -183,13 +186,13 @@ export default function PatientsPage() {
           {/* Table — Name, Age, Phone, Status, Actions (Check-in / WhatsApp / View / Delete) */}
           <div className="rounded-xl border border-border bg-card overflow-hidden">
             <div className="grid grid-cols-[110px_1fr_70px_1fr_auto_auto_auto] gap-4 px-6 py-3 border-b border-border bg-muted/30 text-xs font-medium text-muted-foreground uppercase tracking-wider">
-              <span>ID</span>
-              <span>Name</span>
-              <span>Age</span>
-              <span>Phone</span>
-              <span>Status</span>
-              <span>Date Added</span>
-              <span>Actions</span>
+              <span>{t("patients.id")}</span>
+              <span>{t("patients.name")}</span>
+              <span>{t("patients.age")}</span>
+              <span>{t("patients.phone")}</span>
+              <span>{t("patients.status")}</span>
+              <span>{t("patients.dateAdded")}</span>
+              <span>{t("patients.actions")}</span>
             </div>
 
             {isLoading ? (
@@ -201,11 +204,11 @@ export default function PatientsPage() {
             ) : !data?.data.length ? (
               <div className="text-center py-16 text-muted-foreground">
                 <Users className="w-10 h-10 mx-auto mb-3 opacity-30" />
-                <p className="font-medium text-sm">{search ? "No patients found" : "No patients yet"}</p>
-                <p className="text-xs mt-1">{search ? "Try a different search" : "Add your first patient to get started"}</p>
+                <p className="font-medium text-sm">{search ? t("patients.notFound") : t("patients.empty")}</p>
+                <p className="text-xs mt-1">{search ? t("patients.tryDifferent") : t("patients.addFirst")}</p>
                 {!search && (
                   <Button size="sm" className="mt-4" onClick={() => setAddOpen(true)}>
-                    <Plus className="w-3 h-3 mr-1" />Add Patient
+                    <Plus className="w-3 h-3 mr-1" />{t("patients.add")}
                   </Button>
                 )}
               </div>
@@ -230,7 +233,7 @@ export default function PatientsPage() {
                       </div>
                       <div className="min-w-0">
                         <p className="text-sm font-medium truncate">{patient.name}</p>
-                        {patient.bloodType && <p className="text-xs text-muted-foreground">Blood: {patient.bloodType}</p>}
+                        {patient.bloodType && <p className="text-xs text-muted-foreground">{t("patients.blood")}: {patient.bloodType}</p>}
                       </div>
                     </div>
                     <span className="text-sm font-mono text-muted-foreground" data-testid={`patient-age-${patient.id}`}>
@@ -240,7 +243,7 @@ export default function PatientsPage() {
                     <span data-testid={`patient-status-${patient.id}`}>
                       <StatusPill status={patient.status} />
                     </span>
-                    <span className="text-xs text-muted-foreground">{formatDate(patient.createdAt)}</span>
+                    <span className="text-xs text-muted-foreground">{formatDate(patient.createdAt, lang === "ar" ? "ar-EG" : "en-US")}</span>
                     <div className="flex items-center gap-1">
                       <Button
                         variant={onActiveQueue ? "ghost" : "default"}
@@ -251,11 +254,11 @@ export default function PatientsPage() {
                         )}
                         onClick={() => openCheckIn(patient.id, patient.name)}
                         disabled={onActiveQueue}
-                        title={onActiveQueue ? "Already on the waiting list" : "Send to the Doctor's Waiting List"}
+                        title={onActiveQueue ? t("patients.alreadyOnQueue") : t("patients.sendToQueue")}
                         data-testid={`checkin-patient-${patient.id}`}
                       >
                         <LogIn className="w-3.5 h-3.5 mr-1" />
-                        {onActiveQueue ? "On queue" : "Check-in"}
+                        {onActiveQueue ? t("patients.onQueue") : t("patients.checkIn")}
                       </Button>
                       <Link href={`/patients/${patient.id}`}>
                         <Button variant="ghost" size="icon" className="h-8 w-8" data-testid={`view-patient-${patient.id}`}>
@@ -301,25 +304,25 @@ export default function PatientsPage() {
         <Dialog open={addOpen} onOpenChange={setAddOpen}>
           <DialogContent className="max-w-lg">
             <DialogHeader>
-              <DialogTitle>Add Patient</DialogTitle>
+              <DialogTitle>{t("patients.addDialog.title")}</DialogTitle>
               <DialogDescription>
-                Save the patient&apos;s master record. They will not be added to today&apos;s waiting list — use the Check-in button on the row when they arrive.
+                {t("patients.addDialog.desc")}
               </DialogDescription>
             </DialogHeader>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div className="col-span-2">
-                  <Label>Full Name *</Label>
-                  <Input {...form.register("name")} placeholder="Fatima Al-Rashid" className="mt-1" />
+                  <Label>{t("patients.fullName")} *</Label>
+                  <Input {...form.register("name")} placeholder={t("patients.fullNamePh")} className="mt-1" />
                   {form.formState.errors.name && <p className="text-xs text-destructive mt-1">{form.formState.errors.name.message}</p>}
                 </div>
                 <div>
-                  <Label>Phone *</Label>
+                  <Label>{t("patients.phone")} *</Label>
                   <Input {...form.register("phone")} placeholder="01012345678" className="mt-1" />
                   {form.formState.errors.phone && <p className="text-xs text-destructive mt-1">{form.formState.errors.phone.message}</p>}
                 </div>
                 <div>
-                  <Label>Age *</Label>
+                  <Label>{t("patients.age")} *</Label>
                   <Input
                     {...form.register("age")}
                     type="number"
@@ -327,90 +330,77 @@ export default function PatientsPage() {
                     max={149}
                     step={1}
                     inputMode="numeric"
-                    placeholder="e.g. 32"
                     className="mt-1"
-                    data-testid="input-age"
                   />
-                  {form.formState.errors.age && (
-                    <p className="text-xs text-destructive mt-1">{form.formState.errors.age.message}</p>
-                  )}
+                  {form.formState.errors.age && <p className="text-xs text-destructive mt-1">{form.formState.errors.age.message}</p>}
                 </div>
                 <div>
-                  <Label>Blood Type</Label>
-                  <Input {...form.register("bloodType")} placeholder="A+" className="mt-1" />
+                  <Label>{t("patients.bloodType")}</Label>
+                  <Input {...form.register("bloodType")} placeholder="e.g. O+" className="mt-1" />
                 </div>
                 <div className="col-span-2">
-                  <Label>Allergies</Label>
-                  <Input {...form.register("allergies")} placeholder="Penicillin, Aspirin..." className="mt-1" />
+                  <Label>{t("patients.allergies")}</Label>
+                  <Input {...form.register("allergies")} placeholder="e.g. Penicillin" className="mt-1" />
                 </div>
                 <div className="col-span-2">
-                  <Label>Notes</Label>
-                  <Input {...form.register("notes")} placeholder="Additional medical notes..." className="mt-1" />
+                  <Label>{t("patients.clinicalNotes")}</Label>
+                  <Input {...form.register("notes")} placeholder="Chronic conditions, history..." className="mt-1" />
                 </div>
               </div>
               <div className="flex gap-3 justify-end pt-2">
-                <Button type="button" variant="outline" onClick={() => setAddOpen(false)}>Cancel</Button>
+                <Button type="button" variant="outline" onClick={() => setAddOpen(false)}>{t("presc.cancel")}</Button>
                 <Button type="submit" disabled={createMutation.isPending} data-testid="button-save-patient">
                   {createMutation.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-                  Save Patient
+                  {t("patients.save")}
                 </Button>
               </div>
             </form>
           </DialogContent>
         </Dialog>
 
-        {/* Check-in Dialog — pick visit type, then send to waiting list */}
+        {/* Check-in Dialog */}
         <Dialog open={!!checkInPatient} onOpenChange={(open) => !open && setCheckInPatient(null)}>
           <DialogContent className="max-w-md">
             <DialogHeader>
-              <DialogTitle>Check-in {checkInPatient?.name ?? ""}</DialogTitle>
+              <DialogTitle>{t("patients.checkInDialog.title")}</DialogTitle>
               <DialogDescription>
-                Pick the reason for today&apos;s visit. The patient will be sent to the Doctor&apos;s Waiting List.
+                {t("patients.checkInDialog.desc")}
               </DialogDescription>
             </DialogHeader>
             <form onSubmit={checkInForm.handleSubmit(onCheckIn)} className="space-y-4">
               <div>
-                <Label>Visit Type *</Label>
+                <Label className="text-sm font-medium mb-1.5 block">{t("patients.name")}</Label>
+                <div className="px-3 py-2 rounded-md bg-muted/50 border border-border text-sm font-semibold">
+                  {checkInPatient?.name}
+                </div>
+              </div>
+              <div>
+                <Label>{t("patients.visitType")} *</Label>
                 <Controller
                   control={checkInForm.control}
                   name="visitType"
                   render={({ field }) => (
-                    <Select value={field.value || ""} onValueChange={field.onChange}>
-                      <SelectTrigger className="mt-1" data-testid="select-checkin-visit-type">
-                        <SelectValue placeholder="Select visit type" />
+                    <Select value={field.value} onValueChange={field.onChange}>
+                      <SelectTrigger className="mt-1" data-testid="select-visit-type">
+                        <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        {PATIENT_VISIT_TYPES.map((vt) => {
-                          const style = getVisitTypeStyle(vt);
-                          return (
-                            <SelectItem
-                              key={vt}
-                              value={vt}
-                              data-testid={`checkin-visit-type-option-${vt}`}
-                            >
-                              <span className="inline-flex items-center gap-2">
-                                <span className={cn("w-2 h-2 rounded-full", style.dot)} />
-                                {vt}
-                              </span>
-                            </SelectItem>
-                          );
-                        })}
+                        {PATIENT_VISIT_TYPES.map(type => (
+                          <SelectItem key={type} value={type}>{type}</SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
                   )}
                 />
                 {checkInForm.formState.errors.visitType && (
-                  <p className="text-xs text-destructive mt-1">
-                    {checkInForm.formState.errors.visitType.message}
-                  </p>
+                  <p className="text-xs text-destructive mt-1">{checkInForm.formState.errors.visitType.message}</p>
                 )}
               </div>
               <div className="flex gap-3 justify-end pt-2">
-                <Button type="button" variant="outline" onClick={() => setCheckInPatient(null)}>Cancel</Button>
+                <Button type="button" variant="outline" onClick={() => setCheckInPatient(null)}>{t("presc.cancel")}</Button>
                 <Button type="submit" disabled={patchMutation.isPending} data-testid="button-confirm-checkin">
                   {patchMutation.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-                  <LogIn className="w-4 h-4 mr-1" />
-                  Send to Waiting List
+                  {t("patients.sendToDoctor")}
                 </Button>
               </div>
             </form>

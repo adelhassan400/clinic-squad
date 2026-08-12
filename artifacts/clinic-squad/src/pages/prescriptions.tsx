@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { useLocation, useSearch } from "wouter";
 import { useAuth } from "@/lib/auth";
+import { useLang } from "@/lib/lang";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import {
@@ -73,6 +74,7 @@ interface PrescriptionsContentProps {
 
 export function PrescriptionsContent({ initialPatientId, embedded }: PrescriptionsContentProps) {
   const { clinic, user } = useAuth();
+  const { t, lang } = useLang();
   const clinicId = clinic?.id ?? "";
   const clinicBranding: ClinicBranding = {
     name: clinic?.name ?? "",
@@ -142,7 +144,7 @@ export function PrescriptionsContent({ initialPatientId, embedded }: Prescriptio
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!patientId) {
-      toast({ title: "Select a patient", variant: "destructive" });
+      toast({ title: t("presc.selectPatient"), variant: "destructive" });
       return;
     }
     const cleaned = items
@@ -155,7 +157,7 @@ export function PrescriptionsContent({ initialPatientId, embedded }: Prescriptio
       }))
       .filter((i) => i.drug);
     if (cleaned.length === 0) {
-      toast({ title: "Add at least one medication", variant: "destructive" });
+      toast({ title: t("presc.addMedication"), variant: "destructive" });
       return;
     }
     try {
@@ -170,26 +172,26 @@ export function PrescriptionsContent({ initialPatientId, embedded }: Prescriptio
         },
       });
       await queryClient.invalidateQueries({ queryKey: getListPrescriptionsQueryKey(clinicId) });
-      toast({ title: "Prescription created" });
+      toast({ title: t("presc.created") });
       resetForm();
       setShowForm(false);
     } catch (err: any) {
       toast({
-        title: "Failed to create prescription",
-        description: err?.data?.error ?? err?.message ?? "Try again",
+        title: t("presc.failed"),
+        description: err?.data?.error ?? err?.message ?? t("auth.login.submit"),
         variant: "destructive",
       });
     }
   }
 
   async function handleDelete(id: string) {
-    if (!confirm("Delete this prescription?")) return;
+    if (!confirm(t("presc.confirmDelete"))) return;
     try {
       await deleteMutation.mutateAsync({ clinicId, prescriptionId: id });
       await queryClient.invalidateQueries({ queryKey: getListPrescriptionsQueryKey(clinicId) });
-      toast({ title: "Deleted" });
+      toast({ title: t("presc.deleted") });
     } catch (err: any) {
-      toast({ title: "Failed to delete", description: err?.message, variant: "destructive" });
+      toast({ title: t("presc.failedDelete"), description: err?.message, variant: "destructive" });
     }
   }
 
@@ -203,25 +205,25 @@ export function PrescriptionsContent({ initialPatientId, embedded }: Prescriptio
           {!embedded && (
             <h1 className="text-2xl font-bold flex items-center gap-2">
               <Pill className="w-6 h-6 text-primary" />
-              ePrescription
+              {t("presc.title")}
             </h1>
           )}
           {embedded && (
             <h2 className="text-lg font-semibold flex items-center gap-2">
               <Pill className="w-5 h-5 text-primary" />
-              ePrescription ({filtered.length})
+              {t("presc.title")} ({filtered.length})
             </h2>
           )}
           {!embedded && (
             <p className="text-sm text-muted-foreground mt-1">
-              Write, print, and send prescriptions to your patients.
+              {t("presc.subtitle")}
             </p>
           )}
         </div>
         {isAdmin && (
           <Button onClick={() => setShowForm((s) => !s)} data-testid="button-new-prescription">
             {showForm ? <X className="w-4 h-4 mr-2" /> : <Plus className="w-4 h-4 mr-2" />}
-            {showForm ? "Cancel" : "New Prescription"}
+            {showForm ? t("presc.cancel") : t("presc.new")}
           </Button>
         )}
       </div>
@@ -235,16 +237,16 @@ export function PrescriptionsContent({ initialPatientId, embedded }: Prescriptio
         >
           <div className="grid sm:grid-cols-2 gap-4">
             <div>
-              <Label htmlFor="patient">Patient *</Label>
+              <Label htmlFor="patient">{t("presc.patient")} *</Label>
               {initialPatientId ? (
                 <Input
-                  value={patientList.find((p) => p.id === initialPatientId)?.name ?? "Loading..."}
+                  value={patientList.find((p) => p.id === initialPatientId)?.name ?? "..."}
                   disabled
                 />
               ) : (
                 <Select value={patientId} onValueChange={setPatientId}>
                   <SelectTrigger id="patient" data-testid="select-patient">
-                    <SelectValue placeholder="Select patient" />
+                    <SelectValue placeholder={t("presc.selectPatientPh")} />
                   </SelectTrigger>
                   <SelectContent>
                     {patientList.map((p) => (
@@ -257,7 +259,7 @@ export function PrescriptionsContent({ initialPatientId, embedded }: Prescriptio
               )}
             </div>
             <div>
-              <Label htmlFor="date">Date *</Label>
+              <Label htmlFor="date">{t("presc.date")} *</Label>
               <Input
                 id="date"
                 type="date"
@@ -269,12 +271,12 @@ export function PrescriptionsContent({ initialPatientId, embedded }: Prescriptio
           </div>
 
           <div>
-            <Label htmlFor="diagnosis">Diagnosis</Label>
+            <Label htmlFor="diagnosis">{t("presc.diagnosis")}</Label>
             <Input
               id="diagnosis"
               value={diagnosis}
               onChange={(e) => setDiagnosis(e.target.value)}
-              placeholder="e.g. Acute pharyngitis"
+              placeholder={t("presc.diagnosisPh")}
             />
           </div>
 
@@ -283,7 +285,7 @@ export function PrescriptionsContent({ initialPatientId, embedded }: Prescriptio
             <div className="flex items-center justify-between">
               <Label className="flex items-center gap-2">
                 <Pill className="w-4 h-4 text-primary" />
-                Medications <span className="text-destructive">*</span>
+                {t("presc.medications")} <span className="text-destructive">*</span>
                 <span className="text-xs font-normal text-muted-foreground">({items.filter(i => i.drug.trim()).length})</span>
               </Label>
               <Button
@@ -294,7 +296,7 @@ export function PrescriptionsContent({ initialPatientId, embedded }: Prescriptio
                 data-testid="button-add-medication"
               >
                 <Plus className="w-3.5 h-3.5 mr-1.5" />
-                Add medication
+                {t("presc.addMedBtn")}
               </Button>
             </div>
             {items.map((item, idx) => (
@@ -308,7 +310,7 @@ export function PrescriptionsContent({ initialPatientId, embedded }: Prescriptio
                     <span className="w-5 h-5 rounded-full bg-primary text-primary-foreground text-[10px] font-bold flex items-center justify-center">
                       {idx + 1}
                     </span>
-                    <span className="text-muted-foreground">Medication</span>
+                    <span className="text-muted-foreground">{t("presc.drugName")}</span>
                     {item.drug.trim() && (
                       <span className="text-foreground font-normal truncate max-w-[200px]">· {item.drug.trim()}</span>
                     )}
@@ -320,7 +322,7 @@ export function PrescriptionsContent({ initialPatientId, embedded }: Prescriptio
                       variant="ghost"
                       className="h-7 w-7 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
                       onClick={() => removeItem(idx)}
-                      title="Remove medication"
+                      title={t("presc.delete")}
                       data-testid={`remove-item-${idx}`}
                     >
                       <Trash2 className="w-3.5 h-3.5" />
@@ -331,12 +333,12 @@ export function PrescriptionsContent({ initialPatientId, embedded }: Prescriptio
                 <div className="p-3 space-y-3">
                   <div>
                     <Label className="text-xs flex items-center gap-1.5">
-                      <Pill className="w-3 h-3 text-muted-foreground" /> Drug name *
+                      <Pill className="w-3 h-3 text-muted-foreground" /> {t("presc.drugName")} *
                     </Label>
                     <Input
                       value={item.drug}
                       onChange={(e) => updateItem(idx, { drug: e.target.value })}
-                      placeholder="e.g. Amoxicillin 500mg"
+                      placeholder={t("presc.drugNamePh")}
                       className="mt-1 font-medium"
                       data-testid={`item-drug-${idx}`}
                     />
@@ -345,24 +347,24 @@ export function PrescriptionsContent({ initialPatientId, embedded }: Prescriptio
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                     <div>
                       <Label className="text-xs flex items-center gap-1.5">
-                        <ClipboardList className="w-3 h-3 text-muted-foreground" /> Dosage
+                        <ClipboardList className="w-3 h-3 text-muted-foreground" /> {t("presc.dosage")}
                       </Label>
                       <Input
                         value={item.dosage}
                         onChange={(e) => updateItem(idx, { dosage: e.target.value })}
-                        placeholder="1 capsule"
+                        placeholder={t("presc.dosagePh")}
                         className="mt-1"
                         data-testid={`item-dosage-${idx}`}
                       />
                     </div>
                     <div>
                       <Label className="text-xs flex items-center gap-1.5">
-                        <Clock className="w-3 h-3 text-muted-foreground" /> Frequency
+                        <Clock className="w-3 h-3 text-muted-foreground" /> {t("presc.frequency")}
                       </Label>
                       <Input
                         value={item.frequency}
                         onChange={(e) => updateItem(idx, { frequency: e.target.value })}
-                        placeholder="3× daily"
+                        placeholder={t("presc.frequencyPh")}
                         className="mt-1"
                         data-testid={`item-frequency-${idx}`}
                       />
@@ -381,12 +383,12 @@ export function PrescriptionsContent({ initialPatientId, embedded }: Prescriptio
                     </div>
                     <div>
                       <Label className="text-xs flex items-center gap-1.5">
-                        <CalendarDays className="w-3 h-3 text-muted-foreground" /> Duration
+                        <CalendarDays className="w-3 h-3 text-muted-foreground" /> {t("presc.duration")}
                       </Label>
                       <Input
                         value={item.duration}
                         onChange={(e) => updateItem(idx, { duration: e.target.value })}
-                        placeholder="7 days"
+                        placeholder={t("presc.durationPh")}
                         className="mt-1"
                         data-testid={`item-duration-${idx}`}
                       />
@@ -404,102 +406,91 @@ export function PrescriptionsContent({ initialPatientId, embedded }: Prescriptio
                       </div>
                     </div>
                   </div>
-
-                  <div>
-                    <Label className="text-xs">Notes (optional)</Label>
-                    <Input
-                      value={item.notes}
-                      onChange={(e) => updateItem(idx, { notes: e.target.value })}
-                      placeholder="e.g. Take after meals with water"
-                      className="mt-1"
-                    />
-                  </div>
                 </div>
               </div>
             ))}
           </div>
 
           <div>
-            <Label htmlFor="notes">Additional notes</Label>
+            <Label htmlFor="notes">{t("presc.clinicalNotes")}</Label>
             <Textarea
               id="notes"
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
+              placeholder={t("presc.clinicalNotesPh")}
               rows={2}
-              placeholder="Advice for the patient"
             />
           </div>
 
-          <div className="flex justify-end gap-2 pt-2 border-t border-border">
-            <Button type="button" variant="ghost" onClick={() => setShowForm(false)}>
-              Cancel
-            </Button>
-            <Button type="submit" disabled={createMutation.isPending} data-testid="button-save-prescription">
-              {createMutation.isPending ? "Saving..." : "Save prescription"}
-            </Button>
-          </div>
+          <Button
+            type="submit"
+            className="w-full"
+            disabled={createMutation.isPending}
+            data-testid="button-save-prescription"
+          >
+            {createMutation.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+            {t("presc.save")}
+          </Button>
         </form>
 
-        {/* Live preview panel */}
+        {/* Live Preview Paper */}
         <LivePreview
           clinicName={clinic?.name ?? ""}
           clinicPhone={clinic?.phone ?? null}
           clinicAddress={clinic?.address ?? null}
           doctorName={user?.name ?? ""}
-          doctorSpecialty={user?.specialty ?? null}
-          patient={patientList.find((p) => p.id === patientId) ?? null}
+          doctorSpecialty={clinic?.specialty ?? null}
+          patient={patientList.find(p => p.id === patientId) ?? null}
           date={date}
           diagnosis={diagnosis}
           notes={notes}
           items={items}
+          t={t}
+          lang={lang}
         />
         </div>
       )}
 
-      {/* Search */}
-      {!embedded && (
-        <div className="relative mb-4">
-          <Search className="w-4 h-4 absolute start-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search by patient, diagnosis, or drug name"
-            className="ps-9"
-          />
-        </div>
-      )}
-
       {/* List */}
+      <div className="relative mb-6">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+        <Input
+          placeholder={t("presc.searchPh")}
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          className="pl-10"
+          data-testid="input-search"
+        />
+      </div>
+
       {isLoading ? (
         <div className="space-y-3">
-          {Array.from({ length: 3 }).map((_, i) => (
-            <Skeleton key={i} className="h-20 rounded-xl" />
+          {[1, 2, 3].map((i) => (
+            <Skeleton key={i} className="h-20 w-full rounded-xl" />
           ))}
         </div>
-      ) : error ? (
-        <div className="rounded-xl border border-destructive/30 bg-destructive/5 p-6 text-center text-sm text-destructive">
-          Failed to load prescriptions.
-        </div>
       ) : filtered.length === 0 ? (
-        <div className="rounded-xl border border-border bg-card p-10 text-center">
-          <FileText className="w-10 h-10 text-muted-foreground/40 mx-auto mb-3" />
-          <p className="text-sm text-muted-foreground">No prescriptions yet.</p>
+        <div className="text-center py-12 rounded-xl border border-dashed border-border bg-muted/20">
+          <FileText className="w-10 h-10 mx-auto text-muted-foreground/30 mb-3" />
+          <p className="text-sm text-muted-foreground">{t("presc.empty")}</p>
         </div>
       ) : (
-        <div className="space-y-2">
+        <div className="grid gap-3">
           {filtered.map((p) => (
             <div
               key={p.id}
-              data-testid={`prescription-${p.id}`}
-              className="rounded-xl border border-border bg-card p-4 flex flex-col sm:flex-row sm:items-center gap-3 hover:border-primary/40 transition-colors"
+              data-testid={`prescription-row-${p.id}`}
+              className="flex items-center justify-between p-4 rounded-xl border border-border bg-card hover:bg-muted/30 transition-colors"
             >
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2 flex-wrap">
-                  <p className="font-medium">{p.patientName}</p>
-                  <span className="text-xs text-muted-foreground">{formatDate(p.date)}</span>
+              <div className="min-w-0 flex-1 pr-4">
+                <div className="flex items-center gap-2 mb-1">
+                  <p className="font-semibold truncate">{p.patientName}</p>
+                  <span className="text-[10px] text-muted-foreground px-1.5 py-0.5 rounded-full bg-muted border border-border">
+                    {formatDate(p.date, lang === "ar" ? "ar-EG" : "en-US")}
+                  </span>
                 </div>
                 {p.diagnosis && (
-                  <p className="text-xs text-muted-foreground mt-0.5 truncate">Dx: {p.diagnosis}</p>
+                  <p className="text-xs text-muted-foreground mt-0.5 truncate">{t("presc.diagnosis")}: {p.diagnosis}</p>
                 )}
                 <p className="text-xs text-muted-foreground/80 mt-1 truncate">
                   {p.items.map((i) => i.drug).join(", ")}
@@ -511,7 +502,7 @@ export function PrescriptionsContent({ initialPatientId, embedded }: Prescriptio
                   size="icon"
                   className="h-8 w-8"
                   onClick={() => setViewing(p)}
-                  title="View"
+                  title={t("presc.view")}
                   data-testid={`view-prescription-${p.id}`}
                 >
                   <Eye className="w-4 h-4" />
@@ -521,7 +512,7 @@ export function PrescriptionsContent({ initialPatientId, embedded }: Prescriptio
                   size="icon"
                   className="h-8 w-8 text-primary"
                   onClick={() => printPrescription(p, clinicBranding)}
-                  title="Print / PDF"
+                  title={t("presc.print")}
                   data-testid={`print-prescription-${p.id}`}
                 >
                   <Printer className="w-4 h-4" />
@@ -531,7 +522,7 @@ export function PrescriptionsContent({ initialPatientId, embedded }: Prescriptio
                   size="icon"
                   className="h-8 w-8 text-green-600"
                   onClick={() => sendPrescriptionWhatsApp(p, clinicBranding)}
-                  title="Send via WhatsApp"
+                  title={t("presc.whatsapp")}
                   data-testid={`whatsapp-prescription-${p.id}`}
                 >
                   <MessageCircle className="w-4 h-4" />
@@ -542,7 +533,7 @@ export function PrescriptionsContent({ initialPatientId, embedded }: Prescriptio
                     size="icon"
                     className="h-8 w-8 text-destructive"
                     onClick={() => handleDelete(p.id)}
-                    title="Delete"
+                    title={t("presc.delete")}
                     data-testid={`delete-prescription-${p.id}`}
                   >
                     <Trash2 className="w-4 h-4" />
@@ -558,30 +549,30 @@ export function PrescriptionsContent({ initialPatientId, embedded }: Prescriptio
       <Dialog open={!!viewing} onOpenChange={(open) => !open && setViewing(null)}>
         <DialogContent className="max-w-lg">
           <DialogHeader>
-            <DialogTitle>Prescription</DialogTitle>
+            <DialogTitle>{t("presc.title")}</DialogTitle>
           </DialogHeader>
           {viewing && (
             <div className="space-y-4 text-sm">
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <p className="text-xs text-muted-foreground">Patient</p>
+                  <p className="text-xs text-muted-foreground">{t("presc.patient")}</p>
                   <p className="font-medium">{viewing.patientName}</p>
                   <p className="text-xs text-muted-foreground">{viewing.patientPhone}</p>
                 </div>
                 <div>
-                  <p className="text-xs text-muted-foreground">Date</p>
-                  <p className="font-medium">{formatDate(viewing.date)}</p>
-                  <p className="text-xs text-muted-foreground">By {viewing.doctorName}</p>
+                  <p className="text-xs text-muted-foreground">{t("presc.date")}</p>
+                  <p className="font-medium">{formatDate(viewing.date, lang === "ar" ? "ar-EG" : "en-US")}</p>
+                  <p className="text-xs text-muted-foreground">{t("auth.register.owner")} {viewing.doctorName}</p>
                 </div>
               </div>
               {viewing.diagnosis && (
                 <div>
-                  <p className="text-xs text-muted-foreground">Diagnosis</p>
+                  <p className="text-xs text-muted-foreground">{t("presc.diagnosis")}</p>
                   <p>{viewing.diagnosis}</p>
                 </div>
               )}
               <div>
-                <p className="text-xs text-muted-foreground mb-2">Medications</p>
+                <p className="text-xs text-muted-foreground mb-2">{t("presc.medications")}</p>
                 <ol className="space-y-2">
                   {viewing.items.map((it, i) => (
                     <li key={i} className="rounded-md border border-border p-3">
@@ -600,7 +591,7 @@ export function PrescriptionsContent({ initialPatientId, embedded }: Prescriptio
               </div>
               {viewing.notes && (
                 <div>
-                  <p className="text-xs text-muted-foreground">Notes</p>
+                  <p className="text-xs text-muted-foreground">{t("presc.clinicalNotes")}</p>
                   <p>{viewing.notes}</p>
                 </div>
               )}
@@ -611,11 +602,11 @@ export function PrescriptionsContent({ initialPatientId, embedded }: Prescriptio
                   onClick={() => sendPrescriptionWhatsApp(viewing, clinicBranding)}
                 >
                   <MessageCircle className="w-4 h-4 mr-2" />
-                  WhatsApp
+                  {t("presc.whatsapp")}
                 </Button>
                 <Button size="sm" onClick={() => printPrescription(viewing, clinicBranding)}>
                   <Printer className="w-4 h-4 mr-2" />
-                  Print / PDF
+                  {t("presc.print")}
                 </Button>
               </div>
             </div>
@@ -637,6 +628,8 @@ interface LivePreviewProps {
   diagnosis: string;
   notes: string;
   items: ItemForm[];
+  t: (k: string) => string;
+  lang: string;
 }
 
 function CaduceusWatermark() {
@@ -667,10 +660,10 @@ function CaduceusWatermark() {
   );
 }
 
-function LivePreview({ clinicName, clinicPhone, clinicAddress, doctorName, doctorSpecialty, patient, date, diagnosis, notes, items }: LivePreviewProps) {
+function LivePreview({ clinicName, clinicPhone, clinicAddress, doctorName, doctorSpecialty, patient, date, diagnosis, notes, items, t, lang }: LivePreviewProps) {
   const filledItems = items.filter((i) => i.drug.trim());
   const formattedDate = date
-    ? new Date(date + "T00:00:00").toLocaleDateString(undefined, {
+    ? new Date(date + "T00:00:00").toLocaleDateString(lang === "ar" ? "ar-EG" : "en-US", {
         year: "numeric",
         month: "long",
         day: "numeric",
@@ -684,8 +677,8 @@ function LivePreview({ clinicName, clinicPhone, clinicAddress, doctorName, docto
       {/* Header strip outside the paper */}
       <div className="flex items-center gap-2 text-xs">
         <Eye className="w-3.5 h-3.5" style={{ color: BRAND }} />
-        <span className="font-semibold uppercase tracking-wider" style={{ color: BRAND }}>Live preview</span>
-        <span className="ms-auto text-muted-foreground hidden sm:inline">A4 · what your patient receives</span>
+        <span className="font-semibold uppercase tracking-wider" style={{ color: BRAND }}>{t("presc.preview")}</span>
+        <span className="ms-auto text-muted-foreground hidden sm:inline">{t("presc.previewNote")}</span>
       </div>
 
       {/* Outer surround mimicking the colored backdrop */}
@@ -696,7 +689,7 @@ function LivePreview({ clinicName, clinicPhone, clinicAddress, doctorName, docto
           <div className="relative px-7 pt-6 pb-4">
             {/* Stamp */}
             <div className="absolute top-2 right-3 text-[8px] font-mono text-zinc-400 tracking-[0.2em] uppercase">
-              Rx · Draft
+              {t("presc.rxDraft")}
             </div>
             <h2
               className="text-center font-extrabold leading-tight tracking-tight break-words"
@@ -714,10 +707,10 @@ function LivePreview({ clinicName, clinicPhone, clinicAddress, doctorName, docto
             >
               <div className="min-w-0">
                 <p className="text-[14px] font-bold text-slate-900 leading-tight truncate">
-                  Dr. {doctorName || "Doctor Name"}
+                  {t("presc.doctor")} {doctorName || "Doctor Name"}
                 </p>
                 <p className="text-[9px] uppercase tracking-[0.18em] mt-0.5 font-semibold truncate" style={{ color: BRAND }}>
-                  {doctorSpecialty || "Medical Practitioner"}
+                  {doctorSpecialty || t("presc.medPractitioner")}
                 </p>
               </div>
               <div
@@ -732,7 +725,7 @@ function LivePreview({ clinicName, clinicPhone, clinicAddress, doctorName, docto
           {/* ===== Patient info form ===== */}
           <div className="px-7 pt-3 pb-3 grid grid-cols-2 gap-x-7 gap-y-3 text-[12px]">
             <div className="flex items-baseline gap-2 border-b border-slate-300 pb-1 min-h-[22px]">
-              <span className="text-slate-600 font-medium shrink-0">Patient Name:</span>
+              <span className="text-slate-600 font-medium shrink-0">{t("presc.patientName")}:</span>
               <span className="text-slate-900 font-semibold flex-1 truncate">
                 {patient?.name || <span className="text-slate-400 font-normal italic">—</span>}
                 {patient?.code && (
@@ -746,21 +739,21 @@ function LivePreview({ clinicName, clinicPhone, clinicAddress, doctorName, docto
               </span>
             </div>
             <div className="flex items-baseline gap-2 border-b border-slate-300 pb-1 min-h-[22px]">
-              <span className="text-slate-600 font-medium shrink-0">Date:</span>
+              <span className="text-slate-600 font-medium shrink-0">{t("presc.date")}:</span>
               <span className="text-slate-900 font-semibold flex-1">{formattedDate}</span>
             </div>
             <div className="flex items-baseline gap-2 border-b border-slate-300 pb-1 min-h-[22px]">
-              <span className="text-slate-600 font-medium shrink-0">Phone:</span>
+              <span className="text-slate-600 font-medium shrink-0">{t("presc.phone")}:</span>
               <span className="text-slate-900 font-semibold flex-1 truncate">
                 {patient?.phone || <span className="text-slate-400 font-normal italic">—</span>}
               </span>
             </div>
             <div className="flex items-baseline gap-2 border-b border-slate-300 pb-1 min-h-[22px]">
-              <span className="text-slate-600 font-medium shrink-0">Rx ID:</span>
-              <span className="text-slate-400 font-mono text-[10px] flex-1 italic">— draft —</span>
+              <span className="text-slate-600 font-medium shrink-0">{t("presc.rxId")}:</span>
+              <span className="text-slate-400 font-mono text-[10px] flex-1 italic">— {t("presc.draft")} —</span>
             </div>
             <div className="col-span-2 flex items-baseline gap-2 border-b border-slate-300 pb-1 min-h-[22px]">
-              <span className="text-slate-600 font-medium shrink-0">Diagnosis:</span>
+              <span className="text-slate-600 font-medium shrink-0">{t("presc.diagnosis")}:</span>
               <span className="text-slate-900 font-semibold flex-1 truncate">
                 {diagnosis || <span className="text-slate-400 font-normal italic">—</span>}
               </span>
@@ -785,7 +778,7 @@ function LivePreview({ clinicName, clinicPhone, clinicAddress, doctorName, docto
 
             {filledItems.length === 0 ? (
               <div className="relative z-10 rounded-md border border-dashed border-zinc-300 py-5 text-center text-xs text-zinc-400 italic">
-                Start typing a drug name to preview…
+                {t("presc.drugNamePh")}...
               </div>
             ) : (
               <ol className="relative z-10 space-y-2">
@@ -834,7 +827,9 @@ function LivePreview({ clinicName, clinicPhone, clinicAddress, doctorName, docto
                           </div>
                         )}
                         {itemNotes && (
-                          <p className="text-[11px] text-slate-600 italic mt-1.5">↳ {itemNotes}</p>
+                          <p className="text-[10px] text-slate-500 mt-1.5 italic leading-relaxed">
+                            {itemNotes}
+                          </p>
                         )}
                       </div>
                     </li>
@@ -842,67 +837,37 @@ function LivePreview({ clinicName, clinicPhone, clinicAddress, doctorName, docto
                 })}
               </ol>
             )}
+          </div>
 
-            {notes && (
-              <div
-                className="relative z-10 mt-4 border-l-[3px] rounded p-3"
-                style={{ borderColor: BRAND, background: `${BRAND}0f` }}
-              >
-                <p className="text-[9px] uppercase tracking-[0.18em] font-bold" style={{ color: BRAND }}>
-                  Notes for the patient
+          {/* ===== Footer ===== */}
+          <div className="px-7 py-4 border-t border-slate-200 bg-slate-50/50">
+            <div className="flex justify-between items-end gap-6">
+              <div className="flex-1 min-w-0">
+                <h4 className="text-[10px] font-bold text-slate-900 uppercase tracking-wider mb-1">
+                  {t("presc.notesForPatient")}
+                </h4>
+                <p className="text-[11px] text-slate-600 leading-relaxed min-h-[2.4em]">
+                  {notes || <span className="text-slate-400 italic">—</span>}
                 </p>
-                <p className="text-xs text-slate-800 mt-1 whitespace-pre-wrap">{notes}</p>
               </div>
-            )}
-          </div>
-
-          {/* ===== Signature ===== */}
-          <div className="px-7 pb-3 flex justify-end">
-            <div className="text-center min-w-[200px]">
-              <p
-                className="text-[18px] text-slate-900 pb-1 italic"
-                style={{ fontFamily: '"Brush Script MT", "Lucida Handwriting", "Segoe Script", cursive' }}
-              >
-                Dr. {doctorName || "—"}
-              </p>
-              <div className="border-t border-slate-900 mx-auto w-44" />
-              <p className="text-[9px] text-slate-600 mt-1 uppercase tracking-[0.15em]">Signature</p>
+              <div className="shrink-0 text-right">
+                <div className="inline-block w-24 h-12 border border-slate-200 rounded bg-white/50 mb-1" />
+                <p className="text-[9px] text-slate-400 uppercase tracking-tighter">Doctor Signature</p>
+              </div>
             </div>
-          </div>
 
-          {/* ===== Footer — horizontal line, then address & phone with icons ===== */}
-          <div className="px-7 pb-4">
-            <div className="h-[1.5px] rounded-sm mb-2.5" style={{ backgroundColor: BRAND }} />
-            <footer className="flex items-start justify-between gap-4 flex-wrap text-[10pt] text-slate-700">
-              <div className="flex items-start gap-1.5 flex-1 min-w-[170px]">
-                <MapPin className="w-3 h-3 mt-[3px] flex-shrink-0" style={{ color: BRAND }} />
-                <div className="min-w-0">
-                  <p className="text-[8.5pt] uppercase tracking-[0.12em] font-bold leading-tight" style={{ color: BRAND }}>
-                    Address
-                  </p>
-                  <p
-                    className="text-[10pt] leading-snug whitespace-pre-line break-words"
-                    style={{ color: clinicAddress ? "#0f172a" : "#94a3b8", fontWeight: clinicAddress ? 500 : 400, fontStyle: clinicAddress ? "normal" : "italic" }}
-                  >
-                    {clinicAddress || "—"}
-                  </p>
+            <div className="mt-5 pt-3 border-t border-slate-200 flex flex-wrap justify-center gap-x-6 gap-y-1 text-[9px] text-slate-400 font-medium">
+              {clinicAddress && (
+                <div className="flex items-center gap-1">
+                  <MapPin className="w-2.5 h-2.5 opacity-70" /> {t("presc.address")}: {clinicAddress}
                 </div>
-              </div>
-              <div className="flex items-start gap-1.5 flex-1 min-w-[140px] justify-end text-right">
-                <PhoneIcon className="w-3 h-3 mt-[3px] flex-shrink-0" style={{ color: BRAND }} />
-                <div className="min-w-0">
-                  <p className="text-[8.5pt] uppercase tracking-[0.12em] font-bold leading-tight" style={{ color: BRAND }}>
-                    Phone
-                  </p>
-                  <p
-                    className="text-[10pt] leading-snug break-words"
-                    style={{ color: clinicPhone ? "#0f172a" : "#94a3b8", fontWeight: clinicPhone ? 500 : 400, fontStyle: clinicPhone ? "normal" : "italic" }}
-                  >
-                    {clinicPhone || "—"}
-                  </p>
+              )}
+              {clinicPhone && (
+                <div className="flex items-center gap-1">
+                  <PhoneIcon className="w-2.5 h-2.5 opacity-70" /> {t("presc.phone")}: {clinicPhone}
                 </div>
-              </div>
-            </footer>
+              )}
+            </div>
           </div>
         </div>
       </div>
@@ -911,20 +876,10 @@ function LivePreview({ clinicName, clinicPhone, clinicAddress, doctorName, docto
 }
 
 export default function PrescriptionsPage() {
-  const search = useSearch();
-  const [, setLocation] = useLocation();
-  const params = new URLSearchParams(search);
-  const initialPatientId = params.get("patientId") ?? undefined;
-  const _new = params.get("new");
-
-  // If `new=1` was set, ensure form opens with patient pre-filled (we just rely on initialPatientId)
-  void _new;
-  void setLocation;
-
   return (
-    <ProtectedRoute requireRole={["admin", "secretary", "nurse", "superadmin"]}>
+    <ProtectedRoute>
       <DashboardLayout>
-        <PrescriptionsContent initialPatientId={initialPatientId} />
+        <PrescriptionsContent />
       </DashboardLayout>
     </ProtectedRoute>
   );

@@ -1,4 +1,5 @@
 import { useAuth } from "@/lib/auth";
+import { useLang } from "@/lib/lang";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import {
@@ -14,9 +15,11 @@ import { useCurrency } from "@/lib/currency";
 import { useVisitTypePrices } from "@/lib/visit-prices";
 import { VisitTypeBadge } from "@/lib/visit-types";
 import type { VisitType } from "@/lib/visit-types";
+import { cn } from "@/lib/utils";
 
 export default function CheckoutPage() {
   const { clinic } = useAuth();
+  const { t } = useLang();
   const clinicId = clinic?.id ?? "";
   const qc = useQueryClient();
   const { toast } = useToast();
@@ -39,23 +42,19 @@ export default function CheckoutPage() {
   }, 0);
 
   const handleMarkPaid = (patientId: string, name: string) => {
-    // After payment, the visit cycle ends — reset patient to "waiting" off the active queue.
-    // We model "paid & checked out" by keeping status=completed but the receptionist removes
-    // them from the queue by re-registering them on the next visit. For now we offer a
-    // simple acknowledgement that doesn't change status, so the bill can be looked up later.
-    toast({ title: `${name} marked as paid` });
+    toast({ title: `${name} ${t("checkout.toast.paid")}` });
   };
 
   const handleReopenAsWaiting = (patientId: string, name: string) => {
-    if (!confirm(`Send "${name}" back to the waiting list?`)) return;
+    if (!confirm(t("checkout.confirmRequeue"))) return;
     patchPatient.mutate(
       { clinicId, patientId, data: { status: "waiting", diagnosis: null, clinicalNotes: null } },
       {
         onSuccess: () => {
-          toast({ title: `${name} sent back to waiting list` });
+          toast({ title: `${name} ${t("checkout.toast.requeued")}` });
           qc.invalidateQueries({ queryKey: getListPatientsQueryKey(clinicId) });
         },
-        onError: () => toast({ title: "Failed to update patient", variant: "destructive" }),
+        onError: () => toast({ title: t("finances.toast.failed"), variant: "destructive" }),
       },
     );
   };
@@ -68,11 +67,10 @@ export default function CheckoutPage() {
             <div>
               <h1 className="text-2xl font-bold flex items-center gap-2">
                 <Receipt className="w-6 h-6 text-primary" />
-                Reception · Checkout
+                {t("checkout.title")}
               </h1>
               <p className="text-sm text-muted-foreground mt-0.5">
-                {completed.length} patient{completed.length !== 1 ? "s" : ""} ready for billing.
-                Amounts come from your Visit Type pricing in Settings.
+                {completed.length} {completed.length === 1 ? t("waiting.count") : t("waiting.countPlural")} {t("checkout.subtitle")}
               </p>
             </div>
             <div className="rounded-lg border border-border bg-card px-4 py-3 flex items-center gap-3">
@@ -80,7 +78,7 @@ export default function CheckoutPage() {
                 <Wallet className="w-4 h-4 text-accent-foreground" />
               </div>
               <div>
-                <p className="text-xs text-muted-foreground">Total due now</p>
+                <p className="text-xs text-muted-foreground">{t("checkout.totalDue")}</p>
                 <p className="text-lg font-bold font-mono" data-testid="checkout-total">
                   {formatCurrency(totalDue)}
                 </p>
@@ -90,12 +88,12 @@ export default function CheckoutPage() {
 
           <div className="rounded-xl border border-border bg-card overflow-hidden">
             <div className="grid grid-cols-[110px_1fr_1fr_auto_auto_auto] gap-4 px-6 py-3 border-b border-border bg-muted/30 text-xs font-medium text-muted-foreground uppercase tracking-wider">
-              <span>ID</span>
-              <span>Patient</span>
-              <span>Phone</span>
-              <span>Visit Type</span>
-              <span>Amount Due</span>
-              <span>Action</span>
+              <span>{t("patients.id")}</span>
+              <span>{t("presc.patient")}</span>
+              <span>{t("patients.phone")}</span>
+              <span>{t("patients.visitType")}</span>
+              <span>{t("checkout.amountDue")}</span>
+              <span>{t("waiting.action")}</span>
             </div>
 
             {isLoading ? (
@@ -107,9 +105,9 @@ export default function CheckoutPage() {
             ) : !completed.length ? (
               <div className="text-center py-16 text-muted-foreground">
                 <Receipt className="w-10 h-10 mx-auto mb-3 opacity-30" />
-                <p className="font-medium text-sm">Nothing to bill yet</p>
+                <p className="font-medium text-sm">{t("checkout.empty")}</p>
                 <p className="text-xs mt-1">
-                  Patients show up here once the doctor finishes their session.
+                  {t("checkout.emptyDesc")}
                 </p>
               </div>
             ) : (
@@ -138,7 +136,7 @@ export default function CheckoutPage() {
                       data-testid={`amount-due-${p.id}`}
                     >
                       {due !== null ? formatCurrency(due) : (
-                        <span className="text-muted-foreground text-xs">Set in Settings</span>
+                        <span className="text-muted-foreground text-xs">{t("checkout.setInSettings")}</span>
                       )}
                     </span>
                     <div className="flex items-center gap-1">
@@ -148,7 +146,7 @@ export default function CheckoutPage() {
                         data-testid={`mark-paid-${p.id}`}
                       >
                         <CheckCircle2 className="w-3.5 h-3.5 mr-1" />
-                        Mark Paid
+                        {t("checkout.markPaid")}
                       </Button>
                       <Button
                         size="sm"
@@ -160,7 +158,7 @@ export default function CheckoutPage() {
                         {patchPatient.isPending && patchPatient.variables?.patientId === p.id && (
                           <Loader2 className="w-3.5 h-3.5 mr-1 animate-spin" />
                         )}
-                        Re-queue
+                        {t("checkout.requeue")}
                       </Button>
                     </div>
                   </div>

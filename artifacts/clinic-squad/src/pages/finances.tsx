@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useAuth } from "@/lib/auth";
+import { useLang } from "@/lib/lang";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import {
@@ -19,7 +20,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Plus, TrendingUp, TrendingDown, Loader2 } from "lucide-react";
+import { Plus, TrendingUp, TrendingDown, Loader2 } from "lucide-material";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from "recharts";
 
 const financeSchema = z.object({
@@ -31,10 +32,9 @@ const financeSchema = z.object({
 });
 type FinanceForm = z.infer<typeof financeSchema>;
 
-const MONTH_NAMES = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-
 export default function FinancesPage() {
   const { clinic } = useAuth();
+  const { t, lang } = useLang();
   const clinicId = clinic?.id ?? "";
   const { toast } = useToast();
   const qc = useQueryClient();
@@ -63,21 +63,26 @@ export default function FinancesPage() {
   const onSubmit = (values: FinanceForm) => {
     createMutation.mutate({ clinicId, data: values }, {
       onSuccess: () => {
-        toast({ title: "Record added" });
+        toast({ title: t("finances.toast.added") });
         qc.invalidateQueries({ queryKey: getListFinancesQueryKey(clinicId) });
         qc.invalidateQueries({ queryKey: getGetFinanceSummaryQueryKey(clinicId) });
         setAddOpen(false);
         form.reset();
       },
-      onError: () => toast({ title: "Failed to add record", variant: "destructive" }),
+      onError: () => toast({ title: t("finances.toast.failed"), variant: "destructive" }),
     });
   };
 
-  const chartData = summary?.monthlyBreakdown.map(m => ({
-    month: MONTH_NAMES[m.month - 1],
-    Income: m.income,
-    Expense: m.expense,
-  })) ?? [];
+  const chartData = summary?.monthlyBreakdown.map(m => {
+    const d = new Date();
+    d.setMonth(m.month - 1);
+    const monthName = d.toLocaleString(lang === "ar" ? "ar-EG" : "en-US", { month: 'short' });
+    return {
+      month: monthName,
+      Income: m.income,
+      Expense: m.expense,
+    };
+  }) ?? [];
 
   return (
     <ProtectedRoute requireRole={["admin", "superadmin"]}>
@@ -85,11 +90,11 @@ export default function FinancesPage() {
         <div className="p-6 max-w-6xl mx-auto">
           <div className="flex items-center justify-between mb-6">
             <div>
-              <h1 className="text-2xl font-bold">Finances</h1>
-              <p className="text-sm text-muted-foreground mt-0.5">Financial overview for {currentYear}</p>
+              <h1 className="text-2xl font-bold">{t("finances.title")}</h1>
+              <p className="text-sm text-muted-foreground mt-0.5">{t("finances.overview")} {currentYear}</p>
             </div>
             <Button onClick={() => setAddOpen(true)} data-testid="button-add-finance">
-              <Plus className="w-4 h-4 mr-2" />Add Record
+              <Plus className="w-4 h-4 mr-2" />{t("finances.add")}
             </Button>
           </div>
 
@@ -98,21 +103,21 @@ export default function FinancesPage() {
             <div className="p-5 rounded-xl border border-border bg-card">
               <div className="flex items-center gap-2 mb-2">
                 <TrendingUp className="w-4 h-4 text-green-600" />
-                <span className="text-xs font-medium text-muted-foreground uppercase">Total Income</span>
+                <span className="text-xs font-medium text-muted-foreground uppercase">{t("finances.income")}</span>
               </div>
               <p className="text-2xl font-bold text-green-600">{formatCurrency(summary?.totalIncome ?? 0)}</p>
             </div>
             <div className="p-5 rounded-xl border border-border bg-card">
               <div className="flex items-center gap-2 mb-2">
                 <TrendingDown className="w-4 h-4 text-red-500" />
-                <span className="text-xs font-medium text-muted-foreground uppercase">Total Expenses</span>
+                <span className="text-xs font-medium text-muted-foreground uppercase">{t("finances.expenses")}</span>
               </div>
               <p className="text-2xl font-bold text-red-500">{formatCurrency(summary?.totalExpense ?? 0)}</p>
             </div>
             <div className="p-5 rounded-xl border border-border bg-card">
               <div className="flex items-center gap-2 mb-2">
                 <TrendingUp className="w-4 h-4 text-primary" />
-                <span className="text-xs font-medium text-muted-foreground uppercase">Net Profit</span>
+                <span className="text-xs font-medium text-muted-foreground uppercase">{t("finances.profit")}</span>
               </div>
               <p className={`text-2xl font-bold ${(summary?.netProfit ?? 0) >= 0 ? "text-primary" : "text-red-500"}`}>
                 {formatCurrency(summary?.netProfit ?? 0)}
@@ -123,7 +128,7 @@ export default function FinancesPage() {
           {/* Chart */}
           {chartData.length > 0 && (
             <div className="rounded-xl border border-border bg-card p-6 mb-6">
-              <h2 className="font-semibold mb-4">Monthly Overview</h2>
+              <h2 className="font-semibold mb-4">{t("finances.chartTitle")}</h2>
               <ResponsiveContainer width="100%" height={200}>
                 <BarChart data={chartData} barCategoryGap="30%">
                   <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
@@ -143,11 +148,11 @@ export default function FinancesPage() {
           {/* Records list */}
           <div className="rounded-xl border border-border bg-card overflow-hidden">
             <div className="grid grid-cols-[auto_1fr_auto_auto_auto] gap-4 px-6 py-3 border-b border-border bg-muted/30 text-xs font-medium text-muted-foreground uppercase tracking-wider">
-              <span>Type</span>
-              <span>Description</span>
-              <span>Category</span>
-              <span>Date</span>
-              <span>Amount</span>
+              <span>{t("finances.type")}</span>
+              <span>{t("finances.description")}</span>
+              <span>{t("finances.category")}</span>
+              <span>{t("finances.date")}</span>
+              <span>{t("finances.amount")}</span>
             </div>
 
             {isLoading ? (
@@ -156,9 +161,9 @@ export default function FinancesPage() {
               ))
             ) : !finances?.data.length ? (
               <div className="text-center py-14 text-muted-foreground">
-                <p className="font-medium text-sm">No financial records yet</p>
+                <p className="font-medium text-sm">{t("finances.empty")}</p>
                 <Button size="sm" className="mt-4" onClick={() => setAddOpen(true)}>
-                  <Plus className="w-3 h-3 mr-1" />Add Record
+                  <Plus className="w-3 h-3 mr-1" />{t("finances.add")}
                 </Button>
               </div>
             ) : (
@@ -170,10 +175,10 @@ export default function FinancesPage() {
                 >
                   <span className={`text-xs font-medium px-2 py-0.5 rounded capitalize ${
                     record.type === "income" ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400" : "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"
-                  }`}>{record.type}</span>
+                  }`}>{record.type === "income" ? t("finances.incomeLabel") : t("finances.expenseLabel")}</span>
                   <span className="text-sm truncate">{record.description}</span>
                   <span className="text-xs text-muted-foreground">{record.category}</span>
-                  <span className="text-xs text-muted-foreground">{formatDate(record.date)}</span>
+                  <span className="text-xs text-muted-foreground">{formatDate(record.date, lang === "ar" ? "ar-EG" : "en-US")}</span>
                   <span className={`text-sm font-mono font-semibold ${record.type === "income" ? "text-green-600" : "text-red-500"}`}>
                     {record.type === "income" ? "+" : "-"}{formatCurrency(record.amount)}
                   </span>
@@ -187,11 +192,11 @@ export default function FinancesPage() {
         <Dialog open={addOpen} onOpenChange={setAddOpen}>
           <DialogContent className="max-w-md">
             <DialogHeader>
-              <DialogTitle>Add Financial Record</DialogTitle>
+              <DialogTitle>{t("finances.addDialog.title")}</DialogTitle>
             </DialogHeader>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
               <div>
-                <Label>Type *</Label>
+                <Label>{t("finances.type")} *</Label>
                 <Controller
                   control={form.control}
                   name="type"
@@ -201,37 +206,37 @@ export default function FinancesPage() {
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="income">Income</SelectItem>
-                        <SelectItem value="expense">Expense</SelectItem>
+                        <SelectItem value="income">{t("finances.incomeLabel")}</SelectItem>
+                        <SelectItem value="expense">{t("finances.expenseLabel")}</SelectItem>
                       </SelectContent>
                     </Select>
                   )}
                 />
               </div>
               <div>
-                <Label>Category *</Label>
+                <Label>{t("finances.category")} *</Label>
                 <Input {...form.register("category")} placeholder="Consultation, Supplies, Rent..." className="mt-1" />
                 {form.formState.errors.category && <p className="text-xs text-destructive mt-1">{form.formState.errors.category.message}</p>}
               </div>
               <div>
-                <Label>Amount ({currency.code}) *</Label>
+                <Label>{t("finances.amount")} ({currency.code}) *</Label>
                 <Input {...form.register("amount")} type="number" step="0.01" placeholder="1500" className="mt-1" />
                 {form.formState.errors.amount && <p className="text-xs text-destructive mt-1">{form.formState.errors.amount.message}</p>}
               </div>
               <div>
-                <Label>Description *</Label>
+                <Label>{t("finances.description")} *</Label>
                 <Input {...form.register("description")} placeholder="Brief description..." className="mt-1" />
                 {form.formState.errors.description && <p className="text-xs text-destructive mt-1">{form.formState.errors.description.message}</p>}
               </div>
               <div>
-                <Label>Date *</Label>
+                <Label>{t("finances.date")} *</Label>
                 <Input {...form.register("date")} type="date" className="mt-1" />
               </div>
               <div className="flex gap-3 justify-end pt-2">
-                <Button type="button" variant="outline" onClick={() => setAddOpen(false)}>Cancel</Button>
+                <Button type="button" variant="outline" onClick={() => setAddOpen(false)}>{t("presc.cancel")}</Button>
                 <Button type="submit" disabled={createMutation.isPending} data-testid="button-save-finance">
                   {createMutation.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-                  Save Record
+                  {t("finances.save")}
                 </Button>
               </div>
             </form>
