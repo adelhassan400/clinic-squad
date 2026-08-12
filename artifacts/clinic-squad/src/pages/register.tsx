@@ -11,6 +11,7 @@ import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { Shield, Eye, EyeOff, Loader2, CheckCircle } from "lucide-react";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
+import { useLang } from "@/lib/lang";
 
 const schema = z.object({
   clinicName: z.string().min(2, "Clinic name must be at least 2 characters"),
@@ -29,6 +30,7 @@ export default function RegisterPage() {
   const { toast } = useToast();
   const { login } = useAuth();
   const [, setLocation] = useLocation();
+  const { t } = useLang();
   const [showPw, setShowPw] = useState(false);
 
   const { register, handleSubmit, formState: { errors } } = useForm<FormData>({
@@ -82,16 +84,16 @@ export default function RegisterPage() {
         </div>
         <div>
           <h2 className="text-3xl font-serif font-bold text-sidebar-foreground leading-snug mb-4">
-            Request your free 15-day trial
+            {t("auth.register.hero.title") || "Request your free 15-day trial"}
           </h2>
           <p className="text-sidebar-foreground/60 text-sm leading-relaxed mb-6">
-            Tell us about your clinic and our team will activate your trial within minutes.
+            {t("auth.register.hero.subtitle") || "Tell us about your clinic and our team will activate your trial within minutes."}
           </p>
           <div className="space-y-3">
             {[
-              "Full access during trial",
-              "Both Basic and Premium features",
-              "Cancel anytime — no credit card",
+              t("auth.register.hero.feat1") || "Full access during trial",
+              t("auth.register.hero.feat2") || "Both Basic and Premium features",
+              t("auth.register.hero.feat3") || "Cancel anytime — no credit card",
             ].map(f => (
               <div key={f} className="flex items-center gap-2 text-sm text-sidebar-foreground/80">
                 <CheckCircle className="w-4 h-4 text-primary" />
@@ -100,7 +102,7 @@ export default function RegisterPage() {
             ))}
           </div>
         </div>
-        <p className="text-xs text-sidebar-foreground/40">Trusted by 500+ Egyptian clinics</p>
+        <p className="text-xs text-sidebar-foreground/40">{t("auth.register.hero.trusted") || "Trusted by 500+ Egyptian clinics"}</p>
       </div>
 
       <div className="flex-1 flex items-center justify-center p-8">
@@ -116,13 +118,13 @@ export default function RegisterPage() {
               <div className="hidden lg:block" />
               <LanguageSwitcher />
             </div>
-            <h1 className="text-2xl font-bold mb-1">Request Free Trial</h1>
-            <p className="text-sm text-muted-foreground">15-day free trial — activated by our team after a quick verification.</p>
+            <h1 className="text-2xl font-bold mb-1">{t("auth.register.title")}</h1>
+            <p className="text-sm text-muted-foreground">{t("auth.register.subtitle")}</p>
           </div>
 
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
             <div>
-              <Label htmlFor="clinicName">Doctor / Clinic Name</Label>
+              <Label htmlFor="clinicName">{t("auth.register.name")}</Label>
               <Input
                 id="clinicName"
                 placeholder="Cairo Medical Center"
@@ -134,7 +136,7 @@ export default function RegisterPage() {
             </div>
 
             <div>
-              <Label htmlFor="ownerName">Your Full Name</Label>
+              <Label htmlFor="ownerName">{t("auth.register.owner")}</Label>
               <Input
                 id="ownerName"
                 placeholder="Dr. Ahmed Hassan"
@@ -146,7 +148,7 @@ export default function RegisterPage() {
             </div>
 
             <div>
-              <Label htmlFor="specialty">Medical Specialty</Label>
+              <Label htmlFor="specialty">{t("auth.register.specialty") || "Medical Specialty"}</Label>
               <Input
                 id="specialty"
                 placeholder="Cardiology, Dermatology, etc."
@@ -158,7 +160,7 @@ export default function RegisterPage() {
             </div>
 
             <div>
-              <Label htmlFor="whatsappNumber">WhatsApp Number</Label>
+              <Label htmlFor="whatsappNumber">{t("auth.register.whatsapp") || "WhatsApp Number"}</Label>
               <Input
                 id="whatsappNumber"
                 type="tel"
@@ -171,7 +173,7 @@ export default function RegisterPage() {
             </div>
 
             <div>
-              <Label htmlFor="email">Email Address</Label>
+              <Label htmlFor="email">{t("auth.register.email")}</Label>
               <Input
                 id="email"
                 type="email"
@@ -184,7 +186,7 @@ export default function RegisterPage() {
             </div>
 
             <div>
-              <Label htmlFor="password">Password</Label>
+              <Label htmlFor="password">{t("auth.register.password")}</Label>
               <div className="relative mt-1.5">
                 <Input
                   id="password"
@@ -207,17 +209,17 @@ export default function RegisterPage() {
 
             <Button type="submit" className="w-full mt-2" disabled={registerMutation.isPending} data-testid="button-submit">
               {registerMutation.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-              Request Free Trial
+              {t("auth.register.submit")}
             </Button>
           </form>
 
           <p className="mt-6 text-center text-sm text-muted-foreground">
-            Already have an account?{" "}
-            <Link href="/login" className="text-primary hover:underline font-medium">Sign in</Link>
+            {t("auth.register.haveAccount")}{" "}
+            <Link href="/login" className="text-primary hover:underline font-medium">{t("auth.register.login")}</Link>
           </p>
 
           <p className="mt-4 text-center text-xs text-muted-foreground">
-            By requesting a trial, you agree to our Terms of Service and Privacy Policy.
+            {t("auth.register.terms") || "By requesting a trial, you agree to our Terms of Service and Privacy Policy."}
           </p>
         </div>
       </div>

@@ -6,6 +6,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { formatDate, getTrialDaysLeft, getTrialUrgency } from "@/lib/utils";
 import { cn } from "@/lib/utils";
 import { useCurrency } from "@/lib/currency";
+import { useLang } from "@/lib/lang";
 import { openWhatsApp, whatsappAppointmentReminder } from "@/lib/whatsapp";
 import { Users, Calendar, TrendingUp, Clock, CheckCircle, AlertTriangle, Crown, ArrowRight, MessageCircle, PhoneOff } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
@@ -33,6 +34,7 @@ function StatCard({ label, value, icon: Icon, sub, color }: {
 }
 
 function AppointmentStatusBadge({ status }: { status: string }) {
+  const { t } = useLang();
   const map: Record<string, string> = {
     scheduled: "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400",
     completed: "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400",
@@ -49,6 +51,7 @@ function AppointmentStatusBadge({ status }: { status: string }) {
 export default function DashboardPage() {
   const { format: formatCurrency } = useCurrency();
   const { clinic } = useAuth();
+  const { t, lang } = useLang();
   const clinicId = clinic?.id ?? "";
   const { toast } = useToast();
   const qc = useQueryClient();
@@ -95,7 +98,7 @@ export default function DashboardPage() {
       { clinicId, appointmentId, data: { status: "completed" } },
       {
         onSuccess: () => {
-          toast({ title: `${patientName} checked in` });
+          toast({ title: `${patientName} ${t("dash.today.checkedIn")}` });
           qc.invalidateQueries({ queryKey: getGetTodayAppointmentsQueryKey(clinicId) });
           qc.invalidateQueries({ queryKey: getGetDashboardSummaryQueryKey(clinicId) });
           qc.invalidateQueries({ queryKey: getListAppointmentsQueryKey(clinicId) });
@@ -126,15 +129,15 @@ export default function DashboardPage() {
                 <AlertTriangle className={cn("w-5 h-5", urgency === "danger" ? "text-destructive" : urgency === "warning" ? "text-accent" : "text-primary")} />
                 <div>
                   <p className="font-semibold text-sm">
-                    Free trial: {trialDaysLeft} day{trialDaysLeft !== 1 ? "s" : ""} remaining
+                    {t("dash.trial.days").replace("d", trialDaysLeft.toString())}
                   </p>
-                  <p className="text-xs text-muted-foreground">Choose a plan to continue using ClinicSquad after your trial ends.</p>
+                  <p className="text-xs text-muted-foreground">{t("dash.trial.note")}</p>
                 </div>
               </div>
               <Link href="/subscription">
                 <Button size="sm" variant="outline" className="shrink-0">
                   <Crown className="w-3 h-3 mr-1.5" />
-                  Upgrade
+                  {t("common.upgrade")}
                 </Button>
               </Link>
             </div>
@@ -142,9 +145,9 @@ export default function DashboardPage() {
 
           {/* Header */}
           <div className="mb-8">
-            <h1 className="text-2xl font-bold mb-1">Dashboard</h1>
+            <h1 className="text-2xl font-bold mb-1">{t("dash.title")}</h1>
             <p className="text-sm text-muted-foreground">
-              {new Date().toLocaleDateString("en-US", { weekday: "long", year: "numeric", month: "long", day: "numeric" })}
+              {new Date().toLocaleDateString(lang === "ar" ? "ar-EG" : "en-US", { weekday: "long", year: "numeric", month: "long", day: "numeric" })}
             </p>
           </div>
 
@@ -156,10 +159,30 @@ export default function DashboardPage() {
               ))
             ) : (
               <>
-                <StatCard label="Total Patients" value={summary?.totalPatients ?? 0} icon={Users} sub={`+${summary?.newPatientsThisMonth ?? 0} this month`} />
-                <StatCard label="Today's Appointments" value={summary?.todayAppointments ?? 0} icon={Calendar} sub={`${summary?.upcomingAppointments ?? 0} upcoming`} />
-                <StatCard label="Monthly Revenue" value={formatCurrency(summary?.monthlyRevenue ?? 0)} icon={TrendingUp} sub={`Expenses: ${formatCurrency(summary?.monthlyExpenses ?? 0)}`} />
-                <StatCard label="Completed" value={summary?.completedAppointments ?? 0} icon={CheckCircle} sub="appointments total" />
+                <StatCard 
+                  label={t("dash.stats.patients")} 
+                  value={summary?.totalPatients ?? 0} 
+                  icon={Users} 
+                  sub={`+${summary?.newPatientsThisMonth ?? 0} ${t("dash.stats.newThisMonth")}`} 
+                />
+                <StatCard 
+                  label={t("dash.stats.todayAppts")} 
+                  value={summary?.todayAppointments ?? 0} 
+                  icon={Calendar} 
+                  sub={`${summary?.upcomingAppointments ?? 0} ${t("dash.stats.upcoming")}`} 
+                />
+                <StatCard 
+                  label={t("dash.stats.revenue")} 
+                  value={formatCurrency(summary?.monthlyRevenue ?? 0)} 
+                  icon={TrendingUp} 
+                  sub={`${t("dash.stats.expenses")}: ${formatCurrency(summary?.monthlyExpenses ?? 0)}`} 
+                />
+                <StatCard 
+                  label={t("dash.stats.completed")} 
+                  value={summary?.completedAppointments ?? 0} 
+                  icon={CheckCircle} 
+                  sub={t("dash.stats.total")} 
+                />
               </>
             )}
           </div>
@@ -168,12 +191,12 @@ export default function DashboardPage() {
           <div className="rounded-xl border border-border bg-card p-6">
             <div className="flex items-center justify-between mb-5">
               <div>
-                <h2 className="font-semibold">Today's Appointments</h2>
+                <h2 className="font-semibold">{t("dash.today.title")}</h2>
                 <p className="text-xs text-muted-foreground mt-0.5">{formatDate(new Date().toISOString())}</p>
               </div>
               <Link href="/appointments">
                 <Button variant="ghost" size="sm" className="text-primary text-xs">
-                  View all <ArrowRight className="w-3 h-3 ml-1" />
+                  {t("dash.today.viewAll")} <ArrowRight className="w-3 h-3 ms-1" />
                 </Button>
               </Link>
             </div>
@@ -185,9 +208,9 @@ export default function DashboardPage() {
             ) : !todayAppts?.length ? (
               <div className="text-center py-10 text-muted-foreground">
                 <Clock className="w-8 h-8 mx-auto mb-3 opacity-40" />
-                <p className="text-sm font-medium">No appointments today</p>
+                <p className="text-sm font-medium">{t("dash.today.empty")}</p>
                 <Link href="/appointments">
-                  <Button size="sm" className="mt-3" variant="outline">Schedule appointment</Button>
+                  <Button size="sm" className="mt-3" variant="outline">{t("dash.today.schedule")}</Button>
                 </Link>
               </div>
             ) : (
@@ -205,7 +228,7 @@ export default function DashboardPage() {
                         )}
                       </div>
                       <div className="mt-1">
-                        <span className="text-xs text-muted-foreground mr-1.5">Today:</span>
+                        <span className="text-xs text-muted-foreground me-1.5">{lang === "ar" ? "اليوم:" : "Today:"}</span>
                         <VisitTypeBadge type={appt.type} />
                       </div>
                     </div>
@@ -221,8 +244,8 @@ export default function DashboardPage() {
                           disabled={updateAppointment.isPending}
                           data-testid={`checkin-${appt.id}`}
                         >
-                          <CheckCircle className="w-3.5 h-3.5 mr-1" />
-                          Check-in
+                          <CheckCircle className="w-3.5 h-3.5 me-1" />
+                          {t("dash.today.checkin")}
                         </Button>
                       )}
                     </div>
@@ -238,15 +261,15 @@ export default function DashboardPage() {
               <div>
                 <h2 className="font-semibold flex items-center gap-2">
                   <MessageCircle className="w-4 h-4 text-green-600" />
-                  Tomorrow's Reminders
+                  {t("dash.tomorrow.title")}
                 </h2>
                 <p className="text-xs text-muted-foreground mt-0.5">
-                  One-click WhatsApp reminders to reduce no-shows
+                  {t("dash.tomorrow.subtitle")}
                 </p>
               </div>
               {!!tomorrowAppts?.length && (
                 <Badge variant="secondary" className="text-xs">
-                  {tomorrowAppts.length} scheduled
+                  {tomorrowAppts.length} {t("dash.tomorrow.scheduled")}
                 </Badge>
               )}
             </div>
@@ -258,7 +281,7 @@ export default function DashboardPage() {
             ) : !tomorrowAppts?.length ? (
               <div className="text-center py-8 text-muted-foreground">
                 <Calendar className="w-8 h-8 mx-auto mb-3 opacity-40" />
-                <p className="text-sm font-medium">No appointments tomorrow</p>
+                <p className="text-sm font-medium">{t("dash.tomorrow.empty")}</p>
               </div>
             ) : (
               <div className="space-y-2">
@@ -294,13 +317,13 @@ export default function DashboardPage() {
                     >
                       {a.patientPhone ? (
                         <>
-                          <MessageCircle className="w-3.5 h-3.5 mr-1" />
-                          Send reminder
+                          <MessageCircle className="w-3.5 h-3.5 me-1" />
+                          {t("dash.tomorrow.send")}
                         </>
                       ) : (
                         <>
-                          <PhoneOff className="w-3.5 h-3.5 mr-1" />
-                          No phone
+                          <PhoneOff className="w-3.5 h-3.5 me-1" />
+                          {t("dash.tomorrow.noPhone")}
                         </>
                       )}
                     </Button>

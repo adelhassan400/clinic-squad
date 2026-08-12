@@ -11,6 +11,7 @@ import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { Shield, Eye, EyeOff, Loader2, MailWarning } from "lucide-react";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
+import { useLang } from "@/lib/lang";
 
 const schema = z.object({
   email: z.string().email("Enter a valid email"),
@@ -22,6 +23,7 @@ export default function LoginPage() {
   const { login } = useAuth();
   const [, setLocation] = useLocation();
   const { toast } = useToast();
+  const { t } = useLang();
   const [showPw, setShowPw] = useState(false);
   const [unverifiedEmail, setUnverifiedEmail] = useState<string | null>(null);
 
@@ -74,14 +76,18 @@ export default function LoginPage() {
         </div>
         <div>
           <h2 className="text-3xl font-serif font-bold text-sidebar-foreground leading-snug mb-4">
-            The command center for your clinic
+            {t("auth.login.hero.title")}
           </h2>
           <p className="text-sidebar-foreground/60 text-sm leading-relaxed">
-            Manage patients, appointments, and finances — all in one place, built for Egyptian clinics.
+            {t("auth.login.hero.subtitle")}
           </p>
         </div>
         <div className="space-y-3">
-          {["Patient management", "Appointment scheduling", "Financial tracking"].map(f => (
+          {[
+            t("auth.login.hero.feat1"),
+            t("auth.login.hero.feat2"),
+            t("auth.login.hero.feat3")
+          ].map(f => (
             <div key={f} className="flex items-center gap-2 text-sm text-sidebar-foreground/70">
               <div className="w-1.5 h-1.5 rounded-full bg-primary" />
               {f}
@@ -104,8 +110,8 @@ export default function LoginPage() {
               <div className="hidden lg:block" />
               <LanguageSwitcher />
             </div>
-            <h1 className="text-2xl font-bold mb-1">Welcome back</h1>
-            <p className="text-sm text-muted-foreground">Sign in to your clinic account</p>
+            <h1 className="text-2xl font-bold mb-1">{t("auth.login.title")}</h1>
+            <p className="text-sm text-muted-foreground">{t("auth.login.subtitle")}</p>
           </div>
 
           {unverifiedEmail && (
@@ -129,7 +135,7 @@ export default function LoginPage() {
 
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
             <div>
-              <Label htmlFor="email">Email</Label>
+              <Label htmlFor="email">{t("auth.login.email")}</Label>
               <Input
                 id="email"
                 type="email"
@@ -142,7 +148,7 @@ export default function LoginPage() {
             </div>
 
             <div>
-              <Label htmlFor="password">Password</Label>
+              <Label htmlFor="password">{t("auth.login.password")}</Label>
               <div className="relative mt-1.5">
                 <Input
                   id="password"
@@ -169,13 +175,13 @@ export default function LoginPage() {
                 className="text-xs text-muted-foreground hover:text-primary hover:underline"
                 data-testid="link-forgot-password"
               >
-                Forgot password?
+                {t("auth.login.forgot")}
               </Link>
             </div>
 
             <Button type="submit" className="w-full" disabled={loginMutation.isPending} data-testid="button-submit">
               {loginMutation.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-              Sign In
+              {t("auth.login.submit")}
             </Button>
           </form>
 
@@ -186,9 +192,9 @@ export default function LoginPage() {
           </div>
 
           <p className="mt-6 text-center text-sm text-muted-foreground">
-            Don't have an account?{" "}
+            {t("auth.login.noAccount")}{" "}
             <Link href="/register" className="text-primary hover:underline font-medium">
-              Register your clinic
+              {t("auth.login.register")}
             </Link>
           </p>
         </div>

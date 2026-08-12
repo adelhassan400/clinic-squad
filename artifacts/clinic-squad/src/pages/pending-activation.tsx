@@ -1,12 +1,14 @@
 import { useEffect } from "react";
 import { useLocation } from "wouter";
 import { useAuth } from "@/lib/auth";
+import { useLang } from "@/lib/lang";
+import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { Button } from "@/components/ui/button";
 import { Shield, Clock, MessageCircle, CheckCircle, LogOut, Loader2 } from "lucide-react";
 
 const SUPPORT_WHATSAPP = "201009360198";
 
-function buildWhatsappUrl(name: string | undefined, requestNumber: string | null | undefined): string {
+function buildWhatsappUrl(name: string | undefined, requestNumber: string | null | undefined, t: (k: string) => string): string {
   const safeName = (name ?? "").trim() || "there";
   const safeRequestNumber = (requestNumber ?? "").trim() || "not available";
   const text =
@@ -17,6 +19,7 @@ function buildWhatsappUrl(name: string | undefined, requestNumber: string | null
 
 export default function PendingActivationPage() {
   const { user, clinic, isAuthenticated, isLoading, logout } = useAuth();
+  const { t } = useLang();
   const [, setLocation] = useLocation();
 
   useEffect(() => {
@@ -42,7 +45,7 @@ export default function PendingActivationPage() {
     );
   }
 
-  const whatsappUrl = buildWhatsappUrl(user.name, clinic.requestNumber);
+  const whatsappUrl = buildWhatsappUrl(user.name, clinic.requestNumber, t);
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
@@ -53,15 +56,18 @@ export default function PendingActivationPage() {
           </div>
           <span className="font-serif font-bold text-lg">ClinicSquad</span>
         </div>
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={() => { logout(); setLocation("/login"); }}
-          data-testid="button-logout"
-        >
-          <LogOut className="w-4 h-4 mr-2" />
-          Sign out
-        </Button>
+        <div className="flex items-center gap-4">
+          <LanguageSwitcher />
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => { logout(); setLocation("/login"); }}
+            data-testid="button-logout"
+          >
+            <LogOut className="w-4 h-4 mr-2" />
+            {t("sidebar.signOut")}
+          </Button>
+        </div>
       </header>
 
       <main className="flex-1 flex items-center justify-center p-6">
@@ -80,7 +86,7 @@ export default function PendingActivationPage() {
                   <Clock className="w-7 h-7 text-primary" />
                 </div>
                 <span className="px-3 py-1 rounded-full text-xs font-semibold bg-accent/15 text-accent-foreground border border-accent/20">
-                  Pending Activation
+                  {t("pending.status")}
                 </span>
               </div>
 
@@ -88,35 +94,35 @@ export default function PendingActivationPage() {
                 className="text-2xl sm:text-3xl font-serif font-bold text-foreground leading-tight"
                 data-testid="text-pending-headline"
               >
-                Your request has been received!
+                {t("pending.title")}
               </h1>
               <p
                 className="mt-3 text-muted-foreground leading-relaxed"
                 data-testid="text-pending-body"
               >
-                To activate your <span className="font-semibold text-foreground">15-day free trial</span>, please contact our technical support. We&apos;ll verify your details and unlock your dashboard within minutes.
+                {t("pending.body")}
               </p>
 
               <div className="mt-6 grid sm:grid-cols-2 gap-3">
                 <div className="rounded-xl border border-border bg-muted/30 p-4">
-                  <p className="text-xs text-muted-foreground uppercase tracking-wide">Clinic</p>
+                  <p className="text-xs text-muted-foreground uppercase tracking-wide">{t("pending.clinic")}</p>
                   <p className="font-semibold text-foreground mt-1" data-testid="text-clinic-name">
                     {clinic.name}
                   </p>
                 </div>
                 <div className="rounded-xl border border-border bg-muted/30 p-4">
-                  <p className="text-xs text-muted-foreground uppercase tracking-wide">Account</p>
+                  <p className="text-xs text-muted-foreground uppercase tracking-wide">{t("pending.account")}</p>
                   <p className="font-semibold text-foreground mt-1" data-testid="text-user-name">
                     {user.name}
                   </p>
                 </div>
                 <div className="rounded-xl border border-primary/25 bg-primary/5 p-4 sm:col-span-2">
-                  <p className="text-xs text-muted-foreground uppercase tracking-wide">Request Number</p>
+                  <p className="text-xs text-muted-foreground uppercase tracking-wide">{t("pending.reqNum")}</p>
                   <p className="font-mono font-bold text-primary mt-1 tracking-wide" data-testid="text-request-number">
                     {clinic.requestNumber ?? "Assigned during activation"}
                   </p>
                   <p className="text-xs text-muted-foreground mt-1">
-                    Include this number when contacting support.
+                    {t("pending.reqNumNote")}
                   </p>
                 </div>
               </div>
@@ -133,7 +139,7 @@ export default function PendingActivationPage() {
                 }}
               >
                 <MessageCircle className="w-6 h-6" />
-                Activate via WhatsApp
+                {t("pending.whatsapp")}
                 <span className="hidden sm:inline text-sm font-normal opacity-90">
                   (+20 100 936 0198)
                 </span>
@@ -142,22 +148,22 @@ export default function PendingActivationPage() {
               <ul className="mt-8 space-y-2 text-sm text-muted-foreground">
                 <li className="flex items-start gap-2">
                   <CheckCircle className="w-4 h-4 text-primary mt-0.5 shrink-0" />
-                  Tap the button above to message our support team on WhatsApp.
+                  {t("pending.step1")}
                 </li>
                 <li className="flex items-start gap-2">
                   <CheckCircle className="w-4 h-4 text-primary mt-0.5 shrink-0" />
-                  Once approved, refresh this page to enter your dashboard.
+                  {t("pending.step2")}
                 </li>
                 <li className="flex items-start gap-2">
                   <CheckCircle className="w-4 h-4 text-primary mt-0.5 shrink-0" />
-                  No credit card required during your 15-day trial.
+                  {t("pending.step3")}
                 </li>
               </ul>
             </div>
           </div>
 
           <p className="mt-6 text-center text-xs text-muted-foreground">
-            Activation is usually completed within a few minutes during business hours.
+            {t("pending.footer")}
           </p>
         </div>
       </main>
