@@ -395,10 +395,15 @@ export const CreateSubscriptionParams = zod.object({
 
 export const CreateSubscriptionBody = zod.object({
   planType: zod.enum(["basic", "premium"]),
+  billingPeriod: zod.enum(["monthly", "annual"]).optional(),
+  durationMonths: zod.string().optional(),
+  amount: zod.string().optional(),
   paymentProof: zod
     .string()
-    .optional()
-    .describe("Base64 or URL of payment proof image"),
+    .min(1)
+    .describe("Base64-encoded JPG, PNG, or WebP receipt image data URL"),
+  transactionReference: zod.string().optional(),
+  notes: zod.string().optional(),
 });
 
 /**

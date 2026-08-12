@@ -1660,10 +1660,26 @@ components:
         planType:
           type: string
           enum: [basic, premium]
+        billingPeriod:
+          type: string
+          enum: [monthly, annual]
+          default: monthly
+        durationMonths:
+          type: string
+          description: Requested access duration in months
+        amount:
+          type: string
+          description: Amount paid in the configured currency
         paymentProof:
           type: string
-          description: Base64 or URL of payment proof image
-      required: [planType]
+          description: Base64-encoded JPG, PNG, or WebP receipt image data URL
+        transactionReference:
+          type: string
+          description: Bank or wallet transaction reference
+        notes:
+          type: string
+          description: Optional payment notes
+      required: [planType, paymentProof]
 
     Patient:
       type: object

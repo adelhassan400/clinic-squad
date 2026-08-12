@@ -357,7 +357,14 @@ export default function AdminPage() {
                             <p className="text-xs text-primary mt-1 font-mono">Ref: {s.transactionReference}</p>
                           )}
                           {s.paymentProof && (
-                            <p className="text-xs text-muted-foreground mt-0.5 truncate max-w-xs">Proof: {s.paymentProof}</p>
+                            s.paymentProof.startsWith("data:image/") ? (
+                              <a href={s.paymentProof} target="_blank" rel="noopener noreferrer" className="mt-2 inline-flex items-center gap-2 rounded-md border border-border bg-muted/20 p-1.5 hover:bg-muted/40" aria-label="Open payment receipt screenshot">
+                                <img src={s.paymentProof} alt="Payment receipt screenshot" className="h-20 w-20 rounded object-cover" />
+                                <span className="text-xs text-primary">View receipt</span>
+                              </a>
+                            ) : (
+                              <p className="text-xs text-muted-foreground mt-0.5 truncate max-w-xs">Proof: {s.paymentProof}</p>
+                            )
                           )}
                         </div>
                         <span className="text-xs bg-yellow-500/10 text-yellow-600 px-2 py-0.5 rounded font-medium">Pending Verification</span>

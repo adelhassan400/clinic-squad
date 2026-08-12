@@ -396,8 +396,17 @@ export const CreateSubscriptionBodyPlanType = {
 
 export interface CreateSubscriptionBody {
   planType: CreateSubscriptionBodyPlanType;
-  /** Base64 or URL of payment proof image */
-  paymentProof?: string;
+  billingPeriod?: "monthly" | "annual";
+  /** Requested access duration in months */
+  durationMonths?: string;
+  /** Amount paid in the configured currency */
+  amount?: string;
+  /** Base64-encoded JPG, PNG, or WebP receipt image data URL */
+  paymentProof: string;
+  /** Bank or wallet transaction reference */
+  transactionReference?: string;
+  /** Optional payment notes */
+  notes?: string;
 }
 
 export type PatientVisitType =

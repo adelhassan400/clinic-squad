@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, type ChangeEvent } from "react";
 import { useAuth } from "@/lib/auth";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { useCreateSubscription, getGetSubscriptionQueryKey, getGetClinicQueryKey } from "@workspace/api-client-react";
@@ -6,7 +6,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { CheckCircle, Crown, Shield, PhoneCall, Loader2 } from "lucide-react";
+import { CheckCircle, Crown, Shield, PhoneCall, Loader2, Upload, Image as ImageIcon, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const plans = [
@@ -38,6 +38,7 @@ export default function SubscriptionPage() {
   const [durationMonths, setDurationMonths] = useState<number>(1);
   const [transactionRef, setTransactionRef] = useState("");
   const [paymentProof, setPaymentProof] = useState("");
+  const [receiptFileName, setReceiptFileName] = useState("");
   const [submitted, setSubmitted] = useState(false);
 
   const clinicId = clinic?.id ?? "";
@@ -50,7 +51,47 @@ export default function SubscriptionPage() {
       : currentPlanObj.monthlyPrice * durationMonths
     : 0;
 
+  const handleReceiptChange = (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    const allowedTypes = ["image/jpeg", "image/png", "image/webp"];
+    const maxBytes = 5 * 1024 * 1024;
+    if (!allowedTypes.includes(file.type)) {
+      toast({ title: "Unsupported receipt format", description: "Please upload a JPG, PNG, or WebP image.", variant: "destructive" });
+      event.target.value = "";
+      return;
+    }
+    if (file.size > maxBytes) {
+      toast({ title: "Receipt image is too large", description: "Please choose an image smaller than 5 MB.", variant: "destructive" });
+      event.target.value = "";
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      const result = typeof reader.result === "string" ? reader.result : "";
+      if (!result.startsWith("data:image/")) {
+        toast({ title: "Could not read receipt", variant: "destructive" });
+        return;
+      }
+      setPaymentProof(result);
+      setReceiptFileName(file.name);
+    };
+    reader.onerror = () => toast({ title: "Could not read receipt", variant: "destructive" });
+    reader.readAsDataURL(file);
+  };
+
+  const clearReceipt = () => {
+    setPaymentProof("");
+    setReceiptFileName("");
+  };
+
   const handleChoose = (plan: "basic" | "premium") => {
+    if (!paymentProof) {
+      toast({ title: "Receipt screenshot required", description: "Please upload your payment receipt before submitting.", variant: "destructive" });
+      return;
+    }
     setSelected(plan);
     createMutation.mutate({
       clinicId,
@@ -60,7 +101,7 @@ export default function SubscriptionPage() {
         durationMonths: durationMonths.toString(),
         amount: calculatedAmount.toString(),
         transactionReference: transactionRef.trim() || undefined,
-        paymentProof: paymentProof.trim() || undefined,
+        paymentProof,
       } as any
     }, {
       onSuccess: () => {
@@ -86,10 +127,10 @@ export default function SubscriptionPage() {
           <h1 className="text-2xl font-bold mb-3">Request Submitted!</h1>
           <p className="text-muted-foreground mb-6">
             Your <strong>{selected === "premium" ? "Premium" : "Basic"} Plan</strong> subscription request has been received.
-            Please send payment via WhatsApp and our team will activate your account within 24 hours.
+            Our team will review your receipt and activate your account within 24 hours after verification.
           </p>
           <a
-            href={`https://wa.me/201000000000?text=Hi!%20I%20just%20subscribed%20to%20the%20${selected === "premium" ? "Premium" : "Basic"}%20Plan%20for%20clinic:%20${encodeURIComponent(clinic?.name ?? "")}%20-%20Amount:%20${selected === "premium" ? "400" : "200"}%20EGP`}
+            href={`https://wa.me/201000000000?text=${encodeURIComponent(`Hi! I submitted a payment receipt for the ${selected === "premium" ? "Premium" : "Basic"} Plan (${durationMonths} months) for clinic: ${clinic?.name ?? ""}. Transaction reference: ${transactionRef || "N/A"}. I will attach the receipt screenshot here.`)}`}
             target="_blank"
             rel="noopener noreferrer"
           >
@@ -133,8 +174,8 @@ export default function SubscriptionPage() {
                 {selected === plan.id && <CheckCircle className="w-5 h-5 text-primary shrink-0 mt-1" />}
               </div>
               <div className="flex items-baseline gap-1 mb-6">
-                <span className="text-4xl font-bold">{plan.price}</span>
-                <span className="text-sm text-muted-foreground">{plan.period}</span>
+                    <span className="text-4xl font-bold">{plan.monthlyPrice}</span>
+                <span className="text-sm text-muted-foreground">EGP / month</span>
               </div>
               <ul className="space-y-2.5 flex-1">
                 {plan.features.map(f => (
@@ -214,14 +255,42 @@ export default function SubscriptionPage() {
                   />
                 </div>
                 <div>
-                  <label className="text-xs font-medium mb-1.5 block">Receipt Screenshot URL or Filename</label>
-                  <input
-                    type="text"
-                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-                    placeholder="Paste receipt image URL or description"
-                    value={paymentProof}
-                    onChange={(e) => setPaymentProof(e.target.value)}
-                  />
+                  <label htmlFor="receipt-upload" className="text-xs font-medium mb-1.5 block">Payment Receipt Screenshot</label>
+                  <div className="rounded-lg border border-dashed border-primary/40 bg-primary/5 p-4">
+                    <input
+                      id="receipt-upload"
+                      type="file"
+                      accept="image/jpeg,image/png,image/webp"
+                      className="sr-only"
+                      onChange={handleReceiptChange}
+                    />
+                    {!paymentProof ? (
+                      <label htmlFor="receipt-upload" className="flex cursor-pointer flex-col items-center justify-center gap-2 py-5 text-center">
+                        <Upload className="h-8 w-8 text-primary" />
+                        <span className="text-sm font-medium">Choose receipt screenshot</span>
+                        <span className="text-xs text-muted-foreground">JPG, PNG, or WebP · maximum 5 MB</span>
+                      </label>
+                    ) : (
+                      <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+                        <a href={paymentProof} target="_blank" rel="noopener noreferrer" className="shrink-0" aria-label="Open receipt preview">
+                          <img src={paymentProof} alt="Uploaded payment receipt preview" className="h-24 w-24 rounded-md border border-border object-cover" />
+                        </a>
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-2 text-sm font-medium">
+                            <ImageIcon className="h-4 w-4 text-primary" />
+                            <span className="truncate">{receiptFileName || "Receipt screenshot selected"}</span>
+                          </div>
+                          <p className="mt-1 text-xs text-muted-foreground">Your receipt image will be securely attached to this payment request.</p>
+                        </div>
+                        <div className="flex gap-2">
+                          <label htmlFor="receipt-upload" className="inline-flex h-9 cursor-pointer items-center justify-center rounded-md border border-input bg-background px-3 text-xs font-medium hover:bg-accent hover:text-accent-foreground">Replace</label>
+                          <Button type="button" size="icon" variant="ghost" onClick={clearReceipt} aria-label="Remove receipt">
+                            <X className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
             </div>

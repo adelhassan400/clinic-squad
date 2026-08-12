@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { eq } from "drizzle-orm";
 import { db, clinicsTable, usersTable, subscriptionsTable, patientsTable, appointmentsTable, financesTable } from "@workspace/db";
-import { CreateSubscriptionBody, UpdateClinicBody } from "@workspace/api-zod";
+import { UpdateClinicBody } from "@workspace/api-zod";
 import { randomUUID } from "crypto";
 import { requireAuth } from "../middlewares/auth";
 import type { Request, Response, NextFunction } from "express";
@@ -108,8 +108,26 @@ router.post("/:clinicId/subscription", async (req, res) => {
   const billingPeriod = body.billingPeriod || "monthly";
   const durationMonths = parseInt(body.durationMonths) || 1;
   const amount = body.amount !== undefined ? parseFloat(body.amount) : (planType === "basic" ? 200 : 400) * durationMonths;
-  const paymentProof = body.paymentProof;
-  const transactionReference = body.transactionReference;
+  const paymentProof = typeof body.paymentProof === "string" ? body.paymentProof : null;
+  const transactionReference = typeof body.transactionReference === "string" ? body.transactionReference.trim() : null;
+
+  if (!planType || !["basic", "premium"].includes(planType)) {
+    return res.status(400).json({ error: "A valid subscription plan is required" });
+  }
+  if (!Number.isFinite(durationMonths) || durationMonths < 1 || durationMonths > 120) {
+    return res.status(400).json({ error: "Duration must be between 1 and 120 months" });
+  }
+  if (paymentProof) {
+    const imageDataUrl = /^data:image\/(jpeg|png|webp);base64,[A-Za-z0-9+/=]+$/;
+    if (!imageDataUrl.test(paymentProof)) {
+      return res.status(400).json({ error: "Receipt must be a JPG, PNG, or WebP image" });
+    }
+    if (paymentProof.length > 7_000_000) {
+      return res.status(413).json({ error: "Receipt image is too large (max 5 MB)" });
+    }
+  } else {
+    return res.status(400).json({ error: "Payment receipt image is required" });
+  }
 
   const startDate = new Date();
   const endDate = new Date();
@@ -126,8 +144,8 @@ router.post("/:clinicId/subscription", async (req, res) => {
     endDate,
     paymentStatus: "pending",
     amount: amount.toString(),
-    paymentProof: paymentProof ?? null,
-    transactionReference: transactionReference ?? null,
+    paymentProof,
+    transactionReference: transactionReference || null,
   });
 
   // Update clinic subscription plan
