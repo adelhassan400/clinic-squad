@@ -1,0 +1,43 @@
+name: Daily Database Backup
+
+on:
+  schedule:
+    - cron: '0 3 * * *' # Runs every day at 3:00 AM UTC
+  workflow_dispatch:
+
+jobs:
+  backup:
+    name: Backup Neon PostgreSQL
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    env:
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      PG_VERSION: '17'
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Install PostgreSQL Client
+        run: |
+          sudo apt update
+          yes '' | sudo /usr/share/postgresql-common/pgdg/apt.postgresql.org.sh
+          sudo apt install -y postgresql-client-${{ env.PG_VERSION }}
+
+      - name: Create Database Dump
+        run: |
+          TIMESTAMP=$(date +'%Y-%m-%d_%H-%M-%S')
+          BACKUP_FILE="clinicsquad_backup_${TIMESTAMP}.sql.gz"
+          
+          echo "Generating backup: $BACKUP_FILE"
+          pg_dump "$DATABASE_URL" | gzip > "$BACKUP_FILE"
+          
+          echo "BACKUP_FILE=$BACKUP_FILE" >> $GITHUB_ENV
+
+      - name: Upload Backup Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: db-backup-${{ env.BACKUP_FILE }}
+          path: ${{ env.BACKUP_FILE }}
+          retention-days: 30
