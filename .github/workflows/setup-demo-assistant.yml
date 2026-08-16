@@ -40,6 +40,39 @@ jobs:
           test -n "$DATABASE_URL" || { echo "DATABASE_URL is not configured" >&2; exit 1; }
           test -n "$DEMO_ASSISTANT_PASSWORD" || { echo "DEMO_ASSISTANT_PASSWORD is not configured" >&2; exit 1; }
 
+      - name: Validate database address
+        shell: bash
+        run: |
+          node <<'NODE'
+          const raw = process.env.DATABASE_URL;
+          let parsed;
+          try {
+            parsed = new URL(raw);
+          } catch {
+            console.error('DATABASE_URL is not a valid PostgreSQL connection string.');
+            process.exit(1);
+          }
+
+          if (!['postgres:', 'postgresql:'].includes(parsed.protocol)) {
+            console.error('DATABASE_URL must use the postgres:// or postgresql:// scheme.');
+            process.exit(1);
+          }
+
+          const blockedHosts = new Set([
+            'host',
+            'hostname',
+            'localhost',
+            '127.0.0.1',
+            '::1',
+            'example.com',
+          ]);
+
+          if (!parsed.hostname || blockedHosts.has(parsed.hostname.toLowerCase())) {
+            console.error('DATABASE_URL points to a placeholder or local host. GitHub Actions needs a reachable hosted PostgreSQL database URL.');
+            process.exit(1);
+          }
+          NODE
+
       - name: Apply database schema
         run: pnpm --filter @workspace/db push
 
