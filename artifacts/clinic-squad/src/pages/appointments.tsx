@@ -26,7 +26,7 @@ import {
   ChevronsUpDown, Check, Users, List, ChevronLeft, ChevronRight, Pill, MessageCircle, LogIn, Clock, User
 } from "lucide-react";
 import { Link } from "wouter";
-import { cn, formatDate } from "@/lib/utils";
+import { cn } from "@/lib/utils";
 import { useCurrency } from "@/lib/currency";
 import { openWhatsApp, whatsappAppointmentReminder } from "@/lib/whatsapp";
 import { PATIENT_VISIT_TYPES, VisitTypeBadge, getVisitTypeStyle } from "@/lib/visit-types";
@@ -259,7 +259,7 @@ function DayCalendar({
         </div>
         <div className="flex items-center gap-2">
           <span className="text-xs text-muted-foreground">
-            {visibleAppts.length} {visibleAppts.length === 1 ? t("waiting.count") : t("waiting.countPlural")}
+            {visibleAppts.length} {visibleAppts.length === 1 ? t("appt.appointment") : t("appt.appointments")}
           </span>
           {!isToday(date) && (
             <Button variant="outline" size="sm" className="h-7 text-xs" onClick={onToday}>
@@ -394,6 +394,7 @@ export default function AppointmentsPage() {
   const { data: patients } = useListPatients(clinicId, { limit: 1000 }, {
     query: { enabled: !!clinicId, queryKey: getListPatientsQueryKey(clinicId, { limit: 1000 }) }
   });
+  const patientPhones = new Map((patients?.data ?? []).map((patient) => [patient.id, patient.phone]));
 
   const createMutation = useCreateAppointment();
   const deleteMutation = useDeleteAppointment();
@@ -503,7 +504,9 @@ export default function AppointmentsPage() {
             />
           ) : (
             <div className="rounded-xl border border-border bg-card overflow-hidden">
-              <div className="grid grid-cols-[120px_80px_1fr_120px_auto_auto] gap-4 px-6 py-3 border-b border-border bg-muted/30 text-xs font-medium text-muted-foreground uppercase tracking-wider">
+              <div className="overflow-x-auto">
+                <div className="min-w-[900px]">
+                  <div className="grid grid-cols-[120px_80px_minmax(220px,1fr)_140px_auto_140px] gap-4 px-6 py-3 border-b border-border bg-muted/30 text-xs font-medium text-muted-foreground uppercase tracking-wider">
                 <span>{t("appt.date")}</span>
                 <span>{t("appt.time")}</span>
                 <span>{t("patients.name")}</span>
@@ -524,9 +527,9 @@ export default function AppointmentsPage() {
                   <div
                     key={appt.id}
                     data-testid={`appt-row-${appt.id}`}
-                    className="grid grid-cols-[120px_80px_1fr_120px_auto_auto] gap-4 items-center px-6 py-4 border-b border-border last:border-0 hover:bg-muted/30 transition-colors"
+                    className="grid grid-cols-[120px_80px_minmax(220px,1fr)_140px_auto_140px] gap-4 items-center px-6 py-4 border-b border-border last:border-0 hover:bg-muted/30 transition-colors"
                   >
-                    <span className="text-sm">{formatDate(appt.date, lang === "ar" ? "ar-EG" : "en-US")}</span>
+                    <span className="text-sm">{new Date(`${appt.date}T00:00:00`).toLocaleDateString(lang === "ar" ? "ar-EG" : "en-US")}</span>
                     <span className="text-sm font-mono text-muted-foreground">{appt.time}</span>
                     <div className="flex items-center gap-2">
                       <div className="w-7 h-7 rounded-full bg-primary/10 flex items-center justify-center shrink-0 text-[10px] font-bold text-primary">
@@ -541,9 +544,10 @@ export default function AppointmentsPage() {
                         variant="ghost"
                         size="icon"
                         className="h-8 w-8 text-green-600 hover:bg-green-100 dark:hover:bg-green-900/30"
-                        onClick={() => 
+                        disabled={!patientPhones.get(appt.patientId)}
+                        onClick={() =>
                           openWhatsApp(
-                            appt.patientPhone, 
+                            patientPhones.get(appt.patientId) ?? "",
                             whatsappAppointmentReminder({
                               patientName: appt.patientName,
                               clinicName: clinic?.name ?? "the clinic",
@@ -563,6 +567,8 @@ export default function AppointmentsPage() {
                   </div>
                 ))
               )}
+                </div>
+              </div>
             </div>
           )}
         </div>
