@@ -1,0 +1,47 @@
+name: Set up Demo Assistant
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  setup-demo-assistant:
+    name: Apply schema and create Demo Assistant
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      DEMO_ASSISTANT_EMAIL: ${{ secrets.DEMO_ASSISTANT_EMAIL }}
+      DEMO_ASSISTANT_PASSWORD: ${{ secrets.DEMO_ASSISTANT_PASSWORD }}
+      DEMO_CLINIC_NAME: ${{ secrets.DEMO_CLINIC_NAME }}
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Validate required secrets
+        shell: bash
+        run: |
+          test -n "$DATABASE_URL" || { echo "DATABASE_URL is not configured" >&2; exit 1; }
+          test -n "$DEMO_ASSISTANT_PASSWORD" || { echo "DEMO_ASSISTANT_PASSWORD is not configured" >&2; exit 1; }
+
+      - name: Apply database schema
+        run: pnpm --filter @workspace/db push
+
+      - name: Create or reset Demo Assistant
+        run: pnpm --filter @workspace/db exec node scripts/create-demo-assistant.mjs
