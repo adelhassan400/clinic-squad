@@ -1,5 +1,7 @@
 import { Router } from "express";
-import { eq, desc } from "drizzle-orm";
+import { randomUUID } from "crypto";
+import { eq, desc, inArray } from "drizzle-orm";
+import { requireAuth, requireRole } from "../middlewares/auth";
 import {
   db,
   clinicsTable,
@@ -7,17 +9,79 @@ import {
   usersTable,
   patientsTable,
   appointmentsTable,
+  auditLogsTable,
 } from "@workspace/db";
 
 const router = Router();
 
+function asDate(value: Date | string): Date {
+  const date = value instanceof Date ? value : new Date(value);
+  return Number.isNaN(date.getTime()) ? new Date(0) : date;
+}
+
+router.use(requireAuth, requireRole("superadmin"));
+
 router.get("/clinics", async (_req, res) => {
-  const clinics = await db.select().from(clinicsTable);
-  return res.json(clinics.map(c => ({
-    id: c.id, requestNumber: c.requestNumber ?? null, name: c.name, ownerId: c.ownerId, status: c.status,
-    subscriptionStatus: c.subscriptionStatus, trialEndDate: c.trialEndDate.toISOString(),
-    subscriptionPlan: c.subscriptionPlan, createdAt: c.createdAt.toISOString(),
-  })));
+  const [clinics, confirmedSubscriptions] = await Promise.all([
+    db
+      .select({
+        id: clinicsTable.id,
+        requestNumber: clinicsTable.requestNumber,
+        name: clinicsTable.name,
+        phone: clinicsTable.phone,
+        address: clinicsTable.address,
+        ownerId: clinicsTable.ownerId,
+        ownerEmail: usersTable.email,
+        status: clinicsTable.status,
+        subscriptionStatus: clinicsTable.subscriptionStatus,
+        trialEndDate: clinicsTable.trialEndDate,
+        subscriptionPlan: clinicsTable.subscriptionPlan,
+        createdAt: clinicsTable.createdAt,
+      })
+      .from(clinicsTable)
+      .leftJoin(usersTable, eq(usersTable.id, clinicsTable.ownerId)),
+    db.select().from(subscriptionsTable).where(eq(subscriptionsTable.paymentStatus, "confirmed")),
+  ]);
+
+  const latestSubscriptionByClinic = new Map<string, (typeof confirmedSubscriptions)[number]>();
+  for (const subscription of confirmedSubscriptions) {
+    const current = latestSubscriptionByClinic.get(subscription.clinicId);
+    if (!current || asDate(subscription.createdAt) > asDate(current.createdAt)) {
+      latestSubscriptionByClinic.set(subscription.clinicId, subscription);
+    }
+  }
+
+  const now = new Date();
+  const threeDaysFromNow = new Date(now.getTime() + 3 * 24 * 60 * 60 * 1000);
+
+  return res.json(clinics.map((clinic) => {
+    const latestSubscription = latestSubscriptionByClinic.get(clinic.id);
+    const rawAccessEndDate = clinic.subscriptionStatus === "trial"
+      ? clinic.trialEndDate
+      : latestSubscription?.endDate ?? clinic.trialEndDate;
+    const accessEndDate = rawAccessEndDate ? asDate(rawAccessEndDate) : null;
+    const millisecondsUntilExpiry = accessEndDate ? accessEndDate.getTime() - now.getTime() : 0;
+    const expiringSoon = Boolean(accessEndDate && accessEndDate > now && accessEndDate <= threeDaysFromNow);
+
+    return {
+      id: clinic.id,
+      requestNumber: clinic.requestNumber ?? null,
+      name: clinic.name,
+      phone: clinic.phone ?? null,
+      address: clinic.address ?? null,
+      ownerId: clinic.ownerId,
+      ownerEmail: clinic.ownerEmail ?? null,
+      status: clinic.status,
+      subscriptionStatus: clinic.subscriptionStatus,
+      trialEndDate: clinic.trialEndDate ? asDate(clinic.trialEndDate).toISOString() : null,
+      accessEndDate: accessEndDate?.toISOString() ?? null,
+      expiryType: clinic.subscriptionStatus === "trial" ? "trial" : latestSubscription ? "subscription" : null,
+      expiringSoon,
+      daysUntilExpiry: accessEndDate ? Math.max(0, Math.ceil(millisecondsUntilExpiry / (24 * 60 * 60 * 1000))) : null,
+      subscriptionPlan: clinic.subscriptionPlan,
+      createdAt: clinic.createdAt.toISOString(),
+    };
+  }));
 });
 
 router.get("/stats", async (req, res) => {
@@ -40,16 +104,18 @@ router.get("/stats", async (req, res) => {
   for (const c of clinics) {
     byStatus[c.status] = (byStatus[c.status] ?? 0) + 1;
     bySub[c.subscriptionStatus] = (bySub[c.subscriptionStatus] ?? 0) + 1;
-    if (c.subscriptionStatus === "trial" && c.trialEndDate <= threeDaysFromNow && c.trialEndDate >= now) {
+    const trialEndDate = asDate(c.trialEndDate);
+    const createdAt = asDate(c.createdAt);
+    if (c.subscriptionStatus === "trial" && trialEndDate <= threeDaysFromNow && trialEndDate >= now) {
       trialEndingSoon += 1;
     }
-    if (c.createdAt >= sevenDaysAgo) newSignupsWeek += 1;
+    if (createdAt >= sevenDaysAgo) newSignupsWeek += 1;
   }
 
   const pendingPayments = subs.filter(s => s.paymentStatus === "pending").length;
   const confirmedSubs = subs.filter(s => s.paymentStatus === "confirmed");
   const confirmedRevenue = confirmedSubs.reduce(
-    (sum, s) => sum + parseFloat(s.amount ?? "0"),
+    (sum, s) => sum + (Number.parseFloat(s.amount ?? "0") || 0),
     0,
   );
 
@@ -89,8 +155,8 @@ router.get("/stats", async (req, res) => {
   const availableYears = new Set<number>();
 
   for (const s of confirmedSubs) {
-    const d = s.createdAt;
-    const amount = parseFloat(s.amount ?? "0");
+    const d = asDate(s.createdAt);
+    const amount = Number.parseFloat(s.amount ?? "0") || 0;
     const key = `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}`;
     availableYears.add(d.getUTCFullYear());
     if (key === currentMonthKey) currentMonthRevenue += amount;
@@ -106,8 +172,8 @@ router.get("/stats", async (req, res) => {
 
   const revenueByMonth = months.map((m) => ({
     month: m.key,
-    amount: monthBuckets.get(m.key)!.amount,
-    count: monthBuckets.get(m.key)!.count,
+    amount: monthBuckets.get(m.key)?.amount ?? 0,
+    count: monthBuckets.get(m.key)?.count ?? 0,
   }));
 
   return res.json({
@@ -124,6 +190,105 @@ router.get("/stats", async (req, res) => {
     revenueRange: isSpecificYear
       ? { mode: "year" as const, year: yearParam }
       : { mode: "rolling12" as const },
+    availableYears: Array.from(availableYears).sort((a, b) => b - a),
+  });
+});
+
+router.get("/finance-report", async (req, res) => {
+  const now = new Date();
+  const requestedYear = typeof req.query.year === "string" ? Number(req.query.year) : now.getUTCFullYear();
+  const year = Number.isInteger(requestedYear) && requestedYear >= 2000 && requestedYear <= 2100
+    ? requestedYear
+    : now.getUTCFullYear();
+  const requestedMonth = typeof req.query.month === "string" ? Number(req.query.month) : NaN;
+  const selectedMonth = Number.isInteger(requestedMonth) && requestedMonth >= 1 && requestedMonth <= 12
+    ? requestedMonth
+    : null;
+
+  const [subscriptions, pendingSubscriptions, clinics] = await Promise.all([
+    db.select().from(subscriptionsTable).where(eq(subscriptionsTable.paymentStatus, "confirmed")),
+    db.select().from(subscriptionsTable).where(eq(subscriptionsTable.paymentStatus, "pending")),
+    db.select({ id: clinicsTable.id, name: clinicsTable.name }).from(clinicsTable),
+  ]);
+  const clinicNames = new Map(clinics.map((clinic) => [clinic.id, clinic.name]));
+  const yearSubscriptions = subscriptions.filter((subscription) => asDate(subscription.createdAt).getUTCFullYear() === year);
+  const periodSubscriptions = selectedMonth === null
+    ? yearSubscriptions
+    : yearSubscriptions.filter((subscription) => asDate(subscription.createdAt).getUTCMonth() + 1 === selectedMonth);
+  const periodPendingSubscriptions = pendingSubscriptions.filter((subscription) => {
+    if (asDate(subscription.createdAt).getUTCFullYear() !== year) return false;
+    return selectedMonth === null || asDate(subscription.createdAt).getUTCMonth() + 1 === selectedMonth;
+  });
+  const amountOf = (subscription: (typeof subscriptions)[number]) => Number.parseFloat(subscription.amount ?? "0") || 0;
+
+  const months = Array.from({ length: 12 }, (_, monthIndex) => {
+    const month = monthIndex + 1;
+    return {
+      month: `${year}-${String(month).padStart(2, "0")}`,
+      amount: 0,
+      count: 0,
+    };
+  });
+  const byPlan = new Map<string, { planType: string; amount: number; count: number }>();
+  const byClinic = new Map<string, { clinicId: string; clinicName: string; amount: number; count: number }>();
+
+  for (const subscription of yearSubscriptions) {
+    const amount = amountOf(subscription);
+    const month = asDate(subscription.createdAt).getUTCMonth();
+    months[month].amount += amount;
+    months[month].count += 1;
+  }
+
+  for (const subscription of periodSubscriptions) {
+    const amount = amountOf(subscription);
+    const plan = byPlan.get(subscription.planType) ?? { planType: subscription.planType, amount: 0, count: 0 };
+    plan.amount += amount;
+    plan.count += 1;
+    byPlan.set(subscription.planType, plan);
+
+    const clinic = byClinic.get(subscription.clinicId) ?? {
+      clinicId: subscription.clinicId,
+      clinicName: clinicNames.get(subscription.clinicId) ?? "Deleted clinic",
+      amount: 0,
+      count: 0,
+    };
+    clinic.amount += amount;
+    clinic.count += 1;
+    byClinic.set(subscription.clinicId, clinic);
+  }
+
+  const totalCollected = periodSubscriptions.reduce((sum, subscription) => sum + amountOf(subscription), 0);
+  const pendingAmount = periodPendingSubscriptions.reduce((sum, subscription) => sum + amountOf(subscription), 0);
+  const currentMonthKey = `${now.getUTCFullYear()}-${String(now.getUTCMonth() + 1).padStart(2, "0")}`;
+  const currentMonth = months.find((item) => item.month === currentMonthKey);
+  const availableYears = new Set<number>([now.getUTCFullYear()]);
+  subscriptions.forEach((subscription) => availableYears.add(asDate(subscription.createdAt).getUTCFullYear()));
+
+  return res.json({
+    year,
+    month: selectedMonth,
+    totalCollected,
+    transactionCount: periodSubscriptions.length,
+    averageTransaction: periodSubscriptions.length ? totalCollected / periodSubscriptions.length : 0,
+    pendingAmount,
+    pendingCount: periodPendingSubscriptions.length,
+    currentMonthCollected: currentMonth?.amount ?? 0,
+    monthly: months,
+    byPlan: Array.from(byPlan.values()).sort((a, b) => b.amount - a.amount),
+    topClinics: Array.from(byClinic.values()).sort((a, b) => b.amount - a.amount).slice(0, 10),
+    transactions: [...periodSubscriptions]
+      .sort((a, b) => asDate(b.createdAt).getTime() - asDate(a.createdAt).getTime())
+      .slice(0, 100)
+      .map((subscription) => ({
+        id: subscription.id,
+        clinicName: clinicNames.get(subscription.clinicId) ?? "Deleted clinic",
+        planType: subscription.planType,
+        billingPeriod: subscription.billingPeriod,
+        durationMonths: subscription.durationMonths,
+        amount: amountOf(subscription),
+        transactionReference: subscription.transactionReference ?? null,
+        createdAt: asDate(subscription.createdAt).toISOString(),
+      })),
     availableYears: Array.from(availableYears).sort((a, b) => b - a),
   });
 });
@@ -146,9 +311,13 @@ router.get("/subscriptions", async (req, res) => {
       transactionReference: subscriptionsTable.transactionReference,
       createdAt: subscriptionsTable.createdAt,
       clinicName: clinicsTable.name,
+      ownerName: usersTable.name,
+      ownerEmail: usersTable.email,
+      ownerWhatsappNumber: usersTable.whatsappNumber,
     })
     .from(subscriptionsTable)
     .leftJoin(clinicsTable, eq(subscriptionsTable.clinicId, clinicsTable.id))
+    .leftJoin(usersTable, eq(usersTable.id, clinicsTable.ownerId))
     .orderBy(desc(subscriptionsTable.createdAt));
 
   const filtered = status ? rows.filter(r => r.paymentStatus === status) : rows;
@@ -157,6 +326,9 @@ router.get("/subscriptions", async (req, res) => {
     id: r.id,
     clinicId: r.clinicId,
     clinicName: r.clinicName ?? "(deleted)",
+    ownerName: r.ownerName ?? null,
+    ownerEmail: r.ownerEmail ?? null,
+    ownerWhatsappNumber: r.ownerWhatsappNumber ?? null,
     planType: r.planType,
     billingPeriod: r.billingPeriod,
     durationMonths: r.durationMonths,
@@ -168,6 +340,67 @@ router.get("/subscriptions", async (req, res) => {
     transactionReference: r.transactionReference ?? null,
     createdAt: r.createdAt.toISOString(),
   })));
+});
+
+router.post("/clinics/:clinicId/impersonate", async (req, res) => {
+  const clinicId = String((req.params as Record<string, unknown>).clinicId ?? "");
+  const clinic = (await db.select().from(clinicsTable).where(eq(clinicsTable.id, clinicId)).limit(1))[0];
+  if (!clinic) return res.status(404).json({ error: "Clinic not found" });
+
+  const owner = (await db
+    .select()
+    .from(usersTable)
+    .where(eq(usersTable.id, clinic.ownerId))
+    .limit(1))[0];
+  if (!owner || owner.clinicId !== clinic.id || owner.role !== "admin") {
+    return res.status(409).json({ error: "Clinic owner account is unavailable" });
+  }
+  if (owner.isBlocked || clinic.status === "blocked" || clinic.status === "deactivated") {
+    return res.status(409).json({ error: "The clinic owner account is blocked or deactivated" });
+  }
+
+  const token = Buffer.from(`${owner.id}:${Date.now()}`).toString("base64");
+  await db.insert(auditLogsTable).values({
+    id: randomUUID(),
+    adminId: req.authUser!.id,
+    adminEmail: req.authUser!.email,
+    action: "IMPERSONATE_CLINIC_ADMIN",
+    details: `Started a support session for ${clinic.name} (${clinic.id}) as ${owner.email}`,
+  });
+
+  return res.json({
+    token,
+    impersonation: {
+      active: true,
+      clinicId: clinic.id,
+      clinicName: clinic.name,
+      startedBy: req.authUser!.email,
+    },
+    user: {
+      id: owner.id,
+      email: owner.email,
+      role: owner.role,
+      clinicId: owner.clinicId,
+      name: owner.name,
+      specialty: owner.specialty ?? null,
+      whatsappNumber: owner.whatsappNumber ?? null,
+      isBlocked: owner.isBlocked,
+      emailVerifiedAt: owner.emailVerifiedAt?.toISOString() ?? null,
+    },
+    clinic: {
+      id: clinic.id,
+      requestNumber: clinic.requestNumber ?? null,
+      name: clinic.name,
+      phone: clinic.phone ?? null,
+      address: clinic.address ?? null,
+      ownerId: clinic.ownerId,
+      status: clinic.status,
+      subscriptionStatus: clinic.subscriptionStatus,
+      trialEndDate: clinic.trialEndDate.toISOString(),
+      subscriptionPlan: clinic.subscriptionPlan,
+      createdAt: clinic.createdAt.toISOString(),
+    },
+  });
 });
 
 router.get("/clinics/:clinicId/detail", async (req, res) => {
@@ -218,7 +451,7 @@ router.get("/clinics/:clinicId/detail", async (req, res) => {
           email: owner.email,
           role: owner.role,
           specialty: owner.specialty ?? null,
-          phone: owner.phone ?? null,
+          phone: owner.whatsappNumber ?? null,
           isBlocked: owner.isBlocked,
           createdAt: owner.createdAt.toISOString(),
         }
@@ -289,6 +522,45 @@ router.get("/pending-clinics", async (_req, res) => {
   );
 });
 
+router.post("/clinics/bulk-action", async (req, res) => {
+  const body = req.body as { clinicIds?: unknown; action?: unknown };
+  const requestedIds = Array.isArray(body.clinicIds)
+    ? body.clinicIds.filter((clinicId): clinicId is string => typeof clinicId === "string" && clinicId.trim().length > 0)
+    : [];
+  const clinicIds = Array.from(new Set(requestedIds));
+  const action = body.action === "activate" || body.action === "deactivate" || body.action === "block" ? body.action : null;
+
+  if (!clinicIds.length) return res.status(400).json({ error: "Select at least one clinic" });
+  if (!action) return res.status(400).json({ error: "Bulk action must be activate or deactivate" });
+  if (clinicIds.length > 100) return res.status(400).json({ error: "You can update up to 100 clinics at a time" });
+
+  const clinics = await db
+    .select({ id: clinicsTable.id, name: clinicsTable.name })
+    .from(clinicsTable)
+    .where(inArray(clinicsTable.id, clinicIds));
+
+  if (!clinics.length) return res.status(404).json({ error: "No matching clinics found" });
+
+  const status = action === "activate" ? "active" : "deactivated";
+  await db.update(clinicsTable).set({ status }).where(inArray(clinicsTable.id, clinics.map((clinic) => clinic.id)));
+
+  await db.insert(auditLogsTable).values({
+    id: randomUUID(),
+    adminId: req.authUser!.id,
+    adminEmail: req.authUser!.email,
+    action: action === "activate" ? "BULK_ACTIVATE_CLINICS" : "BULK_DEACTIVATE_CLINICS",
+    details: `${action === "activate" ? "Activated" : "Deactivated"} ${clinics.length} clinics: ${clinics.map((clinic) => clinic.name).join(", ")}`,
+  });
+
+  return res.json({
+    action,
+    status,
+    updatedCount: clinics.length,
+    updatedClinicIds: clinics.map((clinic) => clinic.id),
+    missingClinicIds: clinicIds.filter((clinicId) => !clinics.some((clinic) => clinic.id === clinicId)),
+  });
+});
+
 router.post("/clinics/:clinicId/activate", async (req, res) => {
   const { clinicId } = req.params;
   await db.update(clinicsTable).set({ status: "active" }).where(eq(clinicsTable.id, clinicId));
@@ -298,6 +570,31 @@ router.post("/clinics/:clinicId/activate", async (req, res) => {
     id: clinic.id, requestNumber: clinic.requestNumber ?? null, name: clinic.name, ownerId: clinic.ownerId, status: clinic.status,
     subscriptionStatus: clinic.subscriptionStatus, trialEndDate: clinic.trialEndDate.toISOString(),
     subscriptionPlan: clinic.subscriptionPlan, createdAt: clinic.createdAt.toISOString(),
+  });
+});
+
+router.post("/clinics/:clinicId/deactivate", async (req, res) => {
+  const { clinicId } = req.params;
+  const clinic = (await db.select().from(clinicsTable).where(eq(clinicsTable.id, clinicId)).limit(1))[0];
+  if (!clinic) return res.status(404).json({ error: "Clinic not found" });
+
+  const updated = (await db.update(clinicsTable)
+    .set({ status: "deactivated" })
+    .where(eq(clinicsTable.id, clinicId))
+    .returning())[0];
+
+  await db.insert(auditLogsTable).values({
+    id: randomUUID(),
+    adminId: req.authUser!.id,
+    adminEmail: req.authUser!.email,
+    action: "DEACTIVATE_CLINIC",
+    details: `Deactivated clinic ${clinic.name}`,
+  });
+
+  return res.json({
+    id: updated.id, requestNumber: updated.requestNumber ?? null, name: updated.name, ownerId: updated.ownerId, status: updated.status,
+    subscriptionStatus: updated.subscriptionStatus, trialEndDate: updated.trialEndDate.toISOString(),
+    subscriptionPlan: updated.subscriptionPlan, createdAt: updated.createdAt.toISOString(),
   });
 });
 

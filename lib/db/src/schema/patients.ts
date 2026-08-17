@@ -1,4 +1,4 @@
-import { pgTable, text, integer, timestamp } from "drizzle-orm/pg-core";
+import { pgTable, text, integer, timestamp, numeric } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 
@@ -14,7 +14,15 @@ export const patientsTable = pgTable("patients", {
   allergies: text("allergies"),
   notes: text("notes"),
   visitType: text("visit_type"),
+  assignedDoctorId: text("assigned_doctor_id"),
   status: text("status").notNull().default("registered"),
+  paymentStatus: text("payment_status").notNull().default("unpaid"),
+  paymentAmount: numeric("payment_amount", { precision: 10, scale: 2 }),
+  paymentMethod: text("payment_method"),
+  paymentReference: text("payment_reference"),
+  paymentCollectedBy: text("payment_collected_by"),
+  paymentShiftDate: text("payment_shift_date"),
+  paymentReceivedAt: timestamp("payment_received_at", { withTimezone: true }),
   diagnosis: text("diagnosis"),
   clinicalNotes: text("clinical_notes"),
   chronicConditions: text("chronic_conditions"),

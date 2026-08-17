@@ -1,6 +1,6 @@
-import { ReactNode, useState } from "react";
+import { ReactNode, useEffect, useState } from "react";
 import { Link, useLocation } from "wouter";
-import { useAuth } from "@/lib/auth";
+import { useAuth, type AuthClinic, type AuthUser } from "@/lib/auth";
 import { useTheme } from "@/lib/theme";
 import { useLang } from "@/lib/lang";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
@@ -11,8 +11,8 @@ import { useQuery } from "@tanstack/react-query";
 import {
   LayoutDashboard, Users, Calendar, TrendingUp,
   Settings, LogOut, Menu, X, Sun, Moon,
-  AlertTriangle, Crown, ChevronRight, Shield, BarChart2, UserPlus, Pill,
-  Stethoscope, Receipt, Megaphone
+  AlertTriangle, Crown, ChevronRight, Shield, BarChart2, Pill,
+  Stethoscope, Receipt, Megaphone, Building2, History
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -22,38 +22,74 @@ interface Props {
   children: ReactNode;
 }
 
+type ImpersonatorReturnSession = { user: AuthUser; clinic: AuthClinic | null; token: string };
+
 export function DashboardLayout({ children }: Props) {
-  const { user, clinic, logout } = useAuth();
+  const { user, clinic, logout, login } = useAuth();
   const { theme, toggleTheme } = useTheme();
-  const { t } = useLang();
+  const { t, dir } = useLang();
   const [location] = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [returnSession, setReturnSession] = useState<ImpersonatorReturnSession | null>(null);
+
+  useEffect(() => {
+    if (user?.role === "superadmin") {
+      setReturnSession(null);
+      return;
+    }
+    try {
+      const stored = localStorage.getItem("clinicsquad_impersonator_return");
+      setReturnSession(stored ? JSON.parse(stored) as ImpersonatorReturnSession : null);
+    } catch {
+      localStorage.removeItem("clinicsquad_impersonator_return");
+      setReturnSession(null);
+    }
+  }, [user?.role]);
+
+  const exitImpersonation = () => {
+    if (!returnSession) return;
+    login(returnSession.user, returnSession.clinic, returnSession.token);
+    localStorage.removeItem("clinicsquad_impersonator_return");
+    window.location.assign("/platform-clinics");
+  };
 
   const isSuperAdmin = user?.role === "superadmin";
-  const isAdmin = user?.role === "admin";
+  // `admin` is retained as a legacy alias for clinic owners created before RBAC.
+  const isDoctor = user?.role === "admin" || user?.role === "doctor";
+  const isAssistant = user?.role === "assistant" || user?.role === "secretary" || user?.role === "nurse";
 
-  // Super admin gets a platform-only nav, no clinic-management pages
+  // Super admin gets a platform-only nav. Clinic users get a focused menu for their role.
   const navItems = isSuperAdmin
     ? [
         { href: "/admin", labelKey: "sidebar.admin", icon: Shield },
-        { href: "/settings", labelKey: "sidebar.settings", icon: Settings },
+        { href: "/platform-clinics", labelKey: "sidebar.platformClinics", icon: Building2 },
+        { href: "/platform-payments", labelKey: "sidebar.platformPayments", icon: Receipt },
+        { href: "/platform-settings", labelKey: "sidebar.platformSettings", icon: Settings },
+        { href: "/platform-finances", labelKey: "sidebar.platformFinances", icon: TrendingUp },
+        { href: "/platform-growth", labelKey: "sidebar.platformGrowth", icon: Megaphone },
+        { href: "/platform-logs", labelKey: "sidebar.platformLogs", icon: History },
       ]
-    : [
-        { href: "/dashboard", labelKey: "sidebar.dashboard", icon: LayoutDashboard },
-        { href: "/patients", labelKey: "sidebar.patients", icon: Users },
-        { href: "/waiting-list", labelKey: "sidebar.waitingList", icon: Stethoscope },
-        { href: "/checkout", labelKey: "sidebar.checkout", icon: Receipt },
-        { href: "/appointments", labelKey: "sidebar.appointments", icon: Calendar },
-        ...(isAdmin
-          ? [
-              { href: "/prescriptions", labelKey: "sidebar.prescriptions", icon: Pill },
-              { href: "/insights", labelKey: "sidebar.insights", icon: BarChart2 },
-              { href: "/finances", labelKey: "sidebar.finances", icon: TrendingUp },
-              { href: "/subscription", labelKey: "sidebar.subscription", icon: Crown },
-            ]
-          : []),
-        { href: "/settings", labelKey: "sidebar.settings", icon: Settings },
-      ];
+    : isDoctor
+      ? [
+          { href: "/dashboard", labelKey: "sidebar.dashboard", icon: LayoutDashboard },
+          { href: "/patients", labelKey: "sidebar.patients", icon: Users },
+          { href: "/waiting-list", labelKey: "sidebar.waitingList", icon: Stethoscope },
+          { href: "/appointments", labelKey: "sidebar.appointments", icon: Calendar },
+          { href: "/prescriptions", labelKey: "sidebar.prescriptions", icon: Pill },
+          { href: "/insights", labelKey: "sidebar.insights", icon: BarChart2 },
+          { href: "/finances", labelKey: "sidebar.finances", icon: TrendingUp },
+          { href: "/subscription", labelKey: "sidebar.subscription", icon: Crown },
+          { href: "/team", labelKey: "sidebar.team", icon: Users },
+          { href: "/settings", labelKey: "sidebar.settings", icon: Settings },
+        ]
+      : [
+          { href: "/dashboard", labelKey: "sidebar.dashboard", icon: LayoutDashboard },
+          { href: "/patients", labelKey: "sidebar.patients", icon: Users },
+          { href: "/waiting-list", labelKey: "sidebar.waitingList", icon: Stethoscope },
+          { href: "/checkout", labelKey: "sidebar.checkout", icon: Receipt },
+          { href: "/appointments", labelKey: "sidebar.appointments", icon: Calendar },
+          { href: "/settings", labelKey: "sidebar.settings", icon: Settings },
+        ];
 
   const trialDaysLeft = clinic?.subscriptionStatus === "trial"
     ? getTrialDaysLeft(clinic.trialEndDate)
@@ -80,7 +116,7 @@ export function DashboardLayout({ children }: Props) {
       {/* Sidebar */}
       <aside className={cn(
         "fixed inset-y-0 start-0 z-30 w-64 flex flex-col bg-sidebar border-e border-sidebar-border transition-transform duration-300 lg:static lg:translate-x-0",
-        sidebarOpen ? "translate-x-0" : "-translate-x-full"
+        sidebarOpen ? "translate-x-0" : dir === "rtl" ? "translate-x-full" : "-translate-x-full"
       )}>
         {/* Logo */}
         <div className="flex items-center gap-3 px-6 py-5 border-b border-sidebar-border">
@@ -133,7 +169,8 @@ export function DashboardLayout({ children }: Props) {
         <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
           {navItems.map(({ href, labelKey, icon: Icon }) => {
             const isPremiumOnly = href === "/insights";
-            const isLocked = isPremiumOnly && clinic?.subscriptionStatus !== "premium";
+            const hasPremiumEntitlements = clinic?.subscriptionStatus === "premium" || clinic?.subscriptionStatus === "trial";
+            const isLocked = isPremiumOnly && !hasPremiumEntitlements;
             const isActive = location.startsWith(href);
             return (
               <Link
@@ -154,21 +191,6 @@ export function DashboardLayout({ children }: Props) {
             );
           })}
 
-          {isAdmin && (
-            <Link
-              href="/team"
-              data-testid="nav-team"
-              className={cn(
-                "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all",
-                location.startsWith("/team")
-                  ? "bg-sidebar-primary text-sidebar-primary-foreground"
-                  : "text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-foreground"
-              )}
-            >
-              <UserPlus className="w-4 h-4" />
-              <span className="flex-1">{t("sidebar.team")}</span>
-            </Link>
-          )}
 
         </nav>
 
@@ -226,6 +248,12 @@ export function DashboardLayout({ children }: Props) {
 
       {/* Main */}
       <div className="flex-1 flex flex-col overflow-hidden">
+        {returnSession && (
+          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-primary/20 bg-primary/10 px-4 py-2 text-sm text-foreground">
+            <span>{t("impersonation.viewingAs")} <strong>{user?.name}</strong></span>
+            <Button size="sm" variant="outline" onClick={exitImpersonation}>{t("impersonation.returnToAdmin")}</Button>
+          </div>
+        )}
         {/* Top bar */}
         <header className="h-14 flex items-center gap-3 px-4 border-b border-border bg-card">
           <Button

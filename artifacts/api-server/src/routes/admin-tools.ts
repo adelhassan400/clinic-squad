@@ -35,6 +35,26 @@ function cleanText(value: unknown, fallback = "") {
   return typeof value === "string" ? value.trim() : fallback;
 }
 
+// Public landing-page pricing. This intentionally sits before the authenticated
+// router middleware so visitors can see the latest global plan prices.
+router.get("/public-pricing", async (_req, res) => {
+  const settings = (await db
+    .select({
+      basicMonthlyPrice: systemSettingsTable.basicMonthlyPrice,
+      premiumMonthlyPrice: systemSettingsTable.premiumMonthlyPrice,
+      updatedAt: systemSettingsTable.updatedAt,
+    })
+    .from(systemSettingsTable)
+    .where(eq(systemSettingsTable.id, "global"))
+    .limit(1))[0];
+
+  return res.json({
+    basicMonthlyPrice: settings?.basicMonthlyPrice ?? "200",
+    premiumMonthlyPrice: settings?.premiumMonthlyPrice ?? "400",
+    updatedAt: settings?.updatedAt?.toISOString() ?? null,
+  });
+});
+
 // Clinic users can read active broadcasts and available promo codes.
 router.get("/messages", requireAuth, async (_req, res) => {
   const rows = await db
@@ -90,22 +110,48 @@ router.get("/audit-logs", async (_req, res) => {
 
 router.get("/engagement", async (_req, res) => {
   const [clinics, patients, appointments] = await Promise.all([
-    db.select().from(clinicsTable),
-    db.select({ clinicId: patientsTable.clinicId }).from(patientsTable),
+    db.select({ id: clinicsTable.id, name: clinicsTable.name, subscriptionStatus: clinicsTable.subscriptionStatus, createdAt: clinicsTable.createdAt }).from(clinicsTable),
+    db.select({ clinicId: patientsTable.clinicId, createdAt: patientsTable.createdAt }).from(patientsTable),
     db.select({ clinicId: appointmentsTable.clinicId, createdAt: appointmentsTable.createdAt }).from(appointmentsTable),
   ]);
-  const since = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+  const activityWindowDays = 30;
+  const since = new Date(Date.now() - activityWindowDays * 24 * 60 * 60 * 1000);
   const patientCounts = new Map<string, number>();
+  const recentPatientCounts = new Map<string, number>();
   const recentAppointmentCounts = new Map<string, number>();
-  for (const row of patients) patientCounts.set(row.clinicId, (patientCounts.get(row.clinicId) ?? 0) + 1);
+  const lastActivity = new Map<string, Date>();
+  for (const row of patients) {
+    patientCounts.set(row.clinicId, (patientCounts.get(row.clinicId) ?? 0) + 1);
+    if (row.createdAt >= since) recentPatientCounts.set(row.clinicId, (recentPatientCounts.get(row.clinicId) ?? 0) + 1);
+    const previous = lastActivity.get(row.clinicId);
+    if (!previous || row.createdAt > previous) lastActivity.set(row.clinicId, row.createdAt);
+  }
   for (const row of appointments) {
     if (row.createdAt >= since) recentAppointmentCounts.set(row.clinicId, (recentAppointmentCounts.get(row.clinicId) ?? 0) + 1);
+    const previous = lastActivity.get(row.clinicId);
+    if (!previous || row.createdAt > previous) lastActivity.set(row.clinicId, row.createdAt);
   }
   return res.json(clinics.map((clinic) => {
     const patientCount = patientCounts.get(clinic.id) ?? 0;
+    const recentPatients = recentPatientCounts.get(clinic.id) ?? 0;
     const recentAppointments = recentAppointmentCounts.get(clinic.id) ?? 0;
-    const score = Math.min(100, patientCount * 2 + recentAppointments * 10);
-    return { clinicId: clinic.id, clinicName: clinic.name, subscriptionStatus: clinic.subscriptionStatus, patientCount, recentAppointments, engagementScore: score };
+    const patientUsageScore = Math.min(40, patientCount);
+    const appointmentActivityScore = Math.min(40, recentAppointments * 4);
+    const subscriptionHealthScore = clinic.subscriptionStatus === "premium" || clinic.subscriptionStatus === "basic" ? 20 : clinic.subscriptionStatus === "trial" ? 10 : 0;
+    const engagementScore = Math.min(100, patientUsageScore + appointmentActivityScore + subscriptionHealthScore);
+    const engagementLevel = engagementScore >= 75 ? "high" : engagementScore >= 45 ? "medium" : "low";
+    return {
+      clinicId: clinic.id,
+      clinicName: clinic.name,
+      subscriptionStatus: clinic.subscriptionStatus,
+      patientCount,
+      recentPatients,
+      recentAppointments,
+      activityWindowDays,
+      engagementScore,
+      engagementLevel,
+      lastActivityAt: lastActivity.get(clinic.id)?.toISOString() ?? null,
+    };
   }).sort((a, b) => b.engagementScore - a.engagementScore));
 });
 

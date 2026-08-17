@@ -13,6 +13,11 @@ function newToken(): string {
   return randomBytes(24).toString("base64url");
 }
 
+function getParam(params: unknown, key: string): string {
+  const value = (params as Record<string, string | string[] | undefined>)[key];
+  return Array.isArray(value) ? value[0] ?? "" : value ?? "";
+}
+
 function isPending(status: string, expiresAt: Date): boolean {
   return status === "pending" && expiresAt.getTime() > Date.now();
 }
@@ -21,7 +26,7 @@ router.use(requireAuth);
 
 // Ensure the authed user belongs to the clinic in the URL.
 router.use((req, res, next): void => {
-  const { clinicId } = req.params as { clinicId?: string };
+  const clinicId = getParam(req.params, "clinicId");
   if (!clinicId) {
     res.status(400).json({ error: "Missing clinicId" });
     return;
@@ -34,7 +39,7 @@ router.use((req, res, next): void => {
 });
 
 router.get("/members", async (req, res) => {
-  const { clinicId } = req.params;
+  const clinicId = getParam(req.params, "clinicId");
 
   const clinic = (
     await db.select().from(clinicsTable).where(eq(clinicsTable.id, clinicId)).limit(1)
@@ -73,8 +78,9 @@ router.get("/members", async (req, res) => {
   });
 });
 
-router.delete("/members/:userId", requireRole("admin", "superadmin"), async (req, res) => {
-  const { clinicId, userId } = req.params;
+router.delete("/members/:userId", requireRole("admin", "doctor", "superadmin"), async (req, res) => {
+  const clinicId = getParam(req.params, "clinicId");
+  const userId = getParam(req.params, "userId");
   const clinic = (
     await db.select().from(clinicsTable).where(eq(clinicsTable.id, clinicId)).limit(1)
   )[0];
@@ -90,7 +96,7 @@ router.delete("/members/:userId", requireRole("admin", "superadmin"), async (req
 });
 
 router.get("/invitations", async (req, res) => {
-  const { clinicId } = req.params;
+  const clinicId = getParam(req.params, "clinicId");
   const all = await db
     .select()
     .from(invitationsTable)
@@ -113,8 +119,8 @@ router.get("/invitations", async (req, res) => {
   );
 });
 
-router.post("/invitations", requireRole("admin", "superadmin"), async (req, res) => {
-  const { clinicId } = req.params;
+router.post("/invitations", requireRole("admin", "doctor", "superadmin"), async (req, res) => {
+  const clinicId = getParam(req.params, "clinicId");
   const parsed = CreateInvitationBody.safeParse(req.body);
   if (!parsed.success) {
     return res.status(400).json({ error: "Invalid input", details: parsed.error.issues });
@@ -128,11 +134,11 @@ router.post("/invitations", requireRole("admin", "superadmin"), async (req, res)
   if (!clinic) return res.status(404).json({ error: "Clinic not found" });
 
   // Plan limit
-  const users = await db.select().from(usersTable).where(eq(usersTable.clinicId, clinicId));
+  const users = await db.select().from(usersTable).where(eq(usersTable.clinicId, String(clinicId)));
   const invites = await db
     .select()
     .from(invitationsTable)
-    .where(eq(invitationsTable.clinicId, clinicId));
+    .where(eq(invitationsTable.clinicId, String(clinicId)));
   const nonAdmin = users.filter((u) => u.role !== "admin" && u.role !== "superadmin").length;
   const pending = invites.filter((i) => isPending(i.status, i.expiresAt)).length;
   const limit = getMemberLimit(clinic.subscriptionStatus);
@@ -168,7 +174,7 @@ router.post("/invitations", requireRole("admin", "superadmin"), async (req, res)
 
   await db.insert(invitationsTable).values({
     id,
-    clinicId,
+    clinicId: String(clinicId),
     email,
     name,
     role,
@@ -195,14 +201,15 @@ router.post("/invitations", requireRole("admin", "superadmin"), async (req, res)
 
 router.delete(
   "/invitations/:invitationId",
-  requireRole("admin", "superadmin"),
+  requireRole("admin", "doctor", "superadmin"),
   async (req, res) => {
-    const { clinicId, invitationId } = req.params;
+    const clinicId = getParam(req.params, "clinicId");
+    const invitationId = getParam(req.params, "invitationId");
     await db
       .update(invitationsTable)
       .set({ status: "revoked" })
       .where(
-        and(eq(invitationsTable.id, invitationId), eq(invitationsTable.clinicId, clinicId))
+        and(eq(invitationsTable.id, String(invitationId)), eq(invitationsTable.clinicId, String(clinicId)))
       );
     return res.status(204).send();
   }

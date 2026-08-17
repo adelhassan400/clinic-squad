@@ -9,7 +9,7 @@ import {
 import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Stethoscope, Clock, ArrowRight, Loader2 } from "lucide-react";
+import { Stethoscope, Clock, ArrowRight, Loader2, CheckCircle2 } from "lucide-react";
 import { useLocation } from "wouter";
 import { cn } from "@/lib/utils";
 import { VisitTypeBadge } from "@/lib/visit-types";
@@ -18,6 +18,27 @@ import { useToast } from "@/hooks/use-toast";
 function displayAge(age: number | null | undefined): string {
   if (age === null || age === undefined) return "—";
   return `${age}`;
+}
+
+function PaymentPill({ paymentStatus, paymentMethod, paymentAmount }: { paymentStatus?: string | null; paymentMethod?: string | null; paymentAmount?: string | number | null }) {
+  const { t } = useLang();
+  const status = paymentStatus || (paymentMethod ? "paid" : "unpaid");
+  const methodKey = paymentMethod && ["cash", "vodafone_cash", "instapay", "card", "other"].includes(paymentMethod)
+    ? `checkout.method.${paymentMethod}`
+    : null;
+  if (status === "free") {
+    return <span className="inline-flex max-w-full items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full border border-slate-400/40 bg-slate-500/10 text-slate-700 dark:text-slate-300"><span className="truncate">{t("waiting.free")}</span></span>;
+  }
+  if (status === "unpaid") {
+    return <span className="inline-flex max-w-full items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full border border-amber-500/40 bg-amber-500/10 text-amber-700 dark:text-amber-300"><Clock className="w-3 h-3 shrink-0" /><span className="truncate">{t("waiting.unpaid")}</span></span>;
+  }
+  const amount = Number(paymentAmount ?? 0);
+  return (
+    <span className="inline-flex max-w-full items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full border border-emerald-500/35 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300">
+      <CheckCircle2 className="w-3 h-3 shrink-0" />
+      <span className="truncate">{t("waiting.paid")} · EGP {Number.isFinite(amount) ? amount.toLocaleString() : "0"}{methodKey ? ` · ${t(methodKey)}` : ""}</span>
+    </span>
+  );
 }
 
 function StatusPill({ status }: { status: string }) {
@@ -38,7 +59,8 @@ function StatusPill({ status }: { status: string }) {
 }
 
 export default function WaitingListPage() {
-  const { clinic } = useAuth();
+  const { clinic, user } = useAuth();
+  const isDoctor = user?.role === "admin" || user?.role === "doctor";
   const { t } = useLang();
   const clinicId = clinic?.id ?? "";
   const [, navigate] = useLocation();
@@ -67,6 +89,7 @@ export default function WaitingListPage() {
   );
 
   const handleOpen = (patientId: string, currentStatus: string) => {
+    if (!isDoctor) return;
     if (currentStatus === "waiting") {
       patchPatient.mutate(
         { clinicId, patientId, data: { status: "in-progress" } },
@@ -102,8 +125,8 @@ export default function WaitingListPage() {
             </div>
           </div>
 
-          <div className="rounded-xl border border-border bg-card overflow-hidden">
-            <div className="grid grid-cols-[60px_110px_1fr_70px_1fr_auto_auto_auto] gap-4 px-6 py-3 border-b border-border bg-muted/30 text-xs font-medium text-muted-foreground uppercase tracking-wider">
+          <div className="rounded-xl border border-border bg-card overflow-x-auto">
+            <div className="grid min-w-[1140px] grid-cols-[60px_110px_minmax(220px,1.2fr)_70px_minmax(160px,1fr)_140px_180px_140px] gap-4 px-6 py-3 border-b border-border bg-muted/30 text-xs font-medium text-muted-foreground uppercase tracking-wider">
               <span className="text-center">#</span>
               <span>{t("patients.id")}</span>
               <span>{t("patients.name")}</span>
@@ -136,7 +159,7 @@ export default function WaitingListPage() {
                   key={p.id}
                   data-testid={`waiting-row-${p.id}`}
                   className={cn(
-                    "grid grid-cols-[60px_110px_1fr_70px_1fr_auto_auto_auto] gap-4 items-center px-6 py-4 border-b border-border last:border-0 hover:bg-muted/30 transition-colors",
+                    "grid min-w-[1140px] grid-cols-[60px_110px_minmax(220px,1.2fr)_70px_minmax(160px,1fr)_140px_180px_140px] gap-4 items-center px-6 py-4 border-b border-border last:border-0 hover:bg-muted/30 transition-colors",
                     p.status === "in-progress" && "bg-primary/[0.04]",
                   )}
                 >
@@ -163,15 +186,18 @@ export default function WaitingListPage() {
                   <span className="text-sm font-mono text-muted-foreground">
                     {displayAge(p.age)}
                   </span>
-                  <span className="text-sm text-muted-foreground font-mono">{p.phone}</span>
+                  <span className="min-w-0 truncate text-sm text-muted-foreground font-mono">{p.phone}</span>
                   <span data-testid={`waiting-visit-type-${p.id}`}>
                     <VisitTypeBadge type={p.visitType} />
                   </span>
-                  <StatusPill status={p.status} />
+                  <div className="flex min-w-0 flex-col items-start gap-1">
+                    <PaymentPill paymentStatus={p.paymentStatus} paymentMethod={p.paymentMethod} paymentAmount={p.paymentAmount} />
+                    <StatusPill status={p.status} />
+                  </div>
                   <Button
                     size="sm"
                     onClick={() => handleOpen(p.id, p.status)}
-                    disabled={patchPatient.isPending}
+                    disabled={patchPatient.isPending || !isDoctor}
                     data-testid={`open-patient-${p.id}`}
                   >
                     {patchPatient.isPending && patchPatient.variables?.patientId === p.id ? (
@@ -179,7 +205,7 @@ export default function WaitingListPage() {
                     ) : (
                       <ArrowRight className="w-3.5 h-3.5 mr-1" />
                     )}
-                    {t("waiting.open")}
+                    {isDoctor ? t("waiting.open") : t("waiting.doctorOnly")}
                   </Button>
                 </div>
                 );

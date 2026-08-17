@@ -1,6 +1,6 @@
 import type { Request, Response, NextFunction } from "express";
 import { eq } from "drizzle-orm";
-import { db, usersTable } from "@workspace/db";
+import { db, clinicsTable, usersTable } from "@workspace/db";
 
 export interface AuthedUser {
   id: string;
@@ -46,7 +46,7 @@ async function resolveUser(req: Request, res: Response): Promise<AuthedUser | nu
     return null;
   }
   if (user.isBlocked) {
-    res.status(403).json({ error: "Account blocked" });
+    res.status(403).json({ error: "Account deactivated" });
     return null;
   }
   return {
@@ -88,6 +88,14 @@ export async function requireClinicAccess(
     res.status(403).json({ error: "Forbidden" });
     return;
   }
+
+  if (user.role !== "superadmin") {
+    const clinic = (await db.select({ status: clinicsTable.status }).from(clinicsTable).where(eq(clinicsTable.id, user.clinicId)).limit(1))[0];
+    if (clinic?.status === "blocked" || clinic?.status === "deactivated") {
+      res.status(403).json({ error: "Clinic access is deactivated", code: "CLINIC_DEACTIVATED" });
+      return;
+    }
+  }
   next();
 }
 
@@ -108,9 +116,9 @@ export function requireRole(...roles: string[]) {
 export function getMemberLimit(subscriptionStatus: string): number {
   switch (subscriptionStatus) {
     case "premium":
+    case "trial":
       return 10;
     case "basic":
-    case "trial":
       return 2;
     default:
       return 0;

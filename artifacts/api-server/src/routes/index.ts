@@ -6,6 +6,7 @@ import patientsRouter from "./patients";
 import labResultsRouter from "./lab-results";
 import appointmentsRouter from "./appointments";
 import financesRouter from "./finances";
+import cashTransactionsRouter from "./cash-transactions";
 import prescriptionsRouter from "./prescriptions";
 import adminRouter from "./admin";
 import teamRouter from "./team";
@@ -23,6 +24,7 @@ router.use("/clinics/:clinicId/patients/:patientId/lab-results", labResultsRoute
 router.use("/clinics/:clinicId/patients", patientsRouter);
 router.use("/clinics/:clinicId/appointments", appointmentsRouter);
 router.use("/clinics/:clinicId/finances", financesRouter);
+router.use("/clinics/:clinicId/cash-transactions", cashTransactionsRouter);
 router.use("/clinics/:clinicId/prescriptions", prescriptionsRouter);
 router.use("/admin", adminRouter);
 router.use("/platform", adminToolsRouter);

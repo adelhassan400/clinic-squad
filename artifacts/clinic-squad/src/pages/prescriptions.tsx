@@ -50,8 +50,8 @@ import {
   ClipboardList,
   MapPin,
   Phone as PhoneIcon,
+  Loader2,
 } from "lucide-react";
-import { formatDate } from "@/lib/utils";
 import { printPrescription, sendPrescriptionWhatsApp, type ClinicBranding } from "@/lib/prescription";
 
 interface ItemForm {
@@ -439,7 +439,7 @@ export function PrescriptionsContent({ initialPatientId, embedded }: Prescriptio
           clinicPhone={clinic?.phone ?? null}
           clinicAddress={clinic?.address ?? null}
           doctorName={user?.name ?? ""}
-          doctorSpecialty={clinic?.specialty ?? null}
+          doctorSpecialty={user?.specialty ?? null}
           patient={patientList.find(p => p.id === patientId) ?? null}
           date={date}
           diagnosis={diagnosis}
@@ -486,7 +486,7 @@ export function PrescriptionsContent({ initialPatientId, embedded }: Prescriptio
                 <div className="flex items-center gap-2 mb-1">
                   <p className="font-semibold truncate">{p.patientName}</p>
                   <span className="text-[10px] text-muted-foreground px-1.5 py-0.5 rounded-full bg-muted border border-border">
-                    {formatDate(p.date, lang === "ar" ? "ar-EG" : "en-US")}
+                    {new Date(p.date).toLocaleDateString(lang === "ar" ? "ar-EG" : "en-US")}
                   </span>
                 </div>
                 {p.diagnosis && (
@@ -561,7 +561,7 @@ export function PrescriptionsContent({ initialPatientId, embedded }: Prescriptio
                 </div>
                 <div>
                   <p className="text-xs text-muted-foreground">{t("presc.date")}</p>
-                  <p className="font-medium">{formatDate(viewing.date, lang === "ar" ? "ar-EG" : "en-US")}</p>
+                  <p className="font-medium">{new Date(viewing.date).toLocaleDateString(lang === "ar" ? "ar-EG" : "en-US")}</p>
                   <p className="text-xs text-muted-foreground">{t("auth.register.owner")} {viewing.doctorName}</p>
                 </div>
               </div>
@@ -877,7 +877,7 @@ function LivePreview({ clinicName, clinicPhone, clinicAddress, doctorName, docto
 
 export default function PrescriptionsPage() {
   return (
-    <ProtectedRoute>
+    <ProtectedRoute requireRole={["admin", "doctor", "superadmin"]}>
       <DashboardLayout>
         <PrescriptionsContent />
       </DashboardLayout>

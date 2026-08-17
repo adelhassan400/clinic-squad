@@ -5,6 +5,7 @@ export * from "./patients";
 export * from "./lab-results";
 export * from "./appointments";
 export * from "./finances";
+export * from "./cash-transactions";
 export * from "./invitations";
 export * from "./prescriptions";
 export * from "./password-reset-tokens";

@@ -46,7 +46,7 @@ import {
 const inviteSchema = z.object({
   email: z.string().email("Enter a valid email"),
   name: z.string().min(1, "Name is required"),
-  role: z.enum(["secretary", "nurse"]),
+  role: z.enum(["doctor", "assistant"]),
 });
 type InviteForm = z.infer<typeof inviteSchema>;
 
@@ -72,12 +72,12 @@ export default function TeamPage() {
   const { register, handleSubmit, reset, setValue, watch, formState: { errors } } =
     useForm<InviteForm>({
       resolver: zodResolver(inviteSchema),
-      defaultValues: { email: "", name: "", role: "secretary" },
+      defaultValues: { email: "", name: "", role: "assistant" },
     });
 
   if (!user || !clinic) return <Redirect to="/login" />;
-  if (user.role !== "admin" && user.role !== "superadmin") {
-    return <Redirect to="/dashboard" />;
+  if (user.role !== "admin" && user.role !== "doctor") {
+    return <Redirect to="/admin" />;
   }
 
   const overview = overviewQ.data;
@@ -98,7 +98,7 @@ export default function TeamPage() {
       {
         onSuccess: () => {
           toast({ title: t("team.toast.inviteCreated") });
-          reset({ email: "", name: "", role: "secretary" });
+          reset({ email: "", name: "", role: "assistant" });
           qc.invalidateQueries({ queryKey: getListInvitationsQueryKey(clinicId) });
           qc.invalidateQueries({ queryKey: getListTeamMembersQueryKey(clinicId) });
         },
@@ -159,7 +159,7 @@ export default function TeamPage() {
   };
 
   return (
-    <ProtectedRoute requireRole={["admin", "superadmin"]}>
+    <ProtectedRoute requireRole={["admin", "doctor"]}>
       <DashboardLayout>
       <div className="p-6 max-w-5xl mx-auto space-y-6">
         {/* Page header */}
@@ -277,23 +277,23 @@ export default function TeamPage() {
               <Label>{t("team.invite.role")}</Label>
               <Select
                 value={watch("role")}
-                onValueChange={(v) => setValue("role", v as "secretary" | "nurse")}
+                onValueChange={(v) => setValue("role", v as "doctor" | "assistant")}
                 disabled={limitReached}
               >
                 <SelectTrigger className="mt-1.5" data-testid="select-invite-role">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="secretary">
+                  <SelectItem value="assistant">
                     <div className="flex items-center gap-2">
                       <ClipboardList className="w-4 h-4" />
-                      {t("team.role.secretary")}
+                      {t("team.role.assistant")}
                     </div>
                   </SelectItem>
-                  <SelectItem value="nurse">
+                  <SelectItem value="doctor">
                     <div className="flex items-center gap-2">
                       <Stethoscope className="w-4 h-4" />
-                      {t("team.role.nurse")}
+                      {t("team.role.doctor")}
                     </div>
                   </SelectItem>
                 </SelectContent>

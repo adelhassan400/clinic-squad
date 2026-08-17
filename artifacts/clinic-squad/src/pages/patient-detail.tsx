@@ -236,7 +236,7 @@ export default function PatientDetailPage({ params }: Props) {
   const age = displayAge(patient?.age);
 
   return (
-    <ProtectedRoute>
+    <ProtectedRoute requireRole={["admin", "doctor", "superadmin"]}>
       <DashboardLayout>
         <div className="p-6 max-w-4xl mx-auto">
           <Link href="/waiting-list">

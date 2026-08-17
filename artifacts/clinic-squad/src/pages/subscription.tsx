@@ -31,15 +31,18 @@ export default function SubscriptionPage() {
     const basic = Number(settingsQ.data?.basicMonthlyPrice ?? 200);
     const premium = Number(settingsQ.data?.premiumMonthlyPrice ?? 400);
     return [
-      { id: "basic" as const, name: "Basic Plan", monthlyPrice: basic, annualPrice: basic * 10, desc: "For small clinics getting started", features: ["Up to 500 patients", "Appointment scheduling", "Patient records", "Staff accounts (2)", "Email support", "Basic reporting"] },
-      { id: "premium" as const, name: "Premium Plan", monthlyPrice: premium, annualPrice: premium * 10, desc: "Full-featured for growing clinics", features: ["Unlimited patients", "Advanced scheduling", "Financial dashboard", "Analytics & reports", "Unlimited staff", "Priority support", "AI-ready modules (soon)"], highlighted: true },
+      { id: "basic" as const, name: "Basic Plan", monthlyPrice: basic, annualPrice: basic * 10, desc: "Essential tools for daily clinic operations", features: ["Up to 500 patients", "Patient records & ePrescription", "Waiting list, check-in & checkout", "Standard appointment scheduling", "Basic financial tracking", "Staff accounts (2)", "Standard support"] },
+      { id: "premium" as const, name: "Premium Plan", monthlyPrice: premium, annualPrice: premium * 10, desc: "Advanced visibility and capacity for growing clinics", features: ["Everything in Basic", "Insights & analytics", "Advanced reports", "Up to 10 staff accounts", "Priority support", "AI-ready modules (soon)"], highlighted: true },
     ];
   }, [settingsQ.data]);
   const currentPlanObj = plans.find(p => p.id === selected);
+  // Annual billing is a fixed one-year commitment; never allow a stale or tampered
+  // duration state to change its price or submitted subscription period.
+  const effectiveDurationMonths = billingPeriod === "annual" ? 12 : durationMonths;
   const calculatedAmount = currentPlanObj
     ? billingPeriod === "annual"
-      ? currentPlanObj.annualPrice * (durationMonths / 12)
-      : currentPlanObj.monthlyPrice * durationMonths
+      ? currentPlanObj.annualPrice
+      : currentPlanObj.monthlyPrice * effectiveDurationMonths
     : 0;
   const selectedPromo = promoQ.data?.find((item) => item.active && item.code === promoCode.trim().toUpperCase());
   const finalAmount = selectedPromo ? Math.round(calculatedAmount * (1 - selectedPromo.discountPercent / 100)) : calculatedAmount;
@@ -91,7 +94,7 @@ export default function SubscriptionPage() {
       data: {
         planType: plan,
         billingPeriod,
-        durationMonths: durationMonths.toString(),
+        durationMonths: effectiveDurationMonths.toString(),
         amount: finalAmount.toString(),
         transactionReference: transactionRef.trim() || undefined,
         paymentProof,
@@ -123,7 +126,7 @@ export default function SubscriptionPage() {
             Our team will review your receipt and activate your account within 24 hours after verification.
           </p>
           <a
-            href={`https://wa.me/201000000000?text=${encodeURIComponent(`Hi! I submitted a payment receipt for the ${selected === "premium" ? "Premium" : "Basic"} Plan (${durationMonths} months) for clinic: ${clinic?.name ?? ""}. Transaction reference: ${transactionRef || "N/A"}. I will attach the receipt screenshot here.`)}`}
+            href={`https://wa.me/201000000000?text=${encodeURIComponent(`Hi! I submitted a payment receipt for the ${selected === "premium" ? "Premium" : "Basic"} Plan (${effectiveDurationMonths} months) for clinic: ${clinic?.name ?? ""}. Transaction reference: ${transactionRef || "N/A"}. I will attach the receipt screenshot here.`)}`}
             target="_blank"
             rel="noopener noreferrer"
           >
@@ -213,7 +216,9 @@ export default function SubscriptionPage() {
                   <label className="text-xs text-muted-foreground mb-1 block">Duration (Months)</label>
                   <select
                     className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                    value={durationMonths}
+                    value={effectiveDurationMonths}
+                    disabled={billingPeriod === "annual"}
+                    aria-describedby={billingPeriod === "annual" ? "annual-duration-help" : undefined}
                     onChange={(e) => setDurationMonths(Number(e.target.value))}
                   >
                     <option value={1}>1 Month</option>
@@ -222,6 +227,11 @@ export default function SubscriptionPage() {
                     <option value={12}>1 Year (12 Months)</option>
                     <option value={24}>2 Years (24 Months)</option>
                   </select>
+                  {billingPeriod === "annual" && (
+                    <p id="annual-duration-help" className="mt-1.5 text-xs text-muted-foreground">
+                      Annual billing is fixed at 12 months.
+                    </p>
+                  )}
                 </div>
               </div>
               <div className="flex items-center justify-between p-4 bg-muted/40 rounded-lg">

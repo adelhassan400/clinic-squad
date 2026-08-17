@@ -26,6 +26,13 @@ import SubscriptionPage from "@/pages/subscription";
 import SubscriptionExpiredPage from "@/pages/subscription-expired";
 import SettingsPage from "@/pages/settings";
 import AdminPage from "@/pages/admin";
+import PlatformFinancesPage from "@/pages/platform-finances";
+import PlatformClinicsPage from "@/pages/platform-clinics";
+import PlatformClinicDetailPage from "@/pages/platform-clinic-detail";
+import PlatformPaymentsPage from "@/pages/platform-payments";
+import PlatformSettingsPage from "@/pages/platform-settings";
+import PlatformGrowthPage from "@/pages/platform-growth";
+import PlatformLogsPage from "@/pages/platform-logs";
 import InsightsPage from "@/pages/insights";
 import TeamPage from "@/pages/team";
 import PrescriptionsPage from "@/pages/prescriptions";
@@ -67,6 +74,13 @@ function Router() {
       <Route path="/prescriptions" component={PrescriptionsPage} />
       <Route path="/invite/:token" component={AcceptInvitePage} />
       <Route path="/admin" component={AdminPage} />
+      <Route path="/platform-finances" component={PlatformFinancesPage} />
+      <Route path="/platform-clinics" component={PlatformClinicsPage} />
+      <Route path="/platform-clinics/:clinicId" component={PlatformClinicDetailPage} />
+      <Route path="/platform-payments" component={PlatformPaymentsPage} />
+      <Route path="/platform-settings" component={PlatformSettingsPage} />
+      <Route path="/platform-growth" component={PlatformGrowthPage} />
+      <Route path="/platform-logs" component={PlatformLogsPage} />
       <Route component={NotFound} />
     </Switch>
   );

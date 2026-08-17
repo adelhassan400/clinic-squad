@@ -10,13 +10,13 @@ const plans = [
     id: "basic",
     name: "Basic Plan",
     price: "200 EGP",
-    features: ["Patient management", "Appointment scheduling", "Staff accounts (2)"],
+    features: ["Patient records & ePrescription", "Waiting list, check-in & checkout", "Standard appointment scheduling", "Basic financial tracking", "Staff accounts (2)"],
   },
   {
     id: "premium",
     name: "Premium Plan",
     price: "400 EGP",
-    features: ["All Basic features", "Financial dashboard", "Unlimited patients", "Priority support"],
+    features: ["Everything in Basic", "Insights & analytics", "Advanced reports", "Up to 10 staff accounts", "Priority support"],
     highlighted: true,
   },
 ];
@@ -24,6 +24,7 @@ const plans = [
 export default function SubscriptionExpiredPage() {
   const { clinic, logout } = useAuth();
   const { theme, toggleTheme } = useTheme();
+  const isDeactivated = clinic?.status === "deactivated";
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
@@ -49,19 +50,19 @@ export default function SubscriptionExpiredPage() {
       <div className="flex-1 flex flex-col items-center justify-center p-6">
         <div className="max-w-3xl w-full text-center">
           {/* Alert */}
-          <div className="w-20 h-20 bg-destructive/10 rounded-full flex items-center justify-center mx-auto mb-6">
-            <AlertTriangle className="w-10 h-10 text-destructive" />
+          <div className={`w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6 ${isDeactivated ? "bg-amber-500/10" : "bg-destructive/10"}`}>
+            <AlertTriangle className={`w-10 h-10 ${isDeactivated ? "text-amber-600" : "text-destructive"}`} />
           </div>
-          <Badge className="mb-4 bg-destructive/10 text-destructive border-destructive/20 text-sm px-4 py-1">
-            Subscription Expired
-          </Badge>
-          <h1 className="text-3xl font-bold mb-3">Your free trial has ended</h1>
-          <p className="text-muted-foreground mb-2">
-            Your 15-day free trial for <strong>{clinic?.name}</strong> has expired.
-          </p>
-          <p className="text-muted-foreground mb-10">
-            Choose a plan to restore full access to your clinic dashboard.
-          </p>
+            <Badge className={`mb-4 text-sm px-4 py-1 ${isDeactivated ? "bg-amber-500/10 text-amber-700 border-amber-500/20 dark:text-amber-300" : "bg-destructive/10 text-destructive border-destructive/20"}`}>
+              {isDeactivated ? "Clinic Access Deactivated" : "Subscription Expired"}
+            </Badge>
+            <h1 className="text-3xl font-bold mb-3">{isDeactivated ? "Your clinic access is temporarily paused" : "Your free trial has ended"}</h1>
+            <p className="text-muted-foreground mb-2">
+              {isDeactivated ? <>Access for <strong>{clinic?.name}</strong> is temporarily suspended.</> : <>Your 15-day free trial for <strong>{clinic?.name}</strong> has expired.</>}
+            </p>
+            <p className="text-muted-foreground mb-10">
+              {isDeactivated ? "Choose a plan or contact support to request renewal and restore full access." : "Choose a plan to restore full access to your clinic dashboard."}
+            </p>
 
           {/* Plans */}
           <div className="grid md:grid-cols-2 gap-6 mb-8">

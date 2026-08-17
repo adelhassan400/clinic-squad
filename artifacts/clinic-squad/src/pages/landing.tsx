@@ -3,6 +3,8 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useTheme } from "@/lib/theme";
 import { useLang } from "@/lib/lang";
+import { useQuery } from "@tanstack/react-query";
+import { customFetch } from "@workspace/api-client-react";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import {
   Shield, Users, Calendar, TrendingUp, CheckCircle, Star,
@@ -12,14 +14,25 @@ import {
 
 const planFeatures = {
   basic: {
-    en: ["Up to 500 patients", "Appointment scheduling", "Patient records", "Staff accounts (2)", "Email support"],
-    ar: ["حتى 500 مريض", "جدولة المواعيد", "سجلات المرضى", "حسابات الموظفين (2)", "دعم بالبريد الإلكتروني"],
+    en: ["Up to 500 patients", "Patient records & ePrescription", "Waiting list, check-in & checkout", "Standard appointment scheduling", "Basic financial tracking", "Staff accounts (2)", "Standard support"],
+    ar: ["حتى 500 مريض", "سجلات المرضى والوصفات الإلكترونية", "قائمة الانتظار وتسجيل الدخول والخروج", "جدولة المواعيد الأساسية", "تتبع مالي أساسي", "حسابات الموظفين (2)", "دعم قياسي"],
   },
   premium: {
-    en: ["Unlimited patients", "Advanced scheduling", "Financial dashboard", "Analytics & reports", "Unlimited staff", "Priority support", "AI-ready modules (soon)"],
-    ar: ["مرضى غير محدودين", "جدولة متقدمة", "لوحة المالية", "التحليلات والتقارير", "موظفون غير محدودون", "دعم ذو أولوية", "وحدات الذكاء الاصطناعي (قريباً)"],
+    en: ["Everything in Basic", "Insights & analytics", "Advanced reports", "Up to 10 staff accounts", "Priority support", "AI-ready modules (soon)"],
+    ar: ["كل مزايا الباقة الأساسية", "الرؤى والتحليلات", "تقارير متقدمة", "حتى 10 حسابات للموظفين", "دعم ذو أولوية", "وحدات الذكاء الاصطناعي (قريباً)"],
   },
 };
+
+interface PublicPricing {
+  basicMonthlyPrice: string;
+  premiumMonthlyPrice: string;
+  updatedAt: string | null;
+}
+
+function formatPlanPrice(value: string | undefined, fallback: string) {
+  const price = value?.trim() || fallback;
+  return /(?:EGP|جنيه|£|\$|€)/i.test(price) ? price : `${price} EGP`;
+}
 
 const testimonials = [
   { name: "د. هاني السيد", nameEn: "Dr. Hany El-Sayed", clinic: "عيادة السيد للأسرة، القاهرة", clinicEn: "El-Sayed Family Clinic, Cairo", text: { en: "ClinicSquad transformed how we manage our daily workflow. The appointment system alone saves us 2 hours a day.", ar: "كلينيك سكواد غيّر طريقة إدارتنا للعمل اليومي. نظام المواعيد وحده يوفر لنا ساعتين يومياً." } },
@@ -30,6 +43,11 @@ const testimonials = [
 export default function LandingPage() {
   const { theme, toggleTheme } = useTheme();
   const { t, lang } = useLang();
+  const pricingQ = useQuery<PublicPricing>({
+    queryKey: ["/api/platform/public-pricing"],
+    queryFn: () => customFetch<PublicPricing>("/api/platform/public-pricing"),
+    staleTime: 60_000,
+  });
 
   const features = [
     { icon: Users, titleKey: "feat.patients.title", descKey: "feat.patients.desc" },
@@ -43,7 +61,7 @@ export default function LandingPage() {
   const plans = [
     {
       nameKey: "pricing.basic.name",
-      price: "200 EGP",
+      price: formatPlanPrice(pricingQ.data?.basicMonthlyPrice, "200"),
       period: lang === "ar" ? "/شهر" : "/month",
       descKey: "pricing.basic.desc",
       features: planFeatures.basic[lang],
@@ -51,7 +69,7 @@ export default function LandingPage() {
     },
     {
       nameKey: "pricing.premium.name",
-      price: "400 EGP",
+      price: formatPlanPrice(pricingQ.data?.premiumMonthlyPrice, "400"),
       period: lang === "ar" ? "/شهر" : "/month",
       descKey: "pricing.premium.desc",
       features: planFeatures.premium[lang],

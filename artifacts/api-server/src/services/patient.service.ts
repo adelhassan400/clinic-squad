@@ -1,5 +1,5 @@
-import { eq, and, or, ilike, count, sql, SQL } from "drizzle-orm";
-import { db, patientsTable, Patient } from "@workspace/db";
+import { eq, and, or, ilike, count, sql, SQL, inArray } from "drizzle-orm";
+import { db, patientsTable, appointmentsTable, cashTransactionsTable, Patient } from "@workspace/db";
 import { randomUUID } from "crypto";
 
 export interface PatientFilters {
@@ -77,6 +77,8 @@ export class PatientService {
         clinicId,
         code,
         ...data,
+        // Keep the initial visit type on the patient record so the table and check-in share one value.
+        visitType: data.visitType || "New Consultation",
         status: data.status || "registered",
       });
 
@@ -90,13 +92,168 @@ export class PatientService {
     });
   }
 
+  static async registerAndQueuePatient(clinicId: string, actor: { id: string; role: string }, data: any) {
+    const isSupervisor = ["admin", "doctor", "superadmin"].includes(actor.role);
+    const cashCollected = data.cashCollected !== false;
+    const paymentStatus = cashCollected ? "paid" : (data.paymentStatus === "unpaid" ? "unpaid" : "free");
+
+    if (!cashCollected && !isSupervisor) {
+      throw new Error("Only a reception supervisor or administrator can register an unpaid visit");
+    }
+    if (cashCollected && (!Number.isFinite(Number(data.collectedAmount)) || Number(data.collectedAmount) < 0)) {
+      throw new Error("A valid collected amount is required when cash is collected");
+    }
+
+    const visitType = data.visitType || "New Consultation";
+    const shiftDate = new Date().toISOString().slice(0, 10);
+    const amount = cashCollected ? Number(data.collectedAmount).toFixed(2) : "0.00";
+    const receivedAt = cashCollected ? new Date() : null;
+
+    return db.transaction(async (tx: any) => {
+      let patientId = data.patientId as string | undefined;
+      let patient: any;
+
+      if (patientId) {
+        const rows = await tx
+          .select()
+          .from(patientsTable)
+          .where(and(eq(patientsTable.id, patientId), eq(patientsTable.clinicId, clinicId)))
+          .limit(1);
+        patient = rows[0];
+        if (!patient) throw new Error("Patient not found");
+        if (["waiting", "in-progress"].includes(patient.status)) throw new Error("Patient is already in the queue");
+      } else {
+        patientId = randomUUID();
+        const code = await this.nextPatientCode(clinicId, tx);
+        const inserted = await tx.insert(patientsTable).values({
+          id: patientId,
+          clinicId,
+          code,
+          name: data.name,
+          phone: data.phone,
+          age: data.age,
+          bloodType: data.bloodType ?? null,
+          allergies: data.allergies ?? null,
+          notes: data.notes ?? null,
+          visitType,
+        }).returning();
+        patient = inserted[0];
+      }
+
+      const patientUpdates = {
+        visitType,
+        assignedDoctorId: data.doctorId ?? null,
+        status: "waiting",
+        paymentStatus,
+        paymentAmount: amount,
+        paymentMethod: cashCollected ? "cash" : null,
+        paymentReference: data.paymentReference ?? null,
+        paymentCollectedBy: actor.id,
+        paymentShiftDate: shiftDate,
+        paymentReceivedAt: receivedAt,
+      };
+
+      const updatedRows = await tx
+        .update(patientsTable)
+        .set(patientUpdates)
+        .where(and(eq(patientsTable.id, patientId), eq(patientsTable.clinicId, clinicId)))
+        .returning();
+      patient = updatedRows[0];
+
+      const now = new Date();
+      const appointmentId = randomUUID();
+      await tx.insert(appointmentsTable).values({
+        id: appointmentId,
+        clinicId,
+        patientId,
+        patientName: patient.name,
+        date: shiftDate,
+        time: now.toISOString().slice(11, 16),
+        status: "waiting",
+        type: visitType,
+        fee: amount,
+      });
+
+      await tx.insert(cashTransactionsTable).values({
+        id: randomUUID(),
+        clinicId,
+        patientId,
+        doctorId: data.doctorId ?? null,
+        collectedBy: actor.id,
+        visitType,
+        amount,
+        status: paymentStatus,
+        paymentMethod: cashCollected ? "cash" : null,
+        shiftDate,
+      });
+
+      return this.serialize(patient);
+    });
+  }
+
+  static async bulkCheckInPatients(clinicId: string, patientIds: string[], visitType: string) {
+    return db.transaction(async (tx: any) => {
+      const selectedPatients = await tx
+        .select({ id: patientsTable.id, status: patientsTable.status })
+        .from(patientsTable)
+        .where(and(eq(patientsTable.clinicId, clinicId), inArray(patientsTable.id, patientIds)));
+
+      type SelectedPatient = { id: string; status: string };
+      const selectedById = new Map(selectedPatients.map((patient: SelectedPatient) => [patient.id, patient]));
+      const missingIds = patientIds.filter((patientId) => !selectedById.has(patientId));
+      const skippedInProgressIds = selectedPatients
+        .filter((patient: SelectedPatient) => patient.status === "waiting" || patient.status === "in-progress")
+        .map((patient: SelectedPatient) => patient.id);
+      const skippedUnpaidIds = selectedPatients
+        .filter((patient: SelectedPatient) => patient.status !== "paid" && patient.status !== "waiting" && patient.status !== "in-progress")
+        .map((patient: SelectedPatient) => patient.id);
+      const eligibleIds = selectedPatients
+        .filter((patient: SelectedPatient) => patient.status === "paid")
+        .map((patient: SelectedPatient) => patient.id);
+
+      if (eligibleIds.length > 0) {
+        await tx
+          .update(patientsTable)
+          .set({ status: "waiting", visitType })
+          .where(and(eq(patientsTable.clinicId, clinicId), inArray(patientsTable.id, eligibleIds)));
+      }
+
+      return {
+        updatedCount: eligibleIds.length,
+        skippedCount: skippedInProgressIds.length + skippedUnpaidIds.length + missingIds.length,
+        skippedInProgressCount: skippedInProgressIds.length,
+        skippedInProgressIds,
+        skippedUnpaidIds,
+        missingIds,
+      };
+    });
+  }
+
   static async updatePatient(clinicId: string, patientId: string, updates: any) {
+    const [currentPatient] = await db
+      .select({ status: patientsTable.status, paymentStatus: patientsTable.paymentStatus })
+      .from(patientsTable)
+      .where(and(eq(patientsTable.id, patientId), eq(patientsTable.clinicId, clinicId)))
+      .limit(1);
+
+    if (!currentPatient) throw new Error("Patient not found");
+    // Queue registration no longer requires prepayment. Legacy check-in paths remain
+    // available and are marked unpaid unless an existing payment state is preserved.
+    if (updates.status === "paid" && !["cash", "vodafone_cash", "instapay", "card", "other"].includes(updates.paymentMethod)) {
+      throw new Error("A payment method is required before marking a patient paid");
+    }
+    if (updates.status === "in-progress" && !["waiting", "in-progress"].includes(currentPatient.status)) {
+      throw new Error("Patient must be in the waiting list before starting a session");
+    }
+
     const dbUpdates: Record<string, any> = {};
     
     // Explicitly handle fields that might be null/undefined
     const fields = [
       'name', 'phone', 'age', 'dateOfBirth', 'bloodType', 
-      'allergies', 'notes', 'visitType', 'status', 
+      'allergies', 'notes', 'visitType', 'status',
+      'assignedDoctorId', 'paymentStatus', 'paymentAmount', 'paymentMethod',
+      'paymentReference', 'paymentCollectedBy', 'paymentShiftDate', 'paymentReceivedAt',
       'diagnosis', 'clinicalNotes', 'chronicConditions'
     ];
 
@@ -104,6 +261,15 @@ export class PatientService {
       if (updates[field] !== undefined) {
         dbUpdates[field] = updates[field] ?? null;
       }
+    }
+
+    if (updates.status === "waiting" && updates.paymentStatus === undefined) {
+      dbUpdates.paymentStatus = currentPatient.paymentStatus ?? "unpaid";
+    }
+
+    if (updates.status === "paid") {
+      dbUpdates.paymentStatus = "paid";
+      dbUpdates.paymentReceivedAt = new Date();
     }
 
     if (Object.keys(dbUpdates).length > 0) {

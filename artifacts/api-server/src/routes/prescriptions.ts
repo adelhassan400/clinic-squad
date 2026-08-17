@@ -25,7 +25,7 @@ router.get("/", async (req: any, res) => {
   }
 });
 
-router.post("/", requireRole("admin", "superadmin"), async (req: any, res) => {
+router.post("/", requireRole("admin", "doctor", "superadmin"), async (req: any, res) => {
   try {
     const { clinicId } = req.params;
     if (req.authUser?.clinicId !== clinicId && req.authUser?.role !== "superadmin") {
@@ -69,7 +69,7 @@ router.get("/:prescriptionId", async (req: any, res) => {
   }
 });
 
-router.delete("/:prescriptionId", requireRole("admin", "superadmin"), async (req: any, res) => {
+router.delete("/:prescriptionId", requireRole("admin", "doctor", "superadmin"), async (req: any, res) => {
   try {
     const { clinicId, prescriptionId } = req.params;
     if (req.authUser?.clinicId !== clinicId && req.authUser?.role !== "superadmin") {

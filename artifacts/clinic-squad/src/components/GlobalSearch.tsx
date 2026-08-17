@@ -70,6 +70,7 @@ export function GlobalSearch() {
       document.addEventListener("mousedown", onClick);
       return () => document.removeEventListener("mousedown", onClick);
     }
+    return undefined;
   }, [open]);
 
   function go(patientId: string) {

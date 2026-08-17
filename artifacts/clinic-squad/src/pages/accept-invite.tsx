@@ -3,7 +3,7 @@ import { useRoute, useLocation } from "wouter";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { useGetInvitation, useAcceptInvitation } from "@workspace/api-client-react";
+import { useGetInvitation, getGetInvitationQueryKey, useAcceptInvitation } from "@workspace/api-client-react";
 import { useAuth } from "@/lib/auth";
 import { useLang } from "@/lib/lang";
 import { Button } from "@/components/ui/button";
@@ -28,7 +28,7 @@ export default function AcceptInvitePage() {
   const [, setLocation] = useLocation();
   const [showPw, setShowPw] = useState(false);
 
-  const inviteQ = useGetInvitation(token, { query: { enabled: !!token, retry: false } });
+  const inviteQ = useGetInvitation(token, { query: { queryKey: getGetInvitationQueryKey(token), enabled: !!token, retry: false } });
   const acceptMut = useAcceptInvitation();
 
   const { register, handleSubmit, formState: { errors } } = useForm<FormData>({

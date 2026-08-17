@@ -3,7 +3,7 @@ import { useLocation } from "wouter";
 import { useAuth } from "@/lib/auth";
 import { Loader2 } from "lucide-react";
 
-type Role = "admin" | "secretary" | "nurse" | "superadmin";
+type Role = "admin" | "doctor" | "assistant" | "secretary" | "nurse" | "superadmin";
 
 interface Props {
   children: ReactNode;
@@ -21,6 +21,7 @@ export function ProtectedRoute({ children, requireRole }: Props) {
 
   const isSuperAdmin = user?.role === "superadmin";
   const onClinicOnlyPage = CLINIC_ONLY_PREFIXES.some((p) => location.startsWith(p));
+  const canAccessRenewalPage = location.startsWith("/subscription") || location === "/subscription-expired";
   const clinicIsActive =
     clinic?.status === "active" && clinic?.subscriptionStatus !== "expired";
 
@@ -37,8 +38,8 @@ export function ProtectedRoute({ children, requireRole }: Props) {
       return;
     }
 
-    if (!clinicIsActive) {
-      setLocation("/pending-activation");
+    if (!clinicIsActive && !canAccessRenewalPage) {
+      setLocation(clinic?.status === "deactivated" ? "/subscription-expired" : "/pending-activation");
     }
   }, [
     isLoading,
@@ -46,6 +47,8 @@ export function ProtectedRoute({ children, requireRole }: Props) {
     isSuperAdmin,
     onClinicOnlyPage,
     clinicIsActive,
+    clinic?.status,
+    canAccessRenewalPage,
     setLocation,
   ]);
 
@@ -61,7 +64,7 @@ export function ProtectedRoute({ children, requireRole }: Props) {
     return null;
   }
 
-  if (!isSuperAdmin && !clinicIsActive) {
+  if (!isSuperAdmin && !clinicIsActive && !canAccessRenewalPage) {
     return null;
   }
 

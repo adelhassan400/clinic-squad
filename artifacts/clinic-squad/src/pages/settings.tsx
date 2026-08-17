@@ -24,7 +24,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { formatDate, getTrialDaysLeft } from "@/lib/utils";
-import { useUpdateProfile, useChangePassword, useListAuthEvents, useUpdateClinic } from "@workspace/api-client-react";
+import { useUpdateProfile, useChangePassword, useListAuthEvents, getListAuthEventsQueryKey, useUpdateClinic } from "@workspace/api-client-react";
 import { useToast } from "@/hooks/use-toast";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -94,11 +94,11 @@ export default function SettingsPage() {
   const [specialty, setSpecialty] = useState(user?.specialty ?? "");
   useEffect(() => { setSpecialty(user?.specialty ?? ""); }, [user?.specialty]);
   const updateProfile = useUpdateProfile();
-  const isDoctor = user?.role === "admin";
+  const isDoctor = user?.role === "admin" || user?.role === "doctor";
 
   const [showPw, setShowPw] = useState(false);
   const changePassword = useChangePassword();
-  const authEvents = useListAuthEvents({ query: { staleTime: 30_000 } });
+  const authEvents = useListAuthEvents({ query: { queryKey: getListAuthEventsQueryKey(), staleTime: 30_000 } });
   const passwordForm = useForm<PasswordFormData>({
     resolver: zodResolver(passwordSchema),
     defaultValues: { currentPassword: "", newPassword: "", confirmPassword: "" },
@@ -141,7 +141,7 @@ export default function SettingsPage() {
 
   // Clinic identity (name, phone, address) — editable by admin/superadmin only
   const updateClinicMutation = useUpdateClinic();
-  const isAdminOrOwner = user?.role === "admin";
+  const isAdminOrOwner = user?.role === "admin" || user?.role === "doctor";
   const [clinicName, setClinicName] = useState(clinic?.name ?? "");
   const [clinicPhone, setClinicPhone] = useState(clinic?.phone ?? "");
   const [clinicAddress, setClinicAddress] = useState(clinic?.address ?? "");
@@ -456,7 +456,7 @@ export default function SettingsPage() {
 
             {/* Security */}
             <div className="rounded-xl border border-border bg-card p-6">
-              <h2 className="font-semibold mb-4">{t("sidebar.secure.title" || "Security")}</h2>
+              <h2 className="font-semibold mb-4">{t("sidebar.secure.title")}</h2>
               <div className="flex items-center gap-3 text-sm text-muted-foreground">
                 <Shield className="w-4 h-4 shrink-0" />
                 <span>Your data is secured with role-based access control. Only authorized staff can access patient information.</span>

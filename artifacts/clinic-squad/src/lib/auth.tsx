@@ -4,7 +4,7 @@ import { setAuthTokenGetter } from "@workspace/api-client-react";
 export interface AuthUser {
   id: string;
   email: string;
-  role: "admin" | "secretary" | "nurse" | "superadmin";
+  role: "admin" | "doctor" | "assistant" | "secretary" | "nurse" | "superadmin";
   clinicId: string;
   name: string;
   specialty?: string | null;
@@ -20,7 +20,7 @@ export interface AuthClinic {
   phone?: string | null;
   address?: string | null;
   ownerId: string;
-  status: "pending" | "pending_approval" | "active" | "blocked" | "deleted";
+  status: "pending" | "pending_approval" | "active" | "blocked" | "deactivated" | "deleted";
   subscriptionStatus: "trial" | "basic" | "premium" | "expired";
   trialEndDate: string;
   subscriptionPlan: string | null;
@@ -36,7 +36,7 @@ interface AuthState {
 interface AuthContextType extends AuthState {
   isAuthenticated: boolean;
   isLoading: boolean;
-  login: (user: AuthUser, clinic: AuthClinic, token: string) => void;
+  login: (user: AuthUser, clinic: AuthClinic | null, token: string) => void;
   logout: () => void;
   updateClinic: (clinic: AuthClinic) => void;
   updateUser: (user: AuthUser) => void;
@@ -53,7 +53,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const stored = localStorage.getItem("clinicsquad_auth");
       if (stored) {
         const parsed = JSON.parse(stored) as AuthState;
-        if (parsed.user && parsed.clinic && parsed.token) {
+        if (parsed.user && parsed.token) {
           setState(parsed);
           setAuthTokenGetter(() => parsed.token);
         }
@@ -68,8 +68,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setAuthTokenGetter(() => state.token);
   }, [state.token]);
 
-  const login = (user: AuthUser, clinic: AuthClinic, token: string) => {
+  const login = (user: AuthUser, clinic: AuthClinic | null, token: string) => {
     const newState = { user, clinic, token };
+    // Register the token immediately. The login page redirects as soon as
+    // this function returns, while the state effect runs after the next
+    // render. Without this synchronous update, the first dashboard queries
+    // can be sent without Authorization and return 401.
+    setAuthTokenGetter(() => token);
     setState(newState);
     localStorage.setItem("clinicsquad_auth", JSON.stringify(newState));
   };

@@ -82,7 +82,7 @@ export default function InsightsPage() {
   const { symbol: currencySymbol } = useCurrency();
   const { clinic } = useAuth();
   const clinicId = clinic?.id ?? "";
-  const isPremium = clinic?.subscriptionStatus === "premium";
+  const hasInsightsAccess = clinic?.subscriptionStatus === "premium" || clinic?.subscriptionStatus === "trial";
   const now = new Date();
   const currentYear = now.getFullYear();
   const [selectedYear, setSelectedYear] = useState(currentYear);
@@ -113,19 +113,19 @@ export default function InsightsPage() {
 
   // ── Data fetching (premium-gated) ──
   const { data: summary, isLoading: summaryLoading } = useGetDashboardSummary(clinicId, {
-    query: { enabled: !!clinicId && isPremium, queryKey: getGetDashboardSummaryQueryKey(clinicId) },
+    query: { enabled: !!clinicId && hasInsightsAccess, queryKey: getGetDashboardSummaryQueryKey(clinicId) },
   });
 
   const { data: financeSummary, isLoading: financeLoading } = useGetFinanceSummary(
     clinicId,
     { year: selectedYear },
-    { query: { enabled: !!clinicId && isPremium, queryKey: getGetFinanceSummaryQueryKey(clinicId, { year: selectedYear }) } }
+    { query: { enabled: !!clinicId && hasInsightsAccess, queryKey: getGetFinanceSummaryQueryKey(clinicId, { year: selectedYear }) } }
   );
 
   const { data: allAppts, isLoading: apptsLoading } = useListAppointments(
     clinicId,
     { limit: 1000 } as Parameters<typeof useListAppointments>[1],
-    { query: { enabled: !!clinicId && isPremium, queryKey: getListAppointmentsQueryKey(clinicId, { limit: 1000 } as Parameters<typeof useListAppointments>[1]) } }
+    { query: { enabled: !!clinicId && hasInsightsAccess, queryKey: getListAppointmentsQueryKey(clinicId, { limit: 1000 } as Parameters<typeof useListAppointments>[1]) } }
   );
 
   // ── Derived: busiest days of the current month ──
@@ -204,10 +204,10 @@ export default function InsightsPage() {
 
   const totalAppts = allAppts?.data.length ?? 0;
 
-  // Premium lock screen
-  if (!isPremium) {
+  // Basic clinics see the upgrade lock; trials temporarily receive full Premium access.
+  if (!hasInsightsAccess) {
     return (
-      <ProtectedRoute requireRole={["admin", "superadmin"]}>
+      <ProtectedRoute requireRole={["admin", "doctor", "superadmin"]}>
         <DashboardLayout>
           <div className="p-6 max-w-4xl mx-auto">
             <h1 className="text-2xl font-bold mb-2 flex items-center gap-2">
@@ -236,7 +236,7 @@ export default function InsightsPage() {
   }
 
   return (
-    <ProtectedRoute requireRole={["admin", "superadmin"]}>
+    <ProtectedRoute requireRole={["admin", "doctor", "superadmin"]}>
       <DashboardLayout>
         <div className="p-6 max-w-6xl mx-auto space-y-6">
 

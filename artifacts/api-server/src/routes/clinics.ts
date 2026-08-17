@@ -105,8 +105,9 @@ router.post("/:clinicId/subscription", async (req, res) => {
   const { clinicId } = req.params;
   const body = req.body as any;
   const planType = body.planType;
-  const billingPeriod = body.billingPeriod || "monthly";
-  const durationMonths = parseInt(body.durationMonths) || 1;
+  const billingPeriod = body.billingPeriod === "annual" ? "annual" : "monthly";
+  // Annual billing is always a 12-month commitment, regardless of client input.
+  const durationMonths = billingPeriod === "annual" ? 12 : parseInt(body.durationMonths) || 1;
   const amount = body.amount !== undefined ? parseFloat(body.amount) : (planType === "basic" ? 200 : 400) * durationMonths;
   const paymentProof = typeof body.paymentProof === "string" ? body.paymentProof : null;
   const transactionReference = typeof body.transactionReference === "string" ? body.transactionReference.trim() : null;

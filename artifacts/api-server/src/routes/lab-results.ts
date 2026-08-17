@@ -3,11 +3,16 @@ import { eq, and, desc } from "drizzle-orm";
 import { db, labResultsTable, patientsTable } from "@workspace/db";
 import { CreateLabResultBody } from "@workspace/api-zod";
 import { randomUUID } from "crypto";
-import { requireClinicAccess } from "../middlewares/auth";
+import { requireClinicAccess, requireRole } from "../middlewares/auth";
 
 const router = Router({ mergeParams: true });
 
-router.use(requireClinicAccess);
+function getParam(params: unknown, key: string): string {
+  const value = (params as Record<string, string | string[] | undefined>)[key];
+  return Array.isArray(value) ? value[0] ?? "" : value ?? "";
+}
+
+router.use(requireClinicAccess, requireRole("admin", "doctor", "superadmin"));
 
 const MAX_ATTACHMENT_BYTES = 5 * 1024 * 1024; // 5 MB on the raw payload string
 
@@ -36,7 +41,8 @@ async function ensurePatient(clinicId: string, patientId: string) {
 }
 
 router.get("/", async (req, res) => {
-  const { clinicId, patientId } = req.params;
+  const clinicId = getParam(req.params, "clinicId");
+  const patientId = getParam(req.params, "patientId");
   const ok = await ensurePatient(clinicId, patientId);
   if (!ok) return res.status(404).json({ error: "Patient not found" });
 
@@ -50,7 +56,8 @@ router.get("/", async (req, res) => {
 });
 
 router.post("/", async (req, res) => {
-  const { clinicId, patientId } = req.params;
+  const clinicId = getParam(req.params, "clinicId");
+  const patientId = getParam(req.params, "patientId");
   const ok = await ensurePatient(clinicId, patientId);
   if (!ok) return res.status(404).json({ error: "Patient not found" });
 
@@ -72,7 +79,7 @@ router.post("/", async (req, res) => {
     clinicId,
     patientId,
     testName: testName.trim(),
-    testDate,
+    testDate: testDate.toISOString().slice(0, 10),
     resultValue: resultValue ?? null,
     attachmentName: attachmentName ?? null,
     attachmentMime: attachmentMime ?? null,
@@ -86,7 +93,9 @@ router.post("/", async (req, res) => {
 });
 
 router.delete("/:labResultId", async (req, res) => {
-  const { clinicId, patientId, labResultId } = req.params;
+  const clinicId = getParam(req.params, "clinicId");
+  const patientId = getParam(req.params, "patientId");
+  const labResultId = getParam(req.params, "labResultId");
   await db
     .delete(labResultsTable)
     .where(

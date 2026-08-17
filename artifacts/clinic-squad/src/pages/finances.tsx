@@ -5,10 +5,9 @@ import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import {
   useListFinances, useCreateFinanceRecord, useGetFinanceSummary,
-  getListFinancesQueryKey, getGetFinanceSummaryQueryKey
+  getListFinancesQueryKey, getGetFinanceSummaryQueryKey, customFetch
 } from "@workspace/api-client-react";
-import { useQueryClient } from "@tanstack/react-query";
-import { formatDate } from "@/lib/utils";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCurrency } from "@/lib/currency";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -20,7 +19,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Plus, TrendingUp, TrendingDown, Loader2 } from "lucide-react";
+import { Plus, TrendingUp, TrendingDown, Loader2, Banknote } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from "recharts";
 
 const financeSchema = z.object({
@@ -31,6 +30,14 @@ const financeSchema = z.object({
   date: z.string().min(1, "Date required"),
 });
 type FinanceForm = z.infer<typeof financeSchema>;
+type CashShiftSummary = {
+  shiftDate: string;
+  totalCollected: number | string;
+  paidCount: number;
+  freeCount: number;
+  unpaidCount: number;
+  transactionCount: number;
+};
 
 export default function FinancesPage() {
   const { clinic } = useAuth();
@@ -51,6 +58,14 @@ export default function FinancesPage() {
       enabled: !!clinicId,
       queryKey: getGetFinanceSummaryQueryKey(clinicId, { year: currentYear })
     }
+  });
+
+  const shiftDate = new Date().toISOString().slice(0, 10);
+  const cashShiftQ = useQuery<CashShiftSummary>({
+    queryKey: ["cash-shift-summary", clinicId, shiftDate],
+    queryFn: () => customFetch<CashShiftSummary>(`/api/clinics/${clinicId}/cash-transactions/daily?date=${shiftDate}`),
+    enabled: !!clinicId,
+    staleTime: 30_000,
   });
 
   const createMutation = useCreateFinanceRecord();
@@ -85,7 +100,7 @@ export default function FinancesPage() {
   }) ?? [];
 
   return (
-    <ProtectedRoute requireRole={["admin", "superadmin"]}>
+    <ProtectedRoute requireRole={["admin", "doctor", "superadmin"]}>
       <DashboardLayout>
         <div className="p-6 max-w-6xl mx-auto">
           <div className="flex items-center justify-between mb-6">
@@ -125,6 +140,25 @@ export default function FinancesPage() {
             </div>
           </div>
 
+          <div className="rounded-xl border border-border bg-card p-5 mb-6">
+            <div className="flex items-center justify-between gap-4 mb-4">
+              <div className="flex items-center gap-2">
+                <Banknote className="w-4 h-4 text-emerald-600" />
+                <div>
+                  <h2 className="font-semibold">{t("finances.cashShiftTitle")}</h2>
+                  <p className="text-xs text-muted-foreground">{t("finances.cashShiftDate")} {shiftDate}</p>
+                </div>
+              </div>
+              <span className="text-xl font-bold text-emerald-600">{formatCurrency(Number(cashShiftQ.data?.totalCollected ?? 0))}</span>
+            </div>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-sm">
+              <div className="rounded-lg bg-emerald-500/10 p-3"><p className="text-xs text-muted-foreground">{t("finances.cashPaid")}</p><p className="font-semibold mt-1">{cashShiftQ.data?.paidCount ?? 0}</p></div>
+              <div className="rounded-lg bg-slate-500/10 p-3"><p className="text-xs text-muted-foreground">{t("finances.cashFree")}</p><p className="font-semibold mt-1">{cashShiftQ.data?.freeCount ?? 0}</p></div>
+              <div className="rounded-lg bg-amber-500/10 p-3"><p className="text-xs text-muted-foreground">{t("finances.cashUnpaid")}</p><p className="font-semibold mt-1">{cashShiftQ.data?.unpaidCount ?? 0}</p></div>
+              <div className="rounded-lg bg-primary/10 p-3"><p className="text-xs text-muted-foreground">{t("finances.cashTransactions")}</p><p className="font-semibold mt-1">{cashShiftQ.data?.transactionCount ?? 0}</p></div>
+            </div>
+          </div>
+
           {/* Chart */}
           {chartData.length > 0 && (
             <div className="rounded-xl border border-border bg-card p-6 mb-6">
@@ -147,7 +181,9 @@ export default function FinancesPage() {
 
           {/* Records list */}
           <div className="rounded-xl border border-border bg-card overflow-hidden">
-            <div className="grid grid-cols-[auto_1fr_auto_auto_auto] gap-4 px-6 py-3 border-b border-border bg-muted/30 text-xs font-medium text-muted-foreground uppercase tracking-wider">
+            <div className="overflow-x-auto">
+              <div className="min-w-[760px]">
+                <div className="grid grid-cols-[130px_minmax(240px,1fr)_150px_120px_140px] gap-4 px-6 py-3 border-b border-border bg-muted/30 text-xs font-medium text-muted-foreground uppercase tracking-wider">
               <span>{t("finances.type")}</span>
               <span>{t("finances.description")}</span>
               <span>{t("finances.category")}</span>
@@ -171,20 +207,22 @@ export default function FinancesPage() {
                 <div
                   key={record.id}
                   data-testid={`finance-row-${record.id}`}
-                  className="grid grid-cols-[auto_1fr_auto_auto_auto] gap-4 items-center px-6 py-4 border-b border-border last:border-0 hover:bg-muted/30 transition-colors"
+                  className="grid grid-cols-[130px_minmax(240px,1fr)_150px_120px_140px] gap-4 items-center px-6 py-4 border-b border-border last:border-0 hover:bg-muted/30 transition-colors"
                 >
                   <span className={`text-xs font-medium px-2 py-0.5 rounded capitalize ${
                     record.type === "income" ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400" : "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"
                   }`}>{record.type === "income" ? t("finances.incomeLabel") : t("finances.expenseLabel")}</span>
                   <span className="text-sm truncate">{record.description}</span>
                   <span className="text-xs text-muted-foreground">{record.category}</span>
-                  <span className="text-xs text-muted-foreground">{formatDate(record.date, lang === "ar" ? "ar-EG" : "en-US")}</span>
+                  <span className="text-xs text-muted-foreground">{new Date(record.date).toLocaleDateString(lang === "ar" ? "ar-EG" : "en-US")}</span>
                   <span className={`text-sm font-mono font-semibold ${record.type === "income" ? "text-green-600" : "text-red-500"}`}>
                     {record.type === "income" ? "+" : "-"}{formatCurrency(record.amount)}
                   </span>
                 </div>
               ))
             )}
+              </div>
+            </div>
           </div>
         </div>
 

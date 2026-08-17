@@ -7,10 +7,15 @@ import { requireClinicAccess } from "../middlewares/auth";
 
 const router = Router({ mergeParams: true });
 
+function getParam(params: unknown, key: string): string {
+  const value = (params as Record<string, string | string[] | undefined>)[key];
+  return Array.isArray(value) ? value[0] ?? "" : value ?? "";
+}
+
 router.use(requireClinicAccess);
 
 router.get("/", async (req, res) => {
-  const { clinicId } = req.params;
+  const clinicId = getParam(req.params, "clinicId");
   const type = req.query.type as string | undefined;
   const month = req.query.month ? parseInt(req.query.month as string) : undefined;
   const year = req.query.year ? parseInt(req.query.year as string) : undefined;
@@ -36,13 +41,21 @@ router.get("/", async (req, res) => {
 });
 
 router.post("/", async (req, res) => {
-  const { clinicId } = req.params;
+  const clinicId = getParam(req.params, "clinicId");
   const parsed = CreateFinanceRecordBody.safeParse(req.body);
   if (!parsed.success) return res.status(400).json({ error: "Invalid input", details: parsed.error.issues });
 
   const { type, category, amount, description, date } = parsed.data;
   const id = randomUUID();
-  await db.insert(financesTable).values({ id, clinicId, type, category, amount: amount.toString(), description, date });
+  await db.insert(financesTable).values({
+    id,
+    clinicId,
+    type,
+    category,
+    amount: amount.toString(),
+    description,
+    date: date.toISOString().slice(0, 10),
+  });
 
   const f = (await db.select().from(financesTable).where(eq(financesTable.id, id)).limit(1))[0];
   return res.status(201).json({

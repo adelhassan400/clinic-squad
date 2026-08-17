@@ -1,3 +1,4 @@
-<svg width="180" height="180" viewBox="0 0 180 180" fill="none" xmlns="http://www.w3.org/2000/svg">
-<rect width="180" height="180" rx="36" fill="#FF3C00"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="ClinicSquad shield icon">
+  <rect width="512" height="512" rx="112" fill="#2BC4BA"/>
+  <path d="M256 126 354 161v88c0 76-41 127-98 151-57-24-98-75-98-151v-88l98-35Z" fill="none" stroke="#fff" stroke-width="18" stroke-linejoin="round"/>
 </svg>
