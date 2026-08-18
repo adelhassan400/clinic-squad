@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { randomUUID } from "crypto";
-import { eq, desc, inArray } from "drizzle-orm";
+import { eq, desc, inArray, or } from "drizzle-orm";
 import { requireAuth, requireRole } from "../middlewares/auth";
 import {
   db,
@@ -503,7 +503,7 @@ router.get("/pending-clinics", async (_req, res) => {
     })
     .from(clinicsTable)
     .leftJoin(usersTable, eq(usersTable.id, clinicsTable.ownerId))
-    .where(eq(clinicsTable.status, "pending_approval"))
+    .where(or(eq(clinicsTable.status, "pending"), eq(clinicsTable.status, "pending_approval")))
     .orderBy(desc(clinicsTable.createdAt));
 
   return res.json(
@@ -563,13 +563,27 @@ router.post("/clinics/bulk-action", async (req, res) => {
 
 router.post("/clinics/:clinicId/activate", async (req, res) => {
   const { clinicId } = req.params;
-  await db.update(clinicsTable).set({ status: "active" }).where(eq(clinicsTable.id, clinicId));
   const clinic = (await db.select().from(clinicsTable).where(eq(clinicsTable.id, clinicId)).limit(1))[0];
   if (!clinic) return res.status(404).json({ error: "Clinic not found" });
+
+  const updated = (await db.update(clinicsTable)
+    .set({ status: "active" })
+    .where(eq(clinicsTable.id, clinicId))
+    .returning())[0];
+  if (!updated) return res.status(404).json({ error: "Clinic not found" });
+
+  await db.insert(auditLogsTable).values({
+    id: randomUUID(),
+    adminId: req.authUser!.id,
+    adminEmail: req.authUser!.email,
+    action: "ACTIVATE_CLINIC_TRIAL",
+    details: `Activated clinic ${clinic.name} (${clinic.id}) for trial access`,
+  });
+
   return res.json({
-    id: clinic.id, requestNumber: clinic.requestNumber ?? null, name: clinic.name, ownerId: clinic.ownerId, status: clinic.status,
-    subscriptionStatus: clinic.subscriptionStatus, trialEndDate: clinic.trialEndDate.toISOString(),
-    subscriptionPlan: clinic.subscriptionPlan, createdAt: clinic.createdAt.toISOString(),
+    id: updated.id, requestNumber: updated.requestNumber ?? null, name: updated.name, ownerId: updated.ownerId, status: updated.status,
+    subscriptionStatus: updated.subscriptionStatus, trialEndDate: updated.trialEndDate.toISOString(),
+    subscriptionPlan: updated.subscriptionPlan, createdAt: updated.createdAt.toISOString(),
   });
 });
 
@@ -600,9 +614,18 @@ router.post("/clinics/:clinicId/deactivate", async (req, res) => {
 
 router.post("/clinics/:clinicId/block", async (req, res) => {
   const { clinicId } = req.params;
+  const original = (await db.select().from(clinicsTable).where(eq(clinicsTable.id, clinicId)).limit(1))[0];
+  if (!original) return res.status(404).json({ error: "Clinic not found" });
   await db.update(clinicsTable).set({ status: "blocked" }).where(eq(clinicsTable.id, clinicId));
   const clinic = (await db.select().from(clinicsTable).where(eq(clinicsTable.id, clinicId)).limit(1))[0];
   if (!clinic) return res.status(404).json({ error: "Clinic not found" });
+  await db.insert(auditLogsTable).values({
+    id: randomUUID(),
+    adminId: req.authUser!.id,
+    adminEmail: req.authUser!.email,
+    action: "BLOCK_CLINIC_LEGACY",
+    details: `Blocked clinic ${clinic.name}`,
+  });
   return res.json({
     id: clinic.id, requestNumber: clinic.requestNumber ?? null, name: clinic.name, ownerId: clinic.ownerId, status: clinic.status,
     subscriptionStatus: clinic.subscriptionStatus, trialEndDate: clinic.trialEndDate.toISOString(),

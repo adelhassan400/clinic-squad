@@ -4,7 +4,7 @@ import { useLang } from "@/lib/lang";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import {
-  useListPatients, useDeletePatient, usePatchPatient, useListTeamMembers,
+  useListPatients, useDeletePatient, usePatchPatient, useListTeamMembers, useCreatePatient,
   getListPatientsQueryKey, getGetPatientQueryKey, getListTeamMembersQueryKey,
   customFetch,
 } from "@workspace/api-client-react";
@@ -51,6 +51,7 @@ const patientSchema = z.object({
   notes: z.string().optional(),
   visitType: z.enum(PATIENT_VISIT_TYPE_VALUES),
   doctorId: z.string().optional(),
+  queueImmediately: z.boolean(),
   cashCollected: z.boolean(),
   paymentStatus: z.enum(["free", "unpaid"]),
 });
@@ -144,6 +145,7 @@ export default function PatientsPage() {
 
   const deleteMutation = useDeletePatient();
   const patchMutation = usePatchPatient();
+  const createPatientMutation = useCreatePatient();
 
   const visiblePatientIds = data?.data.map((patient) => patient.id) ?? [];
   const selectedVisibleCount = visiblePatientIds.filter((id) => selectedPatientIds.has(id)).length;
@@ -158,6 +160,7 @@ export default function PatientsPage() {
       phone: "",
       visitType: "New Consultation",
       doctorId: "",
+      queueImmediately: true,
       cashCollected: true,
       paymentStatus: "free",
     },
@@ -179,19 +182,43 @@ export default function PatientsPage() {
 
   const onSubmit = async (values: PatientForm) => {
     try {
-      await customFetch(`/api/clinics/${clinicId}/patients/register-and-queue`, {
-        method: "POST",
-        body: JSON.stringify({
-          ...values,
-          collectedAmount: values.cashCollected ? prices[values.visitType] ?? 0 : 0,
-          cashCollected: values.cashCollected,
-          paymentStatus: values.cashCollected ? undefined : values.paymentStatus,
-        }),
-      });
-      toast({ title: t("patients.toast.added") });
+      if (values.queueImmediately) {
+        await customFetch(`/api/clinics/${clinicId}/patients/register-and-queue`, {
+          method: "POST",
+          body: JSON.stringify({
+            ...values,
+            collectedAmount: values.cashCollected ? prices[values.visitType] ?? 0 : 0,
+            cashCollected: values.cashCollected,
+            paymentStatus: values.cashCollected ? undefined : values.paymentStatus,
+          }),
+        });
+        toast({ title: t("patients.toast.added") });
+      } else {
+        await createPatientMutation.mutateAsync({
+          clinicId,
+          data: {
+            name: values.name,
+            phone: values.phone,
+            age: values.age,
+            bloodType: values.bloodType || null,
+            allergies: values.allergies || null,
+            notes: values.notes || null,
+            visitType: values.visitType,
+          },
+        });
+        toast({ title: t("patients.toast.savedForLater") });
+      }
       qc.invalidateQueries({ queryKey: getListPatientsQueryKey(clinicId) });
       setAddOpen(false);
-      form.reset({ name: "", phone: "", visitType: "New Consultation", doctorId: form.getValues("doctorId"), cashCollected: true, paymentStatus: "free" });
+      form.reset({
+        name: "",
+        phone: "",
+        visitType: "New Consultation",
+        doctorId: form.getValues("doctorId"),
+        queueImmediately: true,
+        cashCollected: true,
+        paymentStatus: "free",
+      });
     } catch (error: any) {
       toast({ title: error?.message || t("patients.toast.addFailed"), variant: "destructive" });
     }
@@ -479,11 +506,33 @@ export default function PatientsPage() {
             <DialogHeader>
               <DialogTitle>{t("patients.addDialog.title")}</DialogTitle>
               <DialogDescription>
-                {t("patients.addDialog.desc")}
+                {form.watch("queueImmediately") ? t("patients.addDialog.desc") : t("patients.addDialog.profileDesc")}
               </DialogDescription>
             </DialogHeader>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
+                <div className="col-span-2 rounded-lg border border-primary/30 bg-primary/5 p-3">
+                  <Controller
+                    control={form.control}
+                    name="queueImmediately"
+                    render={({ field }) => (
+                      <div className="flex items-start gap-3">
+                        <Checkbox
+                          id="queue-immediately"
+                          checked={field.value}
+                          onCheckedChange={(checked) => field.onChange(checked === true)}
+                          data-testid="checkbox-queue-immediately"
+                        />
+                        <div className="space-y-1">
+                          <Label htmlFor="queue-immediately" className="cursor-pointer font-semibold">
+                            {t("patients.queueImmediately")}
+                          </Label>
+                          <p className="text-xs text-muted-foreground">{t("patients.queueImmediatelyHint")}</p>
+                        </div>
+                      </div>
+                    )}
+                  />
+                </div>
                 <div className="col-span-2">
                   <Label>{t("patients.fullName")} *</Label>
                   <Input {...form.register("name")} placeholder={t("patients.fullNamePh")} className="mt-1" />
@@ -507,7 +556,7 @@ export default function PatientsPage() {
                   />
                   {form.formState.errors.age && <p className="text-xs text-destructive mt-1">{form.formState.errors.age.message}</p>}
                 </div>
-                <div>
+                {form.watch("queueImmediately") && <div>
                   <Label>{t("patients.doctor")} *</Label>
                   <Controller
                     control={form.control}
@@ -525,9 +574,9 @@ export default function PatientsPage() {
                       </Select>
                     )}
                   />
-                </div>
+                </div>}
                 <div>
-                  <Label>{t("patients.visitType")} *</Label>
+                  <Label>{t("patients.visitType")} {form.watch("queueImmediately") ? "*" : ""}</Label>
                   <Controller
                     control={form.control}
                     name="visitType"
@@ -544,17 +593,17 @@ export default function PatientsPage() {
                       </Select>
                     )}
                   />
-                  <div className="mt-2 flex items-center justify-between rounded-md border border-primary/20 bg-primary/5 px-3 py-2">
+                  {form.watch("queueImmediately") && <div className="mt-2 flex items-center justify-between rounded-md border border-primary/20 bg-primary/5 px-3 py-2">
                     <span className="text-xs text-muted-foreground">{t("patients.consultationPrice")}</span>
                     <span className="text-sm font-bold text-primary">EGP {prices[form.watch("visitType")]?.toLocaleString() ?? "0"}</span>
-                  </div>
+                  </div>}
                   {form.formState.errors.visitType && <p className="text-xs text-destructive mt-1">{form.formState.errors.visitType.message}</p>}
                 </div>
                 <div>
                   <Label>{t("patients.bloodType")}</Label>
                   <Input {...form.register("bloodType")} placeholder="e.g. O+" className="mt-1" />
                 </div>
-                <div className="col-span-2 rounded-lg border border-border bg-muted/20 p-3">
+                {form.watch("queueImmediately") && <div className="col-span-2 rounded-lg border border-border bg-muted/20 p-3">
                   <Controller
                     control={form.control}
                     name="cashCollected"
@@ -594,7 +643,7 @@ export default function PatientsPage() {
                       />
                     </div>
                   )}
-                </div>
+                </div>}
                 <div className="col-span-2">
                   <Label>{t("patients.allergies")}</Label>
                   <Input {...form.register("allergies")} placeholder="e.g. Penicillin" className="mt-1" />
@@ -606,9 +655,9 @@ export default function PatientsPage() {
               </div>
               <div className="flex gap-3 justify-end pt-2">
                 <Button type="button" variant="outline" onClick={() => setAddOpen(false)}>{t("presc.cancel")}</Button>
-                <Button type="submit" disabled={form.formState.isSubmitting} data-testid="button-save-patient">
-                  {form.formState.isSubmitting && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-                  {t("patients.addToQueue")}
+                <Button type="submit" disabled={form.formState.isSubmitting || createPatientMutation.isPending} data-testid="button-save-patient">
+                  {(form.formState.isSubmitting || createPatientMutation.isPending) && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                  {form.watch("queueImmediately") ? t("patients.addToQueue") : t("patients.save")}
                 </Button>
               </div>
             </form>

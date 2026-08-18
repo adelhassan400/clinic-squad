@@ -6,6 +6,17 @@ import { requireAuth, requireRole } from "../middlewares/auth";
 const router = Router({ mergeParams: true });
 router.use(requireAuth);
 
+function formatEgyptDate(date = new Date()) {
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Africa/Cairo",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(date);
+  const values = Object.fromEntries(parts.map((part) => [part.type, part.value]));
+  return `${values.year}-${values.month}-${values.day}`;
+}
+
 router.get("/daily", async (req: any, res) => {
   const clinicId = req.params.clinicId;
   if (req.authUser?.clinicId !== clinicId && req.authUser?.role !== "superadmin") {
@@ -14,7 +25,7 @@ router.get("/daily", async (req: any, res) => {
 
   const date = typeof req.query.date === "string" && /^\d{4}-\d{2}-\d{2}$/.test(req.query.date)
     ? req.query.date
-    : new Date().toISOString().slice(0, 10);
+    : formatEgyptDate();
 
   const rows = await db
     .select()

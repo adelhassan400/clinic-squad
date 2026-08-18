@@ -1,6 +1,6 @@
 import { Building2, CheckCircle, Clock, CreditCard, ExternalLink, FileText, History, Hourglass, Shield, Sparkles, TrendingUp, Users, Wallet } from "lucide-react";
 import { Link } from "wouter";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { customFetch, getAdminListClinicsQueryKey, getAdminListPendingClinicsQueryKey, useAdminActivateClinic, useAdminListClinics, useAdminListPendingClinics } from "@workspace/api-client-react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
@@ -40,6 +40,7 @@ function QuickLink({ href, icon: Icon, title, description }: { href: string; ico
 export default function AdminPage() {
   const { t, lang } = useLang();
   const { toast } = useToast();
+  const queryClient = useQueryClient();
   const { currency: { code: currencyCode } } = useCurrency();
   const { data: clinics, isLoading: clinicsLoading } = useAdminListClinics({ query: { queryKey: getAdminListClinicsQueryKey() } });
   const statsQ = useQuery<AdminStats>({ queryKey: ["/api/admin/stats"], queryFn: () => customFetch<AdminStats>("/api/admin/stats") });
@@ -55,7 +56,17 @@ export default function AdminPage() {
   const overviewSignups = stats?.newSignupsWeek ?? 0;
   const overviewRevenue = stats?.confirmedRevenue ?? 0;
 
-  const handleActivate = (clinicId: string) => activateMutation.mutate({ clinicId }, { onSuccess: () => { toast({ title: t("admin.home.activated") }); statsQ.refetch(); pendingApprovalsQ.refetch(); }, onError: () => toast({ title: t("admin.home.activateFailed"), variant: "destructive" }) });
+  const handleActivate = (clinicId: string) => activateMutation.mutate({ clinicId }, { onSuccess: async () => {
+    toast({ title: t("admin.home.activated") });
+    await Promise.all([
+      queryClient.invalidateQueries({ queryKey: getAdminListClinicsQueryKey() }),
+      queryClient.invalidateQueries({ queryKey: getAdminListPendingClinicsQueryKey() }),
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/stats"] }),
+    ]);
+  }, onError: (error) => {
+    const message = error instanceof Error && error.message ? error.message : t("admin.home.activateFailed");
+    toast({ title: t("admin.home.activateFailed"), description: message, variant: "destructive" });
+  } });
 
   const planCards = [
     { key: "trial", label: t("plan.trial"), count: stats?.bySub?.trial ?? clinics?.filter((clinic) => clinic.subscriptionStatus === "trial").length ?? 0, tone: "bg-blue-500/10 text-blue-700 dark:text-blue-400" },

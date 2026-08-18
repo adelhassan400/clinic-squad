@@ -2,6 +2,28 @@ import { eq, and, or, ilike, count, sql, SQL, inArray } from "drizzle-orm";
 import { db, patientsTable, appointmentsTable, cashTransactionsTable, Patient } from "@workspace/db";
 import { randomUUID } from "crypto";
 
+function formatEgyptDate(date = new Date()) {
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Africa/Cairo",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(date);
+  const values = Object.fromEntries(parts.map((part) => [part.type, part.value]));
+  return `${values.year}-${values.month}-${values.day}`;
+}
+
+function formatEgyptTime(date = new Date()) {
+  const parts = new Intl.DateTimeFormat("en-GB", {
+    timeZone: "Africa/Cairo",
+    hour: "2-digit",
+    minute: "2-digit",
+    hourCycle: "h23",
+  }).formatToParts(date);
+  const values = Object.fromEntries(parts.map((part) => [part.type, part.value]));
+  return `${values.hour}:${values.minute}`;
+}
+
 export interface PatientFilters {
   search?: string;
   status?: string;
@@ -105,7 +127,7 @@ export class PatientService {
     }
 
     const visitType = data.visitType || "New Consultation";
-    const shiftDate = new Date().toISOString().slice(0, 10);
+    const shiftDate = formatEgyptDate();
     const amount = cashCollected ? Number(data.collectedAmount).toFixed(2) : "0.00";
     const receivedAt = cashCollected ? new Date() : null;
 
@@ -168,7 +190,7 @@ export class PatientService {
         patientId,
         patientName: patient.name,
         date: shiftDate,
-        time: now.toISOString().slice(11, 16),
+        time: formatEgyptTime(now),
         status: "waiting",
         type: visitType,
         fee: amount,

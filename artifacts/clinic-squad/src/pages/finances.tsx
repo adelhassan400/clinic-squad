@@ -39,6 +39,17 @@ type CashShiftSummary = {
   transactionCount: number;
 };
 
+function formatEgyptDate(date = new Date()) {
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Africa/Cairo",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(date);
+  const values = Object.fromEntries(parts.map((part) => [part.type, part.value]));
+  return `${values.year}-${values.month}-${values.day}`;
+}
+
 export default function FinancesPage() {
   const { clinic } = useAuth();
   const { t, lang } = useLang();
@@ -60,12 +71,14 @@ export default function FinancesPage() {
     }
   });
 
-  const shiftDate = new Date().toISOString().slice(0, 10);
+  const shiftDate = formatEgyptDate();
   const cashShiftQ = useQuery<CashShiftSummary>({
     queryKey: ["cash-shift-summary", clinicId, shiftDate],
     queryFn: () => customFetch<CashShiftSummary>(`/api/clinics/${clinicId}/cash-transactions/daily?date=${shiftDate}`),
     enabled: !!clinicId,
     staleTime: 30_000,
+    refetchInterval: 30_000,
+    refetchOnWindowFocus: true,
   });
 
   const createMutation = useCreateFinanceRecord();
