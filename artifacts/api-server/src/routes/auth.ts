@@ -330,20 +330,23 @@ router.post("/login", async (req, res) => {
     });
   }
 
-  const clinics = await db.select().from(clinicsTable).where(eq(clinicsTable.id, user.clinicId)).limit(1);
-  const clinic = clinics[0];
-  if (!clinic) {
+  let clinic = null;
+  if (user.clinicId) {
+    const clinics = await db.select().from(clinicsTable).where(eq(clinicsTable.id, user.clinicId)).limit(1);
+    clinic = clinics[0];
+    
+    if (clinic && clinic.subscriptionStatus === "trial" && new Date() > clinic.trialEndDate) {
+      await db.update(clinicsTable).set({ subscriptionStatus: "expired" }).where(eq(clinicsTable.id, clinic.id));
+      clinic.subscriptionStatus = "expired";
+    }
+  }
+
+  if (!clinic && user.role !== "superadmin") {
     return res.status(404).json({ error: "Clinic not found" });
   }
 
-  // Check trial expiry and update status if needed
-  if (clinic.subscriptionStatus === "trial" && new Date() > clinic.trialEndDate) {
-    await db.update(clinicsTable).set({ subscriptionStatus: "expired" }).where(eq(clinicsTable.id, clinic.id));
-    clinic.subscriptionStatus = "expired";
-  }
-
   const userObj = { id: user.id, email: user.email, role: user.role, clinicId: user.clinicId, name: user.name, specialty: user.specialty, whatsappNumber: user.whatsappNumber, isBlocked: user.isBlocked, emailVerifiedAt: user.emailVerifiedAt?.toISOString() ?? null };
-  const clinicObj = {
+  const clinicObj = clinic ? {
     id: clinic.id,
     requestNumber: clinic.requestNumber ?? null,
     name: clinic.name,
@@ -355,7 +358,7 @@ router.post("/login", async (req, res) => {
     trialEndDate: clinic.trialEndDate.toISOString(),
     subscriptionPlan: clinic.subscriptionPlan,
     createdAt: clinic.createdAt.toISOString(),
-  };
+  } : null;
 
   await recordAuthEvent(req, user.id, "login_success");
   return res.json({ user: userObj, clinic: clinicObj, token: generateToken(user.id) });
