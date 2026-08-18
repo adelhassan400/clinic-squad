@@ -5,7 +5,7 @@ export interface AuthUser {
   id: string;
   email: string;
   role: "admin" | "doctor" | "assistant" | "secretary" | "nurse" | "superadmin";
-  clinicId: string;
+  clinicId?: string | null;
   name: string;
   specialty?: string | null;
   whatsappNumber?: string | null;
