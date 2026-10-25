@@ -1171,7 +1171,7 @@ components:
           type: string
         role:
           type: string
-          enum: [secretary, nurse]
+          enum: [assistant, secretary, nurse]
         token:
           type: string
         status:
@@ -1196,7 +1196,7 @@ components:
           type: string
         role:
           type: string
-          enum: [secretary, nurse]
+          enum: [assistant, secretary, nurse]
         clinicName:
           type: string
         expiresAt:
@@ -1215,7 +1215,7 @@ components:
           minLength: 1
         role:
           type: string
-          enum: [secretary, nurse]
+          enum: [assistant, secretary, nurse]
       required: [email, name, role]
 
     AcceptInvitationBody:
@@ -1240,7 +1240,7 @@ components:
           type: string
         role:
           type: string
-          enum: [admin, secretary, nurse]
+          enum: [admin, doctor, assistant, secretary, nurse]
         isOwner:
           type: boolean
         isBlocked:
@@ -1667,9 +1667,9 @@ components:
         durationMonths:
           type: string
           description: Requested access duration in months
-        amount:
+        promoCode:
           type: string
-          description: Amount paid in the configured currency
+          description: Optional promotional code to apply to the server-calculated price
         paymentProof:
           type: string
           description: Base64-encoded JPG, PNG, or WebP receipt image data URL
@@ -2062,8 +2062,10 @@ components:
           type: integer
         monthlyRevenue:
           type: number
+          nullable: true
         monthlyExpenses:
           type: number
+          nullable: true
         upcomingAppointments:
           type: integer
         subscriptionStatus:

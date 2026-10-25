@@ -12,7 +12,7 @@ import {
   patientsTable,
   appointmentsTable,
 } from "@workspace/db";
-import { requireAuth, requireRole } from "../middlewares/auth";
+import { requireAuth, requireClinicAccess, requireRole } from "../middlewares/auth";
 
 const router = Router();
 
@@ -56,7 +56,7 @@ router.get("/public-pricing", async (_req, res) => {
 });
 
 // Clinic users can read active broadcasts and available promo codes.
-router.get("/messages", requireAuth, async (_req, res) => {
+router.get("/messages", requireAuth, requireClinicAccess, async (_req, res) => {
   const rows = await db
     .select()
     .from(systemMessagesTable)
@@ -65,13 +65,13 @@ router.get("/messages", requireAuth, async (_req, res) => {
   return res.json(rows.map((row) => ({ ...row, createdAt: row.createdAt.toISOString() })));
 });
 
-router.get("/settings", requireAuth, async (_req, res) => {
+router.get("/settings", requireAuth, requireClinicAccess, async (_req, res) => {
   let settings = (await db.select().from(systemSettingsTable).where(eq(systemSettingsTable.id, "global")).limit(1))[0];
   if (!settings) settings = (await db.insert(systemSettingsTable).values({ id: "global" }).returning())[0];
   return res.json({ ...settings, updatedAt: settings.updatedAt.toISOString() });
 });
 
-router.get("/promo-codes", requireAuth, async (_req, res) => {
+router.get("/promo-codes", requireAuth, requireClinicAccess, async (_req, res) => {
   const now = new Date();
   const rows = await db
     .select()

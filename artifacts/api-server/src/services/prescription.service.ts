@@ -28,8 +28,14 @@ export class PrescriptionService {
         doctorSpecialty: usersTable.specialty,
       })
       .from(prescriptionsTable)
-      .leftJoin(patientsTable, eq(prescriptionsTable.patientId, patientsTable.id))
-      .leftJoin(usersTable, eq(prescriptionsTable.doctorId, usersTable.id))
+      .leftJoin(patientsTable, and(
+        eq(prescriptionsTable.patientId, patientsTable.id),
+        eq(prescriptionsTable.clinicId, patientsTable.clinicId),
+      ))
+      .leftJoin(usersTable, and(
+        eq(prescriptionsTable.doctorId, usersTable.id),
+        eq(prescriptionsTable.clinicId, usersTable.clinicId),
+      ))
       .where(whereClause)
       .orderBy(desc(prescriptionsTable.createdAt));
 
@@ -66,8 +72,14 @@ export class PrescriptionService {
         doctorSpecialty: usersTable.specialty,
       })
       .from(prescriptionsTable)
-      .leftJoin(patientsTable, eq(prescriptionsTable.patientId, patientsTable.id))
-      .leftJoin(usersTable, eq(prescriptionsTable.doctorId, usersTable.id))
+      .leftJoin(patientsTable, and(
+        eq(prescriptionsTable.patientId, patientsTable.id),
+        eq(prescriptionsTable.clinicId, patientsTable.clinicId),
+      ))
+      .leftJoin(usersTable, and(
+        eq(prescriptionsTable.doctorId, usersTable.id),
+        eq(prescriptionsTable.clinicId, usersTable.clinicId),
+      ))
       .where(and(eq(prescriptionsTable.id, prescriptionId), eq(prescriptionsTable.clinicId, clinicId)))
       .limit(1);
 

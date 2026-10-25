@@ -6,7 +6,7 @@ import { PrescriptionService } from "../services/prescription.service";
 const router = Router({ mergeParams: true });
 router.use(requireClinicAccess);
 
-router.get("/", async (req: any, res) => {
+router.get("/", requireRole("admin", "doctor", "superadmin"), async (req: any, res) => {
   try {
     const { clinicId } = req.params;
     if (req.authUser?.clinicId !== clinicId && req.authUser?.role !== "superadmin") {
@@ -52,7 +52,7 @@ router.post("/", requireRole("admin", "doctor", "superadmin"), async (req: any, 
   }
 });
 
-router.get("/:prescriptionId", async (req: any, res) => {
+router.get("/:prescriptionId", requireRole("admin", "doctor", "superadmin"), async (req: any, res) => {
   try {
     const { clinicId, prescriptionId } = req.params;
     if (req.authUser?.clinicId !== clinicId && req.authUser?.role !== "superadmin") {

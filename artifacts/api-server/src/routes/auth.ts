@@ -13,6 +13,7 @@ import {
 } from "@workspace/api-zod";
 import { randomUUID, randomBytes } from "crypto";
 import { createHash } from "crypto";
+import { createAuthToken, requireAuth } from "../middlewares/auth";
 
 const router = Router();
 
@@ -102,10 +103,6 @@ async function recordAuthEvent(
   }
 }
 
-function generateToken(userId: string): string {
-  return Buffer.from(`${userId}:${Date.now()}`).toString("base64");
-}
-
 router.post("/register", async (req, res) => {
   const parsed = RegisterUserBody.safeParse(req.body);
   if (!parsed.success) {
@@ -184,7 +181,7 @@ router.post("/register", async (req, res) => {
       "Account created. Your request is pending approval — please contact support via WhatsApp to activate your 15-day free trial.",
     user,
     clinic,
-    token: generateToken(userId),
+    token: createAuthToken(userId),
   });
 });
 
@@ -263,7 +260,7 @@ router.post("/verify-email", async (req, res) => {
     createdAt: clinic.createdAt.toISOString(),
   };
 
-  return res.json({ user: userObj, clinic: clinicObj, token: generateToken(user.id) });
+  return res.json({ user: userObj, clinic: clinicObj, token: createAuthToken(user.id) });
 });
 
 router.post("/resend-verification", async (req, res) => {
@@ -361,7 +358,7 @@ router.post("/login", async (req, res) => {
   } : null;
 
   await recordAuthEvent(req, user.id, "login_success");
-  return res.json({ user: userObj, clinic: clinicObj, token: generateToken(user.id) });
+  return res.json({ user: userObj, clinic: clinicObj, token: createAuthToken(user.id) });
 });
 
 router.post("/forgot-password", async (req, res) => {
@@ -441,10 +438,8 @@ router.post("/reset-password", async (req, res) => {
   return res.json({ message: "Password updated successfully. You can now sign in." });
 });
 
-router.post("/change-password", async (req, res) => {
-  const userId = userIdFromAuth(req);
-  if (!userId) return res.status(401).json({ error: "Unauthorized" });
-
+router.post("/change-password", requireAuth, async (req, res) => {
+  const userId = req.authUser!.id;
   const parsed = ChangePasswordBody.safeParse(req.body);
   if (!parsed.success) {
     return res.status(400).json({ error: "Invalid input", details: parsed.error.issues });
@@ -469,10 +464,8 @@ router.post("/change-password", async (req, res) => {
   return res.json({ message: "Password changed successfully." });
 });
 
-router.get("/events", async (req, res) => {
-  const userId = userIdFromAuth(req);
-  if (!userId) return res.status(401).json({ error: "Unauthorized" });
-
+router.get("/events", requireAuth, async (req, res) => {
+  const userId = req.authUser!.id;
   const events = await db
     .select()
     .from(authEventsTable)
@@ -491,17 +484,8 @@ router.get("/events", async (req, res) => {
   );
 });
 
-function userIdFromAuth(req: any): string | null {
-  const authHeader = req.headers.authorization;
-  if (!authHeader?.startsWith("Bearer ")) return null;
-  const token = authHeader.replace("Bearer ", "");
-  const decoded = Buffer.from(token, "base64").toString();
-  return decoded.split(":")[0] || null;
-}
-
-router.get("/me", async (req, res) => {
-  const userId = userIdFromAuth(req);
-  if (!userId) return res.status(401).json({ error: "Unauthorized" });
+router.get("/me", requireAuth, async (req, res) => {
+  const userId = req.authUser!.id;
 
   const users = await db.select().from(usersTable).where(eq(usersTable.id, userId)).limit(1);
   const user = users[0];
@@ -512,9 +496,8 @@ router.get("/me", async (req, res) => {
   return res.json({ id: user.id, email: user.email, role: user.role, clinicId: user.clinicId, name: user.name, specialty: user.specialty, whatsappNumber: user.whatsappNumber, isBlocked: user.isBlocked, emailVerifiedAt: user.emailVerifiedAt?.toISOString() ?? null });
 });
 
-router.patch("/me", async (req, res) => {
-  const userId = userIdFromAuth(req);
-  if (!userId) return res.status(401).json({ error: "Unauthorized" });
+router.patch("/me", requireAuth, async (req, res) => {
+  const userId = req.authUser!.id;
 
   const body = req.body ?? {};
   const updates: { name?: string; specialty?: string | null; whatsappNumber?: string | null } = {};

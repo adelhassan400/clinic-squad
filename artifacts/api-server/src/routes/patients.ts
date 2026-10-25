@@ -1,13 +1,13 @@
 import { Router } from "express";
 import { z } from "zod";
 import { CreatePatientBody, PatchPatientBody } from "@workspace/api-zod";
-import { requireClinicAccess, requireRole } from "../middlewares/auth";
+import { CLINIC_MEMBER_ROLES, requireClinicAccess, requireRole } from "../middlewares/auth";
 import { PatientService } from "../services/patient.service";
 
 const router = Router({ mergeParams: true });
 router.use(requireClinicAccess);
 
-router.get("/", async (req: any, res) => {
+router.get("/", requireRole(...CLINIC_MEMBER_ROLES), async (req: any, res) => {
   try {
     const { clinicId } = req.params;
     const filters = {
@@ -18,13 +18,19 @@ router.get("/", async (req: any, res) => {
     };
 
     const result = await PatientService.listPatients(clinicId, filters);
-    const isAssistant = ["assistant", "secretary", "nurse"].includes(req.authUser?.role);
-    if (isAssistant) {
+    const isReceptionRole = ["assistant", "secretary", "nurse"].includes(req.authUser?.role);
+    if (isReceptionRole) {
       result.data = result.data.map((patient: any) => ({
         ...patient,
+        bloodType: null,
+        allergies: null,
         diagnosis: null,
         clinicalNotes: null,
         chronicConditions: null,
+        notes: null,
+        paymentReference: null,
+        paymentCollectedBy: null,
+        paymentReceivedAt: null,
       }));
     }
     return res.json(result);
@@ -33,7 +39,7 @@ router.get("/", async (req: any, res) => {
   }
 });
 
-router.post("/", async (req: any, res) => {
+router.post("/", requireRole(...CLINIC_MEMBER_ROLES), async (req: any, res) => {
   const { clinicId } = req.params;
   const parsed = CreatePatientBody.safeParse(req.body);
   
@@ -68,7 +74,7 @@ const RegisterAndQueueBody = z.object({
   paymentReference: z.string().max(120).nullish(),
 });
 
-router.post("/register-and-queue", async (req: any, res) => {
+router.post("/register-and-queue", requireRole(...CLINIC_MEMBER_ROLES), async (req: any, res) => {
   const parsed = RegisterAndQueueBody.safeParse(req.body);
   if (!parsed.success) {
     return res.status(400).json({ error: "Invalid queue registration", details: parsed.error.issues });
@@ -90,6 +96,9 @@ router.post("/register-and-queue", async (req: any, res) => {
     if (["Patient not found", "Patient is already in the queue"].includes(error.message)) {
       return res.status(409).json({ error: error.message });
     }
+    if (error.message === "Doctor not found") {
+      return res.status(404).json({ error: "Doctor not found in this clinic" });
+    }
     return res.status(500).json({ error: error.message });
   }
 });
@@ -99,7 +108,7 @@ const BulkCheckInBody = z.object({
   visitType: z.enum(["New Consultation", "Follow-up", "Re-exam", "Emergency"]),
 });
 
-router.post("/bulk-check-in", async (req: any, res) => {
+router.post("/bulk-check-in", requireRole(...CLINIC_MEMBER_ROLES), async (req: any, res) => {
   const parsed = BulkCheckInBody.safeParse(req.body);
   if (!parsed.success) {
     return res.status(400).json({ error: "Invalid bulk check-in request", details: parsed.error.issues });
@@ -114,13 +123,24 @@ router.post("/bulk-check-in", async (req: any, res) => {
   }
 });
 
-router.get("/:patientId", async (req: any, res) => {
+router.get("/:patientId", requireRole("admin", "doctor", "superadmin"), async (req: any, res) => {
   try {
     const { clinicId, patientId } = req.params;
     const patient = await PatientService.getPatient(clinicId, patientId);
-    const isAssistant = ["assistant", "secretary", "nurse"].includes(req.authUser?.role);
-    return res.json(isAssistant
-      ? { ...patient, diagnosis: null, clinicalNotes: null, chronicConditions: null }
+    const isReceptionRole = ["assistant", "secretary", "nurse"].includes(req.authUser?.role);
+    return res.json(isReceptionRole
+      ? {
+          ...patient,
+          bloodType: null,
+          allergies: null,
+          diagnosis: null,
+          clinicalNotes: null,
+          chronicConditions: null,
+          notes: null,
+          paymentReference: null,
+          paymentCollectedBy: null,
+          paymentReceivedAt: null,
+        }
       : patient);
   } catch (error: any) {
     if (error.message === "Patient not found") {
@@ -149,7 +169,7 @@ router.put("/:patientId", requireRole("admin", "doctor", "superadmin"), async (r
   }
 });
 
-router.patch("/:patientId", async (req: any, res) => {
+router.patch("/:patientId", requireRole("admin", "doctor", "superadmin"), async (req: any, res) => {
   const { clinicId, patientId } = req.params;
   const parsed = PatchPatientBody.safeParse(req.body);
   
@@ -158,17 +178,6 @@ router.patch("/:patientId", async (req: any, res) => {
       error: "Invalid input", 
       details: parsed.error.issues 
     });
-  }
-
-  const isAssistant = ["assistant", "secretary", "nurse"].includes(req.authUser?.role);
-  if (parsed.data.status === "paid" && !parsed.data.paymentMethod) {
-    return res.status(400).json({ error: "Payment method is required before marking a patient paid" });
-  }
-  const clinicalFields = ["diagnosis", "clinicalNotes", "chronicConditions"];
-  if (isAssistant && Object.keys(parsed.data).some((field) =>
-    clinicalFields.includes(field) || ["in-progress", "completed"].includes((parsed.data as any).status)
-  )) {
-    return res.status(403).json({ error: "Clinical updates require a Doctor" });
   }
 
   try {
@@ -185,12 +194,15 @@ router.patch("/:patientId", async (req: any, res) => {
   }
 });
 
-router.delete("/:patientId", async (req: any, res) => {
+router.delete("/:patientId", requireRole("admin", "doctor", "superadmin"), async (req: any, res) => {
   try {
     const { clinicId, patientId } = req.params;
     await PatientService.deletePatient(clinicId, patientId);
     return res.status(204).send();
   } catch (error: any) {
+    if (error.message === "Patient not found") {
+      return res.status(404).json({ error: "Patient not found" });
+    }
     return res.status(500).json({ error: error.message });
   }
 });

@@ -50,9 +50,10 @@ function AppointmentStatusBadge({ status }: { status: string }) {
 
 export default function DashboardPage() {
   const { format: formatCurrency } = useCurrency();
-  const { clinic } = useAuth();
+  const { clinic, user } = useAuth();
   const { t, lang } = useLang();
   const clinicId = clinic?.id ?? "";
+  const canViewFinances = ["admin", "doctor", "superadmin"].includes(user?.role ?? "");
   const { toast } = useToast();
   const qc = useQueryClient();
 
@@ -171,12 +172,14 @@ export default function DashboardPage() {
                   icon={Calendar} 
                   sub={`${summary?.upcomingAppointments ?? 0} ${t("dash.stats.upcoming")}`} 
                 />
-                <StatCard 
-                  label={t("dash.stats.revenue")} 
-                  value={formatCurrency(summary?.monthlyRevenue ?? 0)} 
-                  icon={TrendingUp} 
-                  sub={`${t("dash.stats.expenses")}: ${formatCurrency(summary?.monthlyExpenses ?? 0)}`} 
-                />
+                {canViewFinances && (
+                  <StatCard
+                    label={t("dash.stats.revenue")}
+                    value={formatCurrency(summary?.monthlyRevenue ?? 0)}
+                    icon={TrendingUp}
+                    sub={`${t("dash.stats.expenses")}: ${formatCurrency(summary?.monthlyExpenses ?? 0)}`}
+                  />
+                )}
                 <StatCard 
                   label={t("dash.stats.completed")} 
                   value={summary?.completedAppointments ?? 0} 

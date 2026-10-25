@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { randomUUID } from "crypto";
 import { eq, desc, inArray, or } from "drizzle-orm";
-import { requireAuth, requireRole } from "../middlewares/auth";
+import { createAuthToken, requireAuth, requireRole } from "../middlewares/auth";
 import {
   db,
   clinicsTable,
@@ -352,14 +352,14 @@ router.post("/clinics/:clinicId/impersonate", async (req, res) => {
     .from(usersTable)
     .where(eq(usersTable.id, clinic.ownerId))
     .limit(1))[0];
-  if (!owner || owner.clinicId !== clinic.id || owner.role !== "admin") {
+  if (!owner || owner.clinicId !== clinic.id || !["admin", "doctor"].includes(owner.role)) {
     return res.status(409).json({ error: "Clinic owner account is unavailable" });
   }
-  if (owner.isBlocked || clinic.status === "blocked" || clinic.status === "deactivated") {
+  if (owner.isBlocked || clinic.status !== "active") {
     return res.status(409).json({ error: "The clinic owner account is blocked or deactivated" });
   }
 
-  const token = Buffer.from(`${owner.id}:${Date.now()}`).toString("base64");
+  const token = createAuthToken(owner.id);
   await db.insert(auditLogsTable).values({
     id: randomUUID(),
     adminId: req.authUser!.id,
@@ -541,15 +541,15 @@ router.post("/clinics/bulk-action", async (req, res) => {
 
   if (!clinics.length) return res.status(404).json({ error: "No matching clinics found" });
 
-  const status = action === "activate" ? "active" : "deactivated";
+  const status = action === "activate" ? "active" : action === "block" ? "blocked" : "deactivated";
   await db.update(clinicsTable).set({ status }).where(inArray(clinicsTable.id, clinics.map((clinic) => clinic.id)));
 
   await db.insert(auditLogsTable).values({
     id: randomUUID(),
     adminId: req.authUser!.id,
     adminEmail: req.authUser!.email,
-    action: action === "activate" ? "BULK_ACTIVATE_CLINICS" : "BULK_DEACTIVATE_CLINICS",
-    details: `${action === "activate" ? "Activated" : "Deactivated"} ${clinics.length} clinics: ${clinics.map((clinic) => clinic.name).join(", ")}`,
+    action: action === "activate" ? "BULK_ACTIVATE_CLINICS" : action === "block" ? "BULK_BLOCK_CLINICS" : "BULK_DEACTIVATE_CLINICS",
+    details: `${action === "activate" ? "Activated" : action === "block" ? "Blocked" : "Deactivated"} ${clinics.length} clinics: ${clinics.map((clinic) => clinic.name).join(", ")}`,
   });
 
   return res.json({
@@ -644,8 +644,12 @@ router.post("/subscriptions/:clinicId/confirm", async (req, res) => {
     : (await db.select().from(subscriptionsTable).where(eq(subscriptionsTable.clinicId, clinicId)).orderBy(desc(subscriptionsTable.createdAt)).limit(1))[0];
 
   if (!sub) return res.status(404).json({ error: "Subscription not found" });
+  if (sub.clinicId !== clinicId) return res.status(404).json({ error: "Subscription not found" });
 
   const months = customMonths || parseInt(sub.durationMonths) || 1;
+  if (!Number.isInteger(months) || months < 1 || months > 120) {
+    return res.status(400).json({ error: "Duration must be between 1 and 120 months" });
+  }
   const startDate = new Date();
   const endDate = new Date();
   endDate.setMonth(endDate.getMonth() + months);

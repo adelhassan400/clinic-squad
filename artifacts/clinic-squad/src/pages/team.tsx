@@ -39,14 +39,13 @@ import {
   Crown,
   Loader2,
   AlertTriangle,
-  Stethoscope,
   ClipboardList,
 } from "lucide-react";
 
 const inviteSchema = z.object({
   email: z.string().email("Enter a valid email"),
   name: z.string().min(1, "Name is required"),
-  role: z.enum(["doctor", "assistant"]),
+  role: z.enum(["assistant", "secretary", "nurse"]),
 });
 type InviteForm = z.infer<typeof inviteSchema>;
 
@@ -277,7 +276,7 @@ export default function TeamPage() {
               <Label>{t("team.invite.role")}</Label>
               <Select
                 value={watch("role")}
-                onValueChange={(v) => setValue("role", v as "doctor" | "assistant")}
+                onValueChange={(v) => setValue("role", v as InviteForm["role"])}
                 disabled={limitReached}
               >
                 <SelectTrigger className="mt-1.5" data-testid="select-invite-role">
@@ -290,12 +289,8 @@ export default function TeamPage() {
                       {t("team.role.assistant")}
                     </div>
                   </SelectItem>
-                  <SelectItem value="doctor">
-                    <div className="flex items-center gap-2">
-                      <Stethoscope className="w-4 h-4" />
-                      {t("team.role.doctor")}
-                    </div>
-                  </SelectItem>
+                  <SelectItem value="secretary">{t("team.role.secretary")}</SelectItem>
+                  <SelectItem value="nurse">{t("team.role.nurse")}</SelectItem>
                 </SelectContent>
               </Select>
             </div>

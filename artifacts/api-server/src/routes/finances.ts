@@ -3,7 +3,7 @@ import { eq } from "drizzle-orm";
 import { db, financesTable } from "@workspace/db";
 import { CreateFinanceRecordBody } from "@workspace/api-zod";
 import { randomUUID } from "crypto";
-import { requireClinicAccess } from "../middlewares/auth";
+import { requireClinicAccess, requireRole } from "../middlewares/auth";
 
 const router = Router({ mergeParams: true });
 
@@ -12,7 +12,7 @@ function getParam(params: unknown, key: string): string {
   return Array.isArray(value) ? value[0] ?? "" : value ?? "";
 }
 
-router.use(requireClinicAccess);
+router.use(requireClinicAccess, requireRole("admin", "doctor", "superadmin"));
 
 router.get("/", async (req, res) => {
   const clinicId = getParam(req.params, "clinicId");

@@ -35,7 +35,13 @@ export class AppointmentService {
         patientVisitType: patientsTable.visitType,
       })
       .from(appointmentsTable)
-      .leftJoin(patientsTable, eq(appointmentsTable.patientId, patientsTable.id))
+      .leftJoin(
+        patientsTable,
+        and(
+          eq(appointmentsTable.patientId, patientsTable.id),
+          eq(appointmentsTable.clinicId, patientsTable.clinicId),
+        ),
+      )
       .where(whereClause)
       .limit(limit)
       .offset(offset)
@@ -88,7 +94,7 @@ export class AppointmentService {
       const [newAppt] = await tx
         .select()
         .from(appointmentsTable)
-        .where(eq(appointmentsTable.id, id))
+        .where(and(eq(appointmentsTable.id, id), eq(appointmentsTable.clinicId, clinicId)))
         .limit(1);
 
       return this.serialize(newAppt, patient.visitType ?? null);
@@ -120,7 +126,7 @@ export class AppointmentService {
       const [appt] = await tx
         .select()
         .from(appointmentsTable)
-        .where(eq(appointmentsTable.id, appointmentId))
+        .where(and(eq(appointmentsTable.id, appointmentId), eq(appointmentsTable.clinicId, clinicId)))
         .limit(1);
 
       if (!appt) throw new Error("Appointment not found");
@@ -128,7 +134,10 @@ export class AppointmentService {
       const [patient] = await tx
         .select({ visitType: patientsTable.visitType })
         .from(patientsTable)
-        .where(eq(patientsTable.id, appt.patientId))
+        .where(and(
+          eq(patientsTable.id, appt.patientId),
+          eq(patientsTable.clinicId, clinicId),
+        ))
         .limit(1);
 
       return this.serialize(appt, patient?.visitType ?? null);

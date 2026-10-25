@@ -49,7 +49,7 @@ export const VerifyEmailResponse = zod.object({
   user: zod.object({
     id: zod.string(),
     email: zod.string(),
-    role: zod.enum(["admin", "doctor", "assistant", "secretary", "nurse", "superadmin"]),
+    role: zod.enum(["admin", "secretary", "nurse", "superadmin"]),
     clinicId: zod.string(),
     name: zod.string(),
     specialty: zod.string().nullish(),
@@ -105,7 +105,7 @@ export const LoginUserResponse = zod.object({
   user: zod.object({
     id: zod.string(),
     email: zod.string(),
-    role: zod.enum(["admin", "doctor", "assistant", "secretary", "nurse", "superadmin"]),
+    role: zod.enum(["admin", "secretary", "nurse", "superadmin"]),
     clinicId: zod.string(),
     name: zod.string(),
     specialty: zod.string().nullish(),
@@ -273,7 +273,7 @@ export const ListAuthEventsResponse = zod.array(ListAuthEventsResponseItem);
 export const GetCurrentUserResponse = zod.object({
   id: zod.string(),
   email: zod.string(),
-  role: zod.enum(["admin", "doctor", "assistant", "secretary", "nurse", "superadmin"]),
+  role: zod.enum(["admin", "secretary", "nurse", "superadmin"]),
   clinicId: zod.string(),
   name: zod.string(),
   specialty: zod.string().nullish(),
@@ -293,7 +293,7 @@ export const UpdateProfileBody = zod.object({
 export const UpdateProfileResponse = zod.object({
   id: zod.string(),
   email: zod.string(),
-  role: zod.enum(["admin", "doctor", "assistant", "secretary", "nurse", "superadmin"]),
+  role: zod.enum(["admin", "secretary", "nurse", "superadmin"]),
   clinicId: zod.string(),
   name: zod.string(),
   specialty: zod.string().nullish(),
@@ -393,17 +393,29 @@ export const CreateSubscriptionParams = zod.object({
   clinicId: zod.coerce.string(),
 });
 
+export const createSubscriptionBodyBillingPeriodDefault = `monthly`;
+
 export const CreateSubscriptionBody = zod.object({
   planType: zod.enum(["basic", "premium"]),
-  billingPeriod: zod.enum(["monthly", "annual"]).optional(),
-  durationMonths: zod.string().optional(),
-  amount: zod.string().optional(),
+  billingPeriod: zod
+    .enum(["monthly", "annual"])
+    .default(createSubscriptionBodyBillingPeriodDefault),
+  durationMonths: zod
+    .string()
+    .optional()
+    .describe("Requested access duration in months"),
+  amount: zod
+    .string()
+    .optional()
+    .describe("Amount paid in the configured currency"),
   paymentProof: zod
     .string()
-    .min(1)
     .describe("Base64-encoded JPG, PNG, or WebP receipt image data URL"),
-  transactionReference: zod.string().optional(),
-  notes: zod.string().optional(),
+  transactionReference: zod
+    .string()
+    .optional()
+    .describe("Bank or wallet transaction reference"),
+  notes: zod.string().optional().describe("Optional payment notes"),
 });
 
 /**
@@ -438,15 +450,7 @@ export const ListPatientsResponse = zod.object({
       visitType: zod
         .enum(["New Consultation", "Follow-up", "Re-exam", "Emergency"])
         .nullish(),
-      status: zod.enum(["registered", "paid", "waiting", "in-progress", "completed"]),
-      assignedDoctorId: zod.string().nullish(),
-      paymentStatus: zod.enum(["paid", "free", "unpaid"]).nullish(),
-      paymentAmount: zod.coerce.number().nullish(),
-      paymentMethod: zod.enum(["cash", "vodafone_cash", "instapay", "card", "other"]).nullish(),
-      paymentReference: zod.string().max(120).nullish(),
-      paymentCollectedBy: zod.string().nullish(),
-      paymentShiftDate: zod.string().nullish(),
-      paymentReceivedAt: zod.coerce.date().nullish(),
+      status: zod.enum(["registered", "waiting", "in-progress", "completed"]),
       diagnosis: zod.string().nullish(),
       clinicalNotes: zod.string().nullish(),
       chronicConditions: zod.string().nullish(),
@@ -477,9 +481,6 @@ export const CreatePatientBody = zod
     bloodType: zod.string().nullish(),
     allergies: zod.string().nullish(),
     notes: zod.string().nullish(),
-    visitType: zod
-      .enum(["New Consultation", "Follow-up", "Re-exam", "Emergency"])
-      .nullish(),
   })
   .describe(
     "Creates a master patient record. The patient is NOT placed on the waiting list — placing on the waiting list requires a separate check-in via PATCH (status set to waiting, plus a visitType).",
@@ -507,15 +508,7 @@ export const GetPatientResponse = zod.object({
   visitType: zod
     .enum(["New Consultation", "Follow-up", "Re-exam", "Emergency"])
     .nullish(),
-  status: zod.enum(["registered", "paid", "waiting", "in-progress", "completed"]),
-  assignedDoctorId: zod.string().nullish(),
-  paymentStatus: zod.enum(["paid", "free", "unpaid"]).nullish(),
-  paymentAmount: zod.coerce.number().nullish(),
-  paymentMethod: zod.enum(["cash", "vodafone_cash", "instapay", "card", "other"]).nullish(),
-  paymentReference: zod.string().max(120).nullish(),
-  paymentCollectedBy: zod.string().nullish(),
-  paymentShiftDate: zod.string().nullish(),
-  paymentReceivedAt: zod.coerce.date().nullish(),
+  status: zod.enum(["registered", "waiting", "in-progress", "completed"]),
   diagnosis: zod.string().nullish(),
   clinicalNotes: zod.string().nullish(),
   chronicConditions: zod.string().nullish(),
@@ -561,15 +554,7 @@ export const UpdatePatientResponse = zod.object({
   visitType: zod
     .enum(["New Consultation", "Follow-up", "Re-exam", "Emergency"])
     .nullish(),
-  status: zod.enum(["registered", "paid", "waiting", "in-progress", "completed"]),
-  assignedDoctorId: zod.string().nullish(),
-  paymentStatus: zod.enum(["paid", "free", "unpaid"]).nullish(),
-  paymentAmount: zod.coerce.number().nullish(),
-  paymentMethod: zod.enum(["cash", "vodafone_cash", "instapay", "card", "other"]).nullish(),
-  paymentReference: zod.string().max(120).nullish(),
-  paymentCollectedBy: zod.string().nullish(),
-  paymentShiftDate: zod.string().nullish(),
-  paymentReceivedAt: zod.coerce.date().nullish(),
+  status: zod.enum(["registered", "waiting", "in-progress", "completed"]),
   diagnosis: zod.string().nullish(),
   clinicalNotes: zod.string().nullish(),
   chronicConditions: zod.string().nullish(),
@@ -603,9 +588,7 @@ export const PatchPatientBody = zod
     visitType: zod
       .enum(["New Consultation", "Follow-up", "Re-exam", "Emergency"])
       .optional(),
-    status: zod.enum(["registered", "paid", "waiting", "in-progress", "completed"]).optional(),
-    paymentMethod: zod.enum(["cash", "vodafone_cash", "instapay", "card", "other"]).optional(),
-    paymentReference: zod.string().max(120).nullish(),
+    status: zod.enum(["waiting", "in-progress", "completed"]).optional(),
     diagnosis: zod.string().nullish(),
     clinicalNotes: zod.string().nullish(),
     chronicConditions: zod.string().nullish(),
@@ -626,15 +609,7 @@ export const PatchPatientResponse = zod.object({
   visitType: zod
     .enum(["New Consultation", "Follow-up", "Re-exam", "Emergency"])
     .nullish(),
-  status: zod.enum(["registered", "paid", "waiting", "in-progress", "completed"]),
-  assignedDoctorId: zod.string().nullish(),
-  paymentStatus: zod.enum(["paid", "free", "unpaid"]).nullish(),
-  paymentAmount: zod.coerce.number().nullish(),
-  paymentMethod: zod.enum(["cash", "vodafone_cash", "instapay", "card", "other"]).nullish(),
-  paymentReference: zod.string().max(120).nullish(),
-  paymentCollectedBy: zod.string().nullish(),
-  paymentShiftDate: zod.string().nullish(),
-  paymentReceivedAt: zod.coerce.date().nullish(),
+  status: zod.enum(["registered", "waiting", "in-progress", "completed"]),
   diagnosis: zod.string().nullish(),
   clinicalNotes: zod.string().nullish(),
   chronicConditions: zod.string().nullish(),
@@ -996,8 +971,8 @@ export const GetDashboardSummaryResponse = zod.object({
   newPatientsThisMonth: zod.number(),
   todayAppointments: zod.number(),
   completedAppointments: zod.number(),
-  monthlyRevenue: zod.number(),
-  monthlyExpenses: zod.number(),
+  monthlyRevenue: zod.number().nullable(),
+  monthlyExpenses: zod.number().nullable(),
   upcomingAppointments: zod.number(),
   subscriptionStatus: zod.string(),
   trialDaysLeft: zod.number().nullish(),
@@ -1205,7 +1180,7 @@ export const ListInvitationsResponseItem = zod.object({
   clinicId: zod.string(),
   email: zod.string(),
   name: zod.string(),
-  role: zod.enum(["doctor", "assistant", "secretary", "nurse"]),
+  role: zod.enum(["assistant", "secretary", "nurse"]),
   token: zod.string(),
   status: zod.enum(["pending", "accepted", "revoked", "expired"]),
   invitedBy: zod.string(),
@@ -1224,7 +1199,7 @@ export const CreateInvitationParams = zod.object({
 export const CreateInvitationBody = zod.object({
   email: zod.string().email(),
   name: zod.string().min(1),
-  role: zod.enum(["doctor", "assistant", "secretary", "nurse"]),
+  role: zod.enum(["assistant", "secretary", "nurse"]),
 });
 
 /**
@@ -1245,7 +1220,7 @@ export const GetInvitationParams = zod.object({
 export const GetInvitationResponse = zod.object({
   email: zod.string(),
   name: zod.string(),
-  role: zod.enum(["doctor", "assistant", "secretary", "nurse"]),
+  role: zod.enum(["assistant", "secretary", "nurse"]),
   clinicName: zod.string(),
   expiresAt: zod.coerce.date(),
 });
@@ -1268,7 +1243,7 @@ export const AcceptInvitationResponse = zod.object({
   user: zod.object({
     id: zod.string(),
     email: zod.string(),
-    role: zod.enum(["admin", "doctor", "assistant", "secretary", "nurse", "superadmin"]),
+    role: zod.enum(["admin", "secretary", "nurse", "superadmin"]),
     clinicId: zod.string(),
     name: zod.string(),
     specialty: zod.string().nullish(),

@@ -49,19 +49,54 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    try {
-      const stored = localStorage.getItem("clinicsquad_auth");
-      if (stored) {
-        const parsed = JSON.parse(stored) as AuthState;
-        if (parsed.user && parsed.token) {
-          setState(parsed);
-          setAuthTokenGetter(() => parsed.token);
+    let active = true;
+    const restoreSession = async () => {
+      let parsed: AuthState | null = null;
+      try {
+        const stored = localStorage.getItem("clinicsquad_auth");
+        if (stored) {
+          const candidate = JSON.parse(stored) as AuthState;
+          if (candidate.user && candidate.token) parsed = candidate;
         }
+      } catch {
+        localStorage.removeItem("clinicsquad_auth");
       }
-    } catch {
-      localStorage.removeItem("clinicsquad_auth");
-    }
-    setIsLoading(false);
+
+      if (!parsed) {
+        if (active) setIsLoading(false);
+        return;
+      }
+
+      setState(parsed);
+      setAuthTokenGetter(() => parsed!.token);
+      try {
+        const response = await fetch("/api/auth/me", {
+          headers: { Authorization: `Bearer ${parsed.token}` },
+        });
+        if (response.status === 401 || response.status === 403) {
+          localStorage.removeItem("clinicsquad_auth");
+          if (active) {
+            setState({ user: null, clinic: null, token: null });
+            setAuthTokenGetter(() => null);
+          }
+        } else if (response.ok) {
+          const trustedUser = await response.json() as AuthUser;
+          const refreshed = { ...parsed, user: trustedUser };
+          localStorage.setItem("clinicsquad_auth", JSON.stringify(refreshed));
+          if (active) setState(refreshed);
+        }
+      } catch {
+        // Keep the cached session during temporary network outages; API requests
+        // still enforce the signed token and current account state on the server.
+      } finally {
+        if (active) setIsLoading(false);
+      }
+    };
+
+    void restoreSession();
+    return () => {
+      active = false;
+    };
   }, []);
 
   useEffect(() => {

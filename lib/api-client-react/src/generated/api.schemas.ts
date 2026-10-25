@@ -13,7 +13,6 @@ export type InvitationRole =
   (typeof InvitationRole)[keyof typeof InvitationRole];
 
 export const InvitationRole = {
-  doctor: "doctor",
   assistant: "assistant",
   secretary: "secretary",
   nurse: "nurse",
@@ -46,7 +45,6 @@ export type InvitationPublicRole =
   (typeof InvitationPublicRole)[keyof typeof InvitationPublicRole];
 
 export const InvitationPublicRole = {
-  doctor: "doctor",
   assistant: "assistant",
   secretary: "secretary",
   nurse: "nurse",
@@ -64,7 +62,6 @@ export type CreateInvitationBodyRole =
   (typeof CreateInvitationBodyRole)[keyof typeof CreateInvitationBodyRole];
 
 export const CreateInvitationBodyRole = {
-  doctor: "doctor",
   assistant: "assistant",
   secretary: "secretary",
   nurse: "nurse",
@@ -140,8 +137,6 @@ export type UserRole = (typeof UserRole)[keyof typeof UserRole];
 
 export const UserRole = {
   admin: "admin",
-  doctor: "doctor",
-  assistant: "assistant",
   secretary: "secretary",
   nurse: "nurse",
   superadmin: "superadmin",
@@ -166,7 +161,6 @@ export const ClinicStatus = {
   pending_approval: "pending_approval",
   active: "active",
   blocked: "blocked",
-  deactivated: "deactivated",
   deleted: "deleted",
 } as const;
 
@@ -405,9 +399,17 @@ export const CreateSubscriptionBodyPlanType = {
   premium: "premium",
 } as const;
 
+export type CreateSubscriptionBodyBillingPeriod =
+  (typeof CreateSubscriptionBodyBillingPeriod)[keyof typeof CreateSubscriptionBodyBillingPeriod];
+
+export const CreateSubscriptionBodyBillingPeriod = {
+  monthly: "monthly",
+  annual: "annual",
+} as const;
+
 export interface CreateSubscriptionBody {
   planType: CreateSubscriptionBodyPlanType;
-  billingPeriod?: "monthly" | "annual";
+  billingPeriod?: CreateSubscriptionBodyBillingPeriod;
   /** Requested access duration in months */
   durationMonths?: string;
   /** Amount paid in the configured currency */
@@ -435,7 +437,6 @@ export type PatientStatus = (typeof PatientStatus)[keyof typeof PatientStatus];
 
 export const PatientStatus = {
   registered: "registered",
-  paid: "paid",
   waiting: "waiting",
   "in-progress": "in-progress",
   completed: "completed",
@@ -454,14 +455,6 @@ export interface Patient {
   notes?: string | null;
   visitType?: PatientVisitType;
   status: PatientStatus;
-  assignedDoctorId?: string | null;
-  paymentStatus?: "paid" | "free" | "unpaid" | null;
-  paymentAmount?: number | null;
-  paymentMethod?: "cash" | "vodafone_cash" | "instapay" | "card" | "other" | null;
-  paymentReference?: string | null;
-  paymentCollectedBy?: string | null;
-  paymentShiftDate?: string | null;
-  paymentReceivedAt?: string | null;
   diagnosis?: string | null;
   clinicalNotes?: string | null;
   chronicConditions?: string | null;
@@ -483,7 +476,6 @@ export interface CreatePatientBody {
   bloodType?: string | null;
   allergies?: string | null;
   notes?: string | null;
-  visitType?: PatientVisitType;
 }
 
 export type UpdatePatientBodyVisitType =
@@ -500,8 +492,6 @@ export type UpdatePatientBodyStatus =
   (typeof UpdatePatientBodyStatus)[keyof typeof UpdatePatientBodyStatus];
 
 export const UpdatePatientBodyStatus = {
-  registered: "registered",
-  paid: "paid",
   waiting: "waiting",
   "in-progress": "in-progress",
   completed: "completed",
@@ -524,8 +514,6 @@ export interface UpdatePatientBody {
   notes?: string | null;
   visitType?: UpdatePatientBodyVisitType;
   status?: UpdatePatientBodyStatus;
-  paymentMethod?: "cash" | "vodafone_cash" | "instapay" | "card" | "other";
-  paymentReference?: string | null;
   diagnosis?: string | null;
   clinicalNotes?: string | null;
   chronicConditions?: string | null;
@@ -688,8 +676,8 @@ export interface DashboardSummary {
   newPatientsThisMonth: number;
   todayAppointments: number;
   completedAppointments: number;
-  monthlyRevenue: number;
-  monthlyExpenses: number;
+  monthlyRevenue: number | null;
+  monthlyExpenses: number | null;
   upcomingAppointments: number;
   subscriptionStatus: string;
   trialDaysLeft?: number | null;

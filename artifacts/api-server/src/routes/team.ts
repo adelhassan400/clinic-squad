@@ -3,7 +3,7 @@ import { eq, and } from "drizzle-orm";
 import { db, usersTable, clinicsTable, invitationsTable } from "@workspace/db";
 import { CreateInvitationBody } from "@workspace/api-zod";
 import { randomUUID, randomBytes } from "crypto";
-import { requireAuth, requireRole, getMemberLimit } from "../middlewares/auth";
+import { requireClinicAccess, requireRole, getMemberLimit } from "../middlewares/auth";
 
 const router = Router({ mergeParams: true });
 
@@ -22,23 +22,9 @@ function isPending(status: string, expiresAt: Date): boolean {
   return status === "pending" && expiresAt.getTime() > Date.now();
 }
 
-router.use(requireAuth);
+router.use(requireClinicAccess);
 
-// Ensure the authed user belongs to the clinic in the URL.
-router.use((req, res, next): void => {
-  const clinicId = getParam(req.params, "clinicId");
-  if (!clinicId) {
-    res.status(400).json({ error: "Missing clinicId" });
-    return;
-  }
-  if (req.authUser!.clinicId !== clinicId && req.authUser!.role !== "superadmin") {
-    res.status(403).json({ error: "Forbidden" });
-    return;
-  }
-  next();
-});
-
-router.get("/members", async (req, res) => {
+router.get("/members", requireRole("admin", "doctor", "superadmin"), async (req, res) => {
   const clinicId = getParam(req.params, "clinicId");
 
   const clinic = (
@@ -88,6 +74,18 @@ router.delete("/members/:userId", requireRole("admin", "doctor", "superadmin"), 
   if (clinic.ownerId === userId) {
     return res.status(403).json({ error: "Cannot remove the clinic owner" });
   }
+  if (req.authUser!.id === userId) {
+    return res.status(403).json({ error: "Cannot remove your own account" });
+  }
+
+  const target = (
+    await db.select({ role: usersTable.role }).from(usersTable)
+      .where(and(eq(usersTable.id, userId), eq(usersTable.clinicId, clinicId))).limit(1)
+  )[0];
+  if (!target) return res.status(404).json({ error: "Team member not found" });
+  if (["admin", "doctor", "superadmin"].includes(target.role)) {
+    return res.status(403).json({ error: "Administrator accounts cannot be removed from this page" });
+  }
 
   await db
     .delete(usersTable)
@@ -95,7 +93,7 @@ router.delete("/members/:userId", requireRole("admin", "doctor", "superadmin"), 
   return res.status(204).send();
 });
 
-router.get("/invitations", async (req, res) => {
+router.get("/invitations", requireRole("admin", "doctor", "superadmin"), async (req, res) => {
   const clinicId = getParam(req.params, "clinicId");
   const all = await db
     .select()

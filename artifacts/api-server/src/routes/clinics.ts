@@ -1,26 +1,28 @@
 import { Router } from "express";
-import { eq } from "drizzle-orm";
-import { db, clinicsTable, usersTable, subscriptionsTable, patientsTable, appointmentsTable, financesTable } from "@workspace/db";
-import { UpdateClinicBody } from "@workspace/api-zod";
+import { and, eq, gt, isNull, or } from "drizzle-orm";
+import {
+  db,
+  clinicsTable,
+  usersTable,
+  subscriptionsTable,
+  patientsTable,
+  appointmentsTable,
+  financesTable,
+  systemSettingsTable,
+  promoCodesTable,
+} from "@workspace/db";
+import { CreateSubscriptionBody, UpdateClinicBody } from "@workspace/api-zod";
 import { randomUUID } from "crypto";
-import { requireAuth } from "../middlewares/auth";
-import type { Request, Response, NextFunction } from "express";
+import { requireClinicAccess, requireRole } from "../middlewares/auth";
 
 const router = Router();
 
-router.use(requireAuth);
+router.use("/:clinicId", requireClinicAccess);
 
-// After requireAuth resolves req.authUser, ensure the user can only access
-// their own clinic (superadmins may access any clinic).
-router.param("clinicId", (req: Request, res: Response, next: NextFunction) => {
-  const { clinicId } = req.params;
-  const user = req.authUser!;
-  if (user.clinicId !== clinicId && user.role !== "superadmin") {
-    res.status(403).json({ error: "Forbidden" });
-    return;
-  }
-  next();
-});
+function getParam(params: unknown, key: string): string {
+  const value = (params as Record<string, string | string[] | undefined>)[key];
+  return Array.isArray(value) ? value[0] ?? "" : value ?? "";
+}
 
 function serializeClinic(clinic: typeof clinicsTable.$inferSelect) {
   return {
@@ -39,7 +41,7 @@ function serializeClinic(clinic: typeof clinicsTable.$inferSelect) {
 }
 
 router.get("/:clinicId", async (req, res) => {
-  const { clinicId } = req.params;
+  const clinicId = getParam(req.params, "clinicId");
   const clinics = await db.select().from(clinicsTable).where(eq(clinicsTable.id, clinicId)).limit(1);
   const clinic = clinics[0];
   if (!clinic) return res.status(404).json({ error: "Clinic not found" });
@@ -53,8 +55,8 @@ router.get("/:clinicId", async (req, res) => {
   return res.json(serializeClinic(clinic));
 });
 
-router.patch("/:clinicId", async (req, res) => {
-  const { clinicId } = req.params;
+router.patch("/:clinicId", requireRole("admin", "doctor", "superadmin"), async (req, res) => {
+  const clinicId = getParam(req.params, "clinicId");
   const parsed = UpdateClinicBody.safeParse(req.body);
   if (!parsed.success) {
     return res.status(400).json({ error: "Invalid input", details: parsed.error.issues });
@@ -83,8 +85,8 @@ router.patch("/:clinicId", async (req, res) => {
   return res.json(serializeClinic(updated));
 });
 
-router.get("/:clinicId/subscription", async (req, res) => {
-  const { clinicId } = req.params;
+router.get("/:clinicId/subscription", requireRole("admin", "doctor", "superadmin"), async (req, res) => {
+  const clinicId = getParam(req.params, "clinicId");
   const subs = await db.select().from(subscriptionsTable).where(eq(subscriptionsTable.clinicId, clinicId)).limit(1);
   const sub = subs[0];
   if (!sub) return res.status(404).json({ error: "No subscription found" });
@@ -101,22 +103,22 @@ router.get("/:clinicId/subscription", async (req, res) => {
   });
 });
 
-router.post("/:clinicId/subscription", async (req, res) => {
-  const { clinicId } = req.params;
-  const body = req.body as any;
-  const planType = body.planType;
-  const billingPeriod = body.billingPeriod === "annual" ? "annual" : "monthly";
-  // Annual billing is always a 12-month commitment, regardless of client input.
-  const durationMonths = billingPeriod === "annual" ? 12 : parseInt(body.durationMonths) || 1;
-  const amount = body.amount !== undefined ? parseFloat(body.amount) : (planType === "basic" ? 200 : 400) * durationMonths;
-  const paymentProof = typeof body.paymentProof === "string" ? body.paymentProof : null;
-  const transactionReference = typeof body.transactionReference === "string" ? body.transactionReference.trim() : null;
+router.post("/:clinicId/subscription", requireRole("admin", "doctor", "superadmin"), async (req, res) => {
+  const clinicId = getParam(req.params, "clinicId");
+  const parsed = CreateSubscriptionBody.safeParse(req.body);
+  if (!parsed.success) return res.status(400).json({ error: "Invalid subscription request" });
 
-  if (!planType || !["basic", "premium"].includes(planType)) {
-    return res.status(400).json({ error: "A valid subscription plan is required" });
-  }
-  if (!Number.isFinite(durationMonths) || durationMonths < 1 || durationMonths > 120) {
-    return res.status(400).json({ error: "Duration must be between 1 and 120 months" });
+  const { planType, billingPeriod = "monthly" } = parsed.data;
+  const requestedDuration = parsed.data.durationMonths
+    ? Number.parseInt(parsed.data.durationMonths, 10)
+    : 1;
+  // Annual billing is always a fixed one-year commitment.
+  const durationMonths = billingPeriod === "annual" ? 12 : requestedDuration;
+  const paymentProof = parsed.data.paymentProof;
+  const transactionReference = parsed.data.transactionReference?.trim() || null;
+
+  if (!Number.isInteger(durationMonths) || ![1, 3, 6, 12, 24].includes(durationMonths)) {
+    return res.status(400).json({ error: "Duration must be 1, 3, 6, 12, or 24 months" });
   }
   if (paymentProof) {
     const imageDataUrl = /^data:image\/(jpeg|png|webp);base64,[A-Za-z0-9+/=]+$/;
@@ -128,6 +130,40 @@ router.post("/:clinicId/subscription", async (req, res) => {
     }
   } else {
     return res.status(400).json({ error: "Payment receipt image is required" });
+  }
+
+  const settings = (
+    await db.select({
+      basicMonthlyPrice: systemSettingsTable.basicMonthlyPrice,
+      premiumMonthlyPrice: systemSettingsTable.premiumMonthlyPrice,
+    }).from(systemSettingsTable).where(eq(systemSettingsTable.id, "global")).limit(1)
+  )[0];
+  const monthlyPrice = Number.parseFloat(
+    planType === "basic"
+      ? settings?.basicMonthlyPrice ?? "200"
+      : settings?.premiumMonthlyPrice ?? "400",
+  );
+  if (!Number.isFinite(monthlyPrice) || monthlyPrice <= 0) {
+    return res.status(503).json({ error: "Subscription pricing is unavailable" });
+  }
+
+  // Never accept a client-computed price. Annual billing costs 10 monthly
+  // payments, and discounts are checked against an active server-side promo.
+  let amount = billingPeriod === "annual"
+    ? monthlyPrice * 10
+    : monthlyPrice * durationMonths;
+  const promoCode = parsed.data.promoCode?.trim().toUpperCase();
+  if (promoCode) {
+    const now = new Date();
+    const promo = (
+      await db.select().from(promoCodesTable).where(and(
+        eq(promoCodesTable.code, promoCode),
+        eq(promoCodesTable.active, true),
+        or(isNull(promoCodesTable.expiresAt), gt(promoCodesTable.expiresAt, now)),
+      )).limit(1)
+    )[0];
+    if (!promo) return res.status(400).json({ error: "Promo code is invalid or expired" });
+    amount = Math.round(amount * (1 - promo.discountPercent / 100));
   }
 
   const startDate = new Date();
@@ -168,7 +204,7 @@ router.post("/:clinicId/subscription", async (req, res) => {
 });
 
 router.get("/:clinicId/dashboard", async (req, res) => {
-  const { clinicId } = req.params;
+  const clinicId = getParam(req.params, "clinicId");
 
   const clinic = (await db.select().from(clinicsTable).where(eq(clinicsTable.id, clinicId)).limit(1))[0];
   if (!clinic) return res.status(404).json({ error: "Clinic not found" });
@@ -204,8 +240,8 @@ router.get("/:clinicId/dashboard", async (req, res) => {
     newPatientsThisMonth,
     todayAppointments,
     completedAppointments,
-    monthlyRevenue: monthlyIncome,
-    monthlyExpenses,
+    monthlyRevenue: ["admin", "doctor", "superadmin"].includes(req.authUser!.role) ? monthlyIncome : null,
+    monthlyExpenses: ["admin", "doctor", "superadmin"].includes(req.authUser!.role) ? monthlyExpenses : null,
     upcomingAppointments,
     subscriptionStatus: clinic.subscriptionStatus,
     trialDaysLeft,
@@ -213,7 +249,8 @@ router.get("/:clinicId/dashboard", async (req, res) => {
 });
 
 router.get("/:clinicId/appointments/today", async (req, res) => {
-  const { clinicId } = req.params;
+  const clinicId = getParam(req.params, "clinicId");
+  const canViewFees = ["admin", "doctor", "superadmin"].includes(req.authUser!.role);
   const today = new Date().toISOString().split("T")[0];
   const [appointments, patients] = await Promise.all([
     db.select().from(appointmentsTable).where(eq(appointmentsTable.clinicId, clinicId)),
@@ -228,7 +265,7 @@ router.get("/:clinicId/appointments/today", async (req, res) => {
     id: a.id, clinicId: a.clinicId, patientId: a.patientId, patientName: a.patientName,
     patientVisitType: visitTypeById.get(a.patientId) ?? null,
     date: a.date, time: a.time, status: a.status, type: a.type, notes: a.notes,
-    fee: a.fee ? parseFloat(a.fee) : null, createdAt: a.createdAt.toISOString(),
+    fee: canViewFees && a.fee ? parseFloat(a.fee) : null, createdAt: a.createdAt.toISOString(),
   })));
 });
 
@@ -236,7 +273,7 @@ router.get("/:clinicId/appointments/today", async (req, res) => {
 // Includes patient phone (joined client-side here for simplicity) so the UI
 // can deep-link to wa.me without a second round-trip.
 router.get("/:clinicId/appointments/tomorrow", async (req, res) => {
-  const { clinicId } = req.params;
+  const clinicId = getParam(req.params, "clinicId");
   const tomorrowDate = new Date();
   tomorrowDate.setDate(tomorrowDate.getDate() + 1);
   const tomorrow = tomorrowDate.toISOString().split("T")[0];
@@ -259,8 +296,8 @@ router.get("/:clinicId/appointments/tomorrow", async (req, res) => {
   return res.json(list);
 });
 
-router.get("/:clinicId/finances/summary", async (req, res) => {
-  const { clinicId } = req.params;
+router.get("/:clinicId/finances/summary", requireRole("admin", "doctor", "superadmin"), async (req, res) => {
+  const clinicId = getParam(req.params, "clinicId");
   const year = parseInt(req.query.year as string) || new Date().getFullYear();
 
   const finances = await db.select().from(financesTable).where(eq(financesTable.clinicId, clinicId));

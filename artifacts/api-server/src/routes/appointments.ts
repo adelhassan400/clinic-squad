@@ -17,6 +17,9 @@ router.get("/", async (req: any, res) => {
     };
 
     const result = await AppointmentService.listAppointments(clinicId, filters);
+    if (!["admin", "doctor", "superadmin"].includes(req.authUser?.role)) {
+      result.data = result.data.map((appointment: any) => ({ ...appointment, fee: null }));
+    }
     return res.json(result);
   } catch (error: any) {
     return res.status(500).json({ error: error.message });

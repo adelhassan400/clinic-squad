@@ -1,5 +1,5 @@
 import { eq, and, or, ilike, count, sql, SQL, inArray } from "drizzle-orm";
-import { db, patientsTable, appointmentsTable, cashTransactionsTable, Patient } from "@workspace/db";
+import { db, patientsTable, appointmentsTable, cashTransactionsTable, usersTable, Patient } from "@workspace/db";
 import { randomUUID } from "crypto";
 
 function formatEgyptDate(date = new Date()) {
@@ -132,6 +132,20 @@ export class PatientService {
     const receivedAt = cashCollected ? new Date() : null;
 
     return db.transaction(async (tx: any) => {
+      const doctorId = typeof data.doctorId === "string" && data.doctorId.trim()
+        ? data.doctorId.trim()
+        : null;
+      if (doctorId) {
+        const [doctor] = await tx
+          .select({ role: usersTable.role, isBlocked: usersTable.isBlocked })
+          .from(usersTable)
+          .where(and(eq(usersTable.id, doctorId), eq(usersTable.clinicId, clinicId)))
+          .limit(1);
+        if (!doctor || doctor.isBlocked || !["admin", "doctor"].includes(doctor.role)) {
+          throw new Error("Doctor not found");
+        }
+      }
+
       let patientId = data.patientId as string | undefined;
       let patient: any;
 
@@ -164,7 +178,7 @@ export class PatientService {
 
       const patientUpdates = {
         visitType,
-        assignedDoctorId: data.doctorId ?? null,
+        assignedDoctorId: doctorId,
         status: "waiting",
         paymentStatus,
         paymentAmount: amount,
@@ -200,7 +214,7 @@ export class PatientService {
         id: randomUUID(),
         clinicId,
         patientId,
-        doctorId: data.doctorId ?? null,
+        doctorId,
         collectedBy: actor.id,
         visitType,
         amount,

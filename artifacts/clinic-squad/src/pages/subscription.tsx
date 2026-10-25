@@ -95,7 +95,7 @@ export default function SubscriptionPage() {
         planType: plan,
         billingPeriod,
         durationMonths: effectiveDurationMonths.toString(),
-        amount: finalAmount.toString(),
+        promoCode: selectedPromo?.code,
         transactionReference: transactionRef.trim() || undefined,
         paymentProof,
       } as any

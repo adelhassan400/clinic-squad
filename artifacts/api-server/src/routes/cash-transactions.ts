@@ -1,10 +1,10 @@
 import { Router } from "express";
 import { and, eq, sql } from "drizzle-orm";
 import { db, cashTransactionsTable } from "@workspace/db";
-import { requireAuth, requireRole } from "../middlewares/auth";
+import { requireClinicAccess, requireRole } from "../middlewares/auth";
 
 const router = Router({ mergeParams: true });
-router.use(requireAuth);
+router.use(requireClinicAccess, requireRole("admin", "doctor", "superadmin"));
 
 function formatEgyptDate(date = new Date()) {
   const parts = new Intl.DateTimeFormat("en-CA", {
@@ -19,9 +19,6 @@ function formatEgyptDate(date = new Date()) {
 
 router.get("/daily", async (req: any, res) => {
   const clinicId = req.params.clinicId;
-  if (req.authUser?.clinicId !== clinicId && req.authUser?.role !== "superadmin") {
-    return res.status(403).json({ error: "Forbidden" });
-  }
 
   const date = typeof req.query.date === "string" && /^\d{4}-\d{2}-\d{2}$/.test(req.query.date)
     ? req.query.date
@@ -53,9 +50,6 @@ router.get("/daily", async (req: any, res) => {
 router.patch("/:transactionId/status", requireRole("admin", "doctor", "superadmin"), async (req: any, res) => {
   const clinicId = req.params.clinicId;
   const transactionId = req.params.transactionId;
-  if (req.authUser?.clinicId !== clinicId && req.authUser?.role !== "superadmin") {
-    return res.status(403).json({ error: "Forbidden" });
-  }
   const status = req.body?.status;
   if (!["paid", "free", "unpaid"].includes(status)) {
     return res.status(400).json({ error: "Status must be paid, free, or unpaid" });
