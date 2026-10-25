@@ -1,15 +1,15 @@
-import { createHash, randomUUID } from "crypto";
+import { randomUUID } from "node:crypto";
 import { eq } from "drizzle-orm";
 import { db, usersTable, clinicsTable } from "@workspace/db";
+import { hashPassword } from "../../lib/auth-password.mjs";
 
-function hashPassword(password: string): string {
-  return createHash("sha256").update(password + "clinicsquad_salt").digest("hex");
-}
+const ADMIN_EMAIL = "admin@demo.com";
+const SUPERADMIN_EMAIL = "super@clinicsquad.com";
 
-async function ensureAdmin() {
-  const existing = await db.select().from(usersTable).where(eq(usersTable.email, "admin@demo.com")).limit(1);
+async function ensureAdmin(password: string) {
+  const existing = await db.select().from(usersTable).where(eq(usersTable.email, ADMIN_EMAIL)).limit(1);
   if (existing.length > 0) {
-    console.log("admin@demo.com already exists, skipping");
+    console.log(`${ADMIN_EMAIL} already exists, skipping`);
     return;
   }
   const clinicId = randomUUID();
@@ -28,21 +28,21 @@ async function ensureAdmin() {
   });
   await db.insert(usersTable).values({
     id: userId,
-    email: "admin@demo.com",
-    passwordHash: hashPassword("demo1234"),
+    email: ADMIN_EMAIL,
+    passwordHash: await hashPassword(password),
     name: "Demo Admin",
     role: "admin",
     clinicId,
     isBlocked: false,
     emailVerifiedAt: new Date(),
   });
-  console.log("Created admin@demo.com / demo1234");
+  console.log(`Created ${ADMIN_EMAIL}`);
 }
 
-async function ensureSuperAdmin() {
-  const existing = await db.select().from(usersTable).where(eq(usersTable.email, "super@clinicsquad.com")).limit(1);
+async function ensureSuperAdmin(password: string) {
+  const existing = await db.select().from(usersTable).where(eq(usersTable.email, SUPERADMIN_EMAIL)).limit(1);
   if (existing.length > 0) {
-    console.log("super@clinicsquad.com already exists, skipping");
+    console.log(`${SUPERADMIN_EMAIL} already exists, skipping`);
     return;
   }
   const clinicId = randomUUID();
@@ -61,24 +61,37 @@ async function ensureSuperAdmin() {
   });
   await db.insert(usersTable).values({
     id: userId,
-    email: "super@clinicsquad.com",
-    passwordHash: hashPassword("super1234"),
+    email: SUPERADMIN_EMAIL,
+    passwordHash: await hashPassword(password),
     name: "Super Admin",
     role: "superadmin",
     clinicId,
     isBlocked: false,
     emailVerifiedAt: new Date(),
   });
-  console.log("Created super@clinicsquad.com / super1234");
+  console.log(`Created ${SUPERADMIN_EMAIL}`);
 }
 
 async function main() {
-  await ensureAdmin();
-  await ensureSuperAdmin();
-  process.exit(0);
+  if (process.env.NODE_ENV === "production" || process.env.REPLIT_ENVIRONMENT === "production") {
+    console.info("Demo account seeding skipped in production.");
+    return;
+  }
+
+  const adminPassword = process.env.DEMO_ADMIN_PASSWORD?.trim();
+  const superAdminPassword = process.env.DEMO_SUPERADMIN_PASSWORD?.trim();
+  if (!adminPassword || !superAdminPassword) {
+    console.info("Demo account seeding skipped; set both demo password secrets to enable it.");
+    return;
+  }
+
+  await ensureAdmin(adminPassword);
+  await ensureSuperAdmin(superAdminPassword);
 }
 
-main().catch((err) => {
-  console.error(err);
-  process.exit(1);
-});
+main()
+  .then(() => process.exit(0))
+  .catch((err) => {
+    console.error("Demo seeding failed:", err);
+    process.exit(1);
+  });

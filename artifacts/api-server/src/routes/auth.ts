@@ -1,7 +1,7 @@
 import type { Request } from "express";
 import { Router } from "express";
 import { and, desc, eq, gt, isNull } from "drizzle-orm";
-import { db, usersTable, clinicsTable, passwordResetTokensTable, emailVerificationTokensTable, authEventsTable } from "@workspace/db";
+import { db, usersTable, clinicsTable, passwordResetTokensTable, emailVerificationTokensTable, authEventsTable, authSessionsTable } from "@workspace/db";
 import {
   RegisterUserBody,
   LoginUserBody,
@@ -11,14 +11,12 @@ import {
   VerifyEmailBody,
   ResendVerificationBody,
 } from "@workspace/api-zod";
-import { randomUUID, randomBytes } from "crypto";
-import { createHash } from "crypto";
+import { createHash, randomBytes, randomUUID } from "node:crypto";
+import { hashPassword, upgradeLegacyPassword, verifyPassword } from "../../../../lib/auth-password.mjs";
+import { authSessions } from "../lib/auth-sessions";
+import { requireAuth } from "../middlewares/auth";
 
 const router = Router();
-
-function hashPassword(password: string): string {
-  return createHash("sha256").update(password + "clinicsquad_salt").digest("hex");
-}
 
 function hashToken(token: string): string {
   return createHash("sha256").update(token).digest("hex");
@@ -26,6 +24,16 @@ function hashToken(token: string): string {
 
 const RESET_TOKEN_TTL_MS = 60 * 60 * 1000;
 const VERIFY_TOKEN_TTL_MS = 24 * 60 * 60 * 1000;
+let dummyLoginHash: Promise<string> | undefined;
+
+function canExposeRecoveryLinks(): boolean {
+  return process.env.NODE_ENV !== "production" && process.env.REPLIT_ENVIRONMENT !== "production";
+}
+
+function getDummyLoginHash(): Promise<string> {
+  dummyLoginHash ??= hashPassword(randomBytes(32).toString("hex"));
+  return dummyLoginHash;
+}
 
 async function createRequestNumber(): Promise<string> {
   for (let attempt = 0; attempt < 5; attempt += 1) {
@@ -102,10 +110,6 @@ async function recordAuthEvent(
   }
 }
 
-function generateToken(userId: string): string {
-  return Buffer.from(`${userId}:${Date.now()}`).toString("base64");
-}
-
 router.post("/register", async (req, res) => {
   const parsed = RegisterUserBody.safeParse(req.body);
   if (!parsed.success) {
@@ -125,6 +129,7 @@ router.post("/register", async (req, res) => {
   const trialEndDate = new Date();
   trialEndDate.setDate(trialEndDate.getDate() + 15);
   const now = new Date();
+  const passwordHash = await hashPassword(password);
 
   // Hybrid trial flow: every new clinic starts in pending_approval until an
   // admin manually flips clinics.status to "active" in the database. The user
@@ -144,7 +149,7 @@ router.post("/register", async (req, res) => {
   await db.insert(usersTable).values({
     id: userId,
     email,
-    passwordHash: hashPassword(password),
+    passwordHash,
     name: ownerName,
     specialty: specialty.trim(),
     whatsappNumber: whatsappNumber.trim(),
@@ -178,13 +183,14 @@ router.post("/register", async (req, res) => {
   };
 
   await recordAuthEvent(req, userId, "login_success");
+  const token = await authSessions.issue(userId);
 
   return res.status(201).json({
     message:
       "Account created. Your request is pending approval — please contact support via WhatsApp to activate your 15-day free trial.",
     user,
     clinic,
-    token: generateToken(userId),
+    token,
   });
 });
 
@@ -214,16 +220,30 @@ router.post("/verify-email", async (req, res) => {
   }
 
   const now = new Date();
-  await db
-    .update(usersTable)
-    .set({ emailVerifiedAt: now })
-    .where(eq(usersTable.id, record.userId));
-  await db
-    .update(emailVerificationTokensTable)
-    .set({ usedAt: now })
-    .where(eq(emailVerificationTokensTable.id, record.id));
+  const verifiedUserId = await db.transaction(async (tx) => {
+    const consumed = await tx
+      .update(emailVerificationTokensTable)
+      .set({ usedAt: now })
+      .where(
+        and(
+          eq(emailVerificationTokensTable.id, record.id),
+          isNull(emailVerificationTokensTable.usedAt),
+          gt(emailVerificationTokensTable.expiresAt, now),
+        ),
+      )
+      .returning({ userId: emailVerificationTokensTable.userId });
+    if (!consumed[0]) return null;
+    await tx
+      .update(usersTable)
+      .set({ emailVerifiedAt: now })
+      .where(eq(usersTable.id, consumed[0].userId));
+    return consumed[0].userId;
+  });
+  if (!verifiedUserId) {
+    return res.status(400).json({ error: "Invalid or expired verification token" });
+  }
 
-  const users = await db.select().from(usersTable).where(eq(usersTable.id, record.userId)).limit(1);
+  const users = await db.select().from(usersTable).where(eq(usersTable.id, verifiedUserId)).limit(1);
   const user = users[0];
   if (!user) return res.status(404).json({ error: "User not found" });
 
@@ -263,7 +283,7 @@ router.post("/verify-email", async (req, res) => {
     createdAt: clinic.createdAt.toISOString(),
   };
 
-  return res.json({ user: userObj, clinic: clinicObj, token: generateToken(user.id) });
+  return res.json({ user: userObj, clinic: clinicObj, token: await authSessions.issue(user.id) });
 });
 
 router.post("/resend-verification", async (req, res) => {
@@ -278,13 +298,13 @@ router.post("/resend-verification", async (req, res) => {
 
   const genericResponse = {
     message:
-      "If the email exists and is not yet verified, a new verification link has been generated.",
+      "If the email exists and needs verification, instructions can be sent when email delivery is configured.",
     verifyToken: null,
     verifyUrl: null,
     expiresAt: null,
   };
 
-  if (!user || user.emailVerifiedAt) {
+  if (!canExposeRecoveryLinks() || !user || user.emailVerifiedAt) {
     return res.json(genericResponse);
   }
 
@@ -311,23 +331,13 @@ router.post("/login", async (req, res) => {
 
   const users = await db.select().from(usersTable).where(eq(usersTable.email, email)).limit(1);
   const user = users[0];
-  if (!user || user.passwordHash !== hashPassword(password)) {
+  const verification = await verifyPassword(password, user?.passwordHash ?? await getDummyLoginHash());
+  if (user && verification.legacy) {
+    await verifyPassword(password, await getDummyLoginHash());
+  }
+  if (!user || !verification.valid || user.isBlocked || !user.emailVerifiedAt) {
     if (user) await recordAuthEvent(req, user.id, "login_failed");
-    return res.status(401).json({ error: "Invalid credentials" });
-  }
-
-  if (user.isBlocked) {
-    await recordAuthEvent(req, user.id, "login_failed");
-    return res.status(403).json({ error: "Account is blocked" });
-  }
-
-  if (!user.emailVerifiedAt) {
-    await recordAuthEvent(req, user.id, "login_failed");
-    return res.status(403).json({
-      error: "Email not verified. Please check your inbox for the verification link.",
-      code: "email_not_verified",
-      email: user.email,
-    });
+    return res.status(401).json({ error: "Invalid email or password" });
   }
 
   let clinic = null;
@@ -342,7 +352,14 @@ router.post("/login", async (req, res) => {
   }
 
   if (!clinic && user.role !== "superadmin") {
-    return res.status(404).json({ error: "Clinic not found" });
+    await recordAuthEvent(req, user.id, "login_failed");
+    return res.status(401).json({ error: "Invalid email or password" });
+  }
+
+  if (verification.needsUpgrade) {
+    await upgradeLegacyPassword(password, user.passwordHash, async (passwordHash) => {
+      await db.update(usersTable).set({ passwordHash }).where(eq(usersTable.id, user.id));
+    });
   }
 
   const userObj = { id: user.id, email: user.email, role: user.role, clinicId: user.clinicId, name: user.name, specialty: user.specialty, whatsappNumber: user.whatsappNumber, isBlocked: user.isBlocked, emailVerifiedAt: user.emailVerifiedAt?.toISOString() ?? null };
@@ -361,7 +378,7 @@ router.post("/login", async (req, res) => {
   } : null;
 
   await recordAuthEvent(req, user.id, "login_success");
-  return res.json({ user: userObj, clinic: clinicObj, token: generateToken(user.id) });
+  return res.json({ user: userObj, clinic: clinicObj, token: await authSessions.issue(user.id) });
 });
 
 router.post("/forgot-password", async (req, res) => {
@@ -370,6 +387,15 @@ router.post("/forgot-password", async (req, res) => {
     return res.status(400).json({ error: "Invalid input" });
   }
   const email = parsed.data.email.toLowerCase().trim();
+
+  if (!canExposeRecoveryLinks()) {
+    return res.json({
+      message: "If that email exists, password reset instructions will be sent when email delivery is configured.",
+      resetToken: null,
+      resetUrl: null,
+      expiresAt: null,
+    });
+  }
 
   const users = await db.select().from(usersTable).where(eq(usersTable.email, email)).limit(1);
   const user = users[0];
@@ -431,19 +457,38 @@ router.post("/reset-password", async (req, res) => {
     return res.status(400).json({ error: "Invalid or expired reset token" });
   }
 
-  await db.update(usersTable).set({ passwordHash: hashPassword(password) }).where(eq(usersTable.id, record.userId));
-  await db
-    .update(passwordResetTokensTable)
-    .set({ usedAt: new Date() })
-    .where(eq(passwordResetTokensTable.id, record.id));
+  const now = new Date();
+  const passwordHash = await hashPassword(password);
+  const resetApplied = await db.transaction(async (tx) => {
+    const consumed = await tx
+      .update(passwordResetTokensTable)
+      .set({ usedAt: now })
+      .where(
+        and(
+          eq(passwordResetTokensTable.id, record.id),
+          isNull(passwordResetTokensTable.usedAt),
+          gt(passwordResetTokensTable.expiresAt, now),
+        ),
+      )
+      .returning({ userId: passwordResetTokensTable.userId });
+    if (!consumed[0]) return false;
+    await tx.update(usersTable).set({ passwordHash }).where(eq(usersTable.id, consumed[0].userId));
+    await tx
+      .update(authSessionsTable)
+      .set({ revokedAt: now })
+      .where(and(eq(authSessionsTable.userId, consumed[0].userId), isNull(authSessionsTable.revokedAt)));
+    return true;
+  });
+  if (!resetApplied) {
+    return res.status(400).json({ error: "Invalid or expired reset token" });
+  }
 
   await recordAuthEvent(req, record.userId, "password_reset");
   return res.json({ message: "Password updated successfully. You can now sign in." });
 });
 
-router.post("/change-password", async (req, res) => {
-  const userId = userIdFromAuth(req);
-  if (!userId) return res.status(401).json({ error: "Unauthorized" });
+router.post("/change-password", requireAuth, async (req, res) => {
+  const userId = req.authUser!.id;
 
   const parsed = ChangePasswordBody.safeParse(req.body);
   if (!parsed.success) {
@@ -459,19 +504,32 @@ router.post("/change-password", async (req, res) => {
   const user = users[0];
   if (!user) return res.status(401).json({ error: "Invalid token" });
 
-  if (user.passwordHash !== hashPassword(currentPassword)) {
+  const verification = await verifyPassword(currentPassword, user.passwordHash);
+  if (!verification.valid) {
     return res.status(401).json({ error: "Current password is incorrect" });
   }
 
-  await db.update(usersTable).set({ passwordHash: hashPassword(newPassword) }).where(eq(usersTable.id, userId));
+  const passwordHash = await hashPassword(newPassword);
+  const now = new Date();
+  await db.transaction(async (tx) => {
+    await tx.update(usersTable).set({ passwordHash }).where(eq(usersTable.id, userId));
+    await tx
+      .update(authSessionsTable)
+      .set({ revokedAt: now })
+      .where(and(eq(authSessionsTable.userId, userId), isNull(authSessionsTable.revokedAt)));
+  });
 
   await recordAuthEvent(req, userId, "password_changed");
   return res.json({ message: "Password changed successfully." });
 });
 
-router.get("/events", async (req, res) => {
-  const userId = userIdFromAuth(req);
-  if (!userId) return res.status(401).json({ error: "Unauthorized" });
+router.post("/logout", requireAuth, async (req, res) => {
+  if (req.authSessionId) await authSessions.revoke(req.authSessionId);
+  return res.json({ message: "Signed out successfully." });
+});
+
+router.get("/events", requireAuth, async (req, res) => {
+  const userId = req.authUser!.id;
 
   const events = await db
     .select()
@@ -491,17 +549,8 @@ router.get("/events", async (req, res) => {
   );
 });
 
-function userIdFromAuth(req: any): string | null {
-  const authHeader = req.headers.authorization;
-  if (!authHeader?.startsWith("Bearer ")) return null;
-  const token = authHeader.replace("Bearer ", "");
-  const decoded = Buffer.from(token, "base64").toString();
-  return decoded.split(":")[0] || null;
-}
-
-router.get("/me", async (req, res) => {
-  const userId = userIdFromAuth(req);
-  if (!userId) return res.status(401).json({ error: "Unauthorized" });
+router.get("/me", requireAuth, async (req, res) => {
+  const userId = req.authUser!.id;
 
   const users = await db.select().from(usersTable).where(eq(usersTable.id, userId)).limit(1);
   const user = users[0];
@@ -512,9 +561,8 @@ router.get("/me", async (req, res) => {
   return res.json({ id: user.id, email: user.email, role: user.role, clinicId: user.clinicId, name: user.name, specialty: user.specialty, whatsappNumber: user.whatsappNumber, isBlocked: user.isBlocked, emailVerifiedAt: user.emailVerifiedAt?.toISOString() ?? null });
 });
 
-router.patch("/me", async (req, res) => {
-  const userId = userIdFromAuth(req);
-  if (!userId) return res.status(401).json({ error: "Unauthorized" });
+router.patch("/me", requireAuth, async (req, res) => {
+  const userId = req.authUser!.id;
 
   const body = req.body ?? {};
   const updates: { name?: string; specialty?: string | null; whatsappNumber?: string | null } = {};

@@ -49,19 +49,51 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    try {
-      const stored = localStorage.getItem("clinicsquad_auth");
-      if (stored) {
-        const parsed = JSON.parse(stored) as AuthState;
-        if (parsed.user && parsed.token) {
-          setState(parsed);
-          setAuthTokenGetter(() => parsed.token);
+    let active = true;
+    const restoreSession = async () => {
+      try {
+        const stored = localStorage.getItem("clinicsquad_auth");
+        if (stored) {
+          const parsed = JSON.parse(stored) as AuthState;
+          if (parsed.user && parsed.token) {
+            setState(parsed);
+            setAuthTokenGetter(() => parsed.token);
+            try {
+              const response = await fetch("/api/auth/me", {
+                headers: { Authorization: `Bearer ${parsed.token}` },
+              });
+              if (response.ok) {
+                const user = await response.json() as AuthUser;
+                const validated = { ...parsed, user };
+                if (active) {
+                  setState(validated);
+                  localStorage.setItem("clinicsquad_auth", JSON.stringify(validated));
+                }
+              } else if (response.status === 401 || response.status === 403) {
+                if (active) {
+                  setAuthTokenGetter(() => null);
+                  setState({ user: null, clinic: null, token: null });
+                  localStorage.removeItem("clinicsquad_auth");
+                }
+              }
+            } catch {
+              // Keep the cached session during a temporary network outage.
+            }
+          } else {
+            localStorage.removeItem("clinicsquad_auth");
+          }
         }
+      } catch {
+        localStorage.removeItem("clinicsquad_auth");
+        setState({ user: null, clinic: null, token: null });
+      } finally {
+        if (active) setIsLoading(false);
       }
-    } catch {
-      localStorage.removeItem("clinicsquad_auth");
-    }
-    setIsLoading(false);
+    };
+    void restoreSession();
+    return () => {
+      active = false;
+    };
   }, []);
 
   useEffect(() => {
@@ -80,6 +112,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const logout = () => {
+    const currentToken = state.token;
+    if (currentToken) {
+      void fetch("/api/auth/logout", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${currentToken}` },
+      }).catch(() => {
+        // Local sign-out must still work if the server cannot be reached.
+      });
+    }
+    setAuthTokenGetter(() => null);
     setState({ user: null, clinic: null, token: null });
     localStorage.removeItem("clinicsquad_auth");
   };

@@ -90,7 +90,7 @@ paths:
     post:
       operationId: resendVerification
       tags: [auth]
-      summary: Generate a new email verification link
+      summary: Request a new email verification link
       requestBody:
         required: true
         content:
@@ -99,7 +99,7 @@ paths:
               $ref: "#/components/schemas/ResendVerificationBody"
       responses:
         "200":
-          description: Verification link generated (always returned, even when email is unknown or already verified)
+          description: Generic response; production delivery requires a configured email provider
           content:
             application/json:
               schema:
@@ -139,7 +139,7 @@ paths:
               $ref: "#/components/schemas/ForgotPasswordBody"
       responses:
         "200":
-          description: Reset link generated (always returned, even when email is unknown)
+          description: Generic response; production delivery requires a configured email provider
           content:
             application/json:
               schema:
@@ -171,6 +171,8 @@ paths:
       operationId: changePassword
       tags: [auth]
       summary: Change password for the currently authenticated user
+      security:
+        - bearerAuth: []
       requestBody:
         required: true
         content:
@@ -188,6 +190,27 @@ paths:
           description: Invalid input
         "401":
           description: Unauthorized or current password incorrect
+
+  /auth/logout:
+    post:
+      operationId: logoutUser
+      tags: [auth]
+      summary: Revoke the current authenticated session
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Session revoked
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                required: [message]
+        "401":
+          description: Unauthorized
 
   /admin/clinics/{clinicId}/detail:
     get:
@@ -215,6 +238,8 @@ paths:
       operationId: listAuthEvents
       tags: [auth]
       summary: List recent sign-in and security events for the current user
+      security:
+        - bearerAuth: []
       responses:
         "200":
           description: Recent events (most recent first, capped at 20)
@@ -232,6 +257,8 @@ paths:
       operationId: getCurrentUser
       tags: [auth]
       summary: Get current user
+      security:
+        - bearerAuth: []
       responses:
         "200":
           description: Current user
@@ -243,6 +270,8 @@ paths:
       operationId: updateProfile
       tags: [auth]
       summary: Update current user profile
+      security:
+        - bearerAuth: []
       requestBody:
         required: true
         content:
@@ -1150,6 +1179,10 @@ paths:
                 $ref: "#/components/schemas/Subscription"
 
 components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
   schemas:
     HealthStatus:
       type: object
@@ -1224,6 +1257,7 @@ components:
         password:
           type: string
           minLength: 6
+          maxLength: 1024
         name:
           type: string
           minLength: 1
@@ -1276,6 +1310,7 @@ components:
         password:
           type: string
           minLength: 6
+          maxLength: 1024
         clinicName:
           type: string
         ownerName:
@@ -1298,6 +1333,7 @@ components:
           format: email
         password:
           type: string
+          maxLength: 1024
       required: [email, password]
 
     AuthResponse:
@@ -1309,6 +1345,7 @@ components:
           $ref: "#/components/schemas/Clinic"
         token:
           type: string
+          description: Opaque bearer session token; expires after seven days.
       required: [user, clinic, token]
 
     RegisterResponse:
@@ -1322,7 +1359,7 @@ components:
           $ref: "#/components/schemas/Clinic"
         token:
           type: string
-          description: Auth token. The user is logged in immediately on registration and routed to the Pending Activation page until an admin activates the clinic.
+          description: Opaque bearer session token. The user is logged in immediately and routed to Pending Activation.
       required: [message, user, clinic, token]
 
     VerifyEmailBody:
@@ -1348,9 +1385,11 @@ components:
         verifyToken:
           type: string
           nullable: true
+          description: Development-only token; null in production.
         verifyUrl:
           type: string
           nullable: true
+          description: Development-only verification URL; null in production.
         expiresAt:
           type: string
           format: date-time
@@ -1373,11 +1412,11 @@ components:
         resetToken:
           type: string
           nullable: true
-          description: Plain reset token. Returned in dev/no-email mode so the user can copy the reset link directly. Will be null when email delivery is configured.
+          description: Development-only reset token; null in production.
         resetUrl:
           type: string
           nullable: true
-          description: Convenience URL containing the token, suitable for sharing.
+          description: Development-only reset URL; null in production.
         expiresAt:
           type: string
           format: date-time
@@ -1392,6 +1431,7 @@ components:
         password:
           type: string
           minLength: 6
+          maxLength: 1024
       required: [token, password]
 
     ResetPasswordResponse:
@@ -1407,9 +1447,11 @@ components:
         currentPassword:
           type: string
           minLength: 1
+          maxLength: 1024
         newPassword:
           type: string
           minLength: 6
+          maxLength: 1024
       required: [currentPassword, newPassword]
 
     ChangePasswordResponse:

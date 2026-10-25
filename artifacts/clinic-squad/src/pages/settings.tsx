@@ -88,7 +88,7 @@ function shortUA(ua: string): string {
 }
 
 export default function SettingsPage() {
-  const { user, clinic, updateUser, updateClinic } = useAuth();
+  const { user, clinic, updateUser, updateClinic, logout } = useAuth();
   const { t } = useLang();
   const { toast } = useToast();
   const [specialty, setSpecialty] = useState(user?.specialty ?? "");
@@ -120,8 +120,8 @@ export default function SettingsPage() {
         data: { currentPassword: data.currentPassword, newPassword: data.newPassword },
       });
       passwordForm.reset();
-      authEvents.refetch();
-      toast({ title: t("settings.pw.changed"), description: "Use your new password next time you sign in." });
+      toast({ title: t("settings.pw.changed"), description: "Sign in again with your new password." });
+      logout();
     } catch (err: any) {
       const status = err?.status;
       toast({

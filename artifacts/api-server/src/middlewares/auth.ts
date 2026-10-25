@@ -1,6 +1,7 @@
 import type { Request, Response, NextFunction } from "express";
 import { eq } from "drizzle-orm";
 import { db, clinicsTable, usersTable } from "@workspace/db";
+import { authSessions } from "../lib/auth-sessions";
 
 export interface AuthedUser {
   id: string;
@@ -14,41 +15,35 @@ declare global {
   namespace Express {
     interface Request {
       authUser?: AuthedUser;
+      authSessionId?: string;
     }
-  }
-}
-
-function decodeToken(token: string): string | null {
-  try {
-    const decoded = Buffer.from(token, "base64").toString();
-    const userId = decoded.split(":")[0];
-    return userId || null;
-  } catch {
-    return null;
   }
 }
 
 async function resolveUser(req: Request, res: Response): Promise<AuthedUser | null> {
   const header = req.headers.authorization;
-  if (!header?.startsWith("Bearer ")) {
+  const match = header && /^Bearer ([A-Za-z0-9_-]{43})$/.exec(header);
+  if (!match) {
     res.status(401).json({ error: "Unauthorized" });
     return null;
   }
-  const userId = decodeToken(header.slice("Bearer ".length));
-  if (!userId) {
-    res.status(401).json({ error: "Invalid token" });
+  const session = await authSessions.resolve(match[1]!);
+  if (!session) {
+    res.status(401).json({ error: "Unauthorized" });
     return null;
   }
-  const rows = await db.select().from(usersTable).where(eq(usersTable.id, userId)).limit(1);
+
+  const rows = await db.select().from(usersTable).where(eq(usersTable.id, session.userId)).limit(1);
   const user = rows[0];
   if (!user) {
-    res.status(401).json({ error: "Invalid token" });
+    res.status(401).json({ error: "Unauthorized" });
     return null;
   }
   if (user.isBlocked) {
     res.status(403).json({ error: "Account deactivated" });
     return null;
   }
+  req.authSessionId = session.id;
   return {
     id: user.id,
     email: user.email,

@@ -12,10 +12,11 @@ app.use(
     logger,
     serializers: {
       req(req: IncomingMessage) {
+        const path = req.url?.split("?")[0];
         return {
           id: req.id,
           method: req.method,
-          url: req.url?.split("?")[0],
+          url: path?.replace(/(\/invitations\/)[^/]+(?=\/|$)/g, "$1[redacted]"),
         };
       },
       res(res: ServerResponse) {

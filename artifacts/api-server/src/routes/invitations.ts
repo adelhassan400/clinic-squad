@@ -2,17 +2,11 @@ import { Router } from "express";
 import { eq } from "drizzle-orm";
 import { db, invitationsTable, clinicsTable, usersTable } from "@workspace/db";
 import { AcceptInvitationBody } from "@workspace/api-zod";
-import { randomUUID, createHash } from "crypto";
+import { randomUUID } from "node:crypto";
+import { hashPassword } from "../../../../lib/auth-password.mjs";
+import { authSessions } from "../lib/auth-sessions";
 
 const router = Router();
-
-function hashPassword(password: string): string {
-  return createHash("sha256").update(password + "clinicsquad_salt").digest("hex");
-}
-
-function generateToken(userId: string): string {
-  return Buffer.from(`${userId}:${Date.now()}`).toString("base64");
-}
 
 function isUsable(status: string, expiresAt: Date): boolean {
   return status === "pending" && expiresAt.getTime() > Date.now();
@@ -69,14 +63,16 @@ router.post("/:token/accept", async (req, res) => {
 
   const userId = randomUUID();
   const finalName = parsed.data.name?.trim() || inv.name;
+  const passwordHash = await hashPassword(parsed.data.password);
   await db.insert(usersTable).values({
     id: userId,
     email: inv.email,
-    passwordHash: hashPassword(parsed.data.password),
+    passwordHash,
     name: finalName,
     role: inv.role,
     clinicId: inv.clinicId,
     isBlocked: false,
+    emailVerifiedAt: new Date(),
   });
 
   await db
@@ -103,7 +99,7 @@ router.post("/:token/accept", async (req, res) => {
     createdAt: clinic.createdAt.toISOString(),
   };
 
-  return res.json({ user, clinic: clinicObj, token: generateToken(userId) });
+  return res.json({ user, clinic: clinicObj, token: await authSessions.issue(userId) });
 });
 
 export default router;

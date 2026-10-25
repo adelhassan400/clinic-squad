@@ -11,6 +11,7 @@ import {
   appointmentsTable,
   auditLogsTable,
 } from "@workspace/db";
+import { authSessions } from "../lib/auth-sessions";
 
 const router = Router();
 
@@ -359,7 +360,7 @@ router.post("/clinics/:clinicId/impersonate", async (req, res) => {
     return res.status(409).json({ error: "The clinic owner account is blocked or deactivated" });
   }
 
-  const token = Buffer.from(`${owner.id}:${Date.now()}`).toString("base64");
+  const token = await authSessions.issue(owner.id);
   await db.insert(auditLogsTable).values({
     id: randomUUID(),
     adminId: req.authUser!.id,

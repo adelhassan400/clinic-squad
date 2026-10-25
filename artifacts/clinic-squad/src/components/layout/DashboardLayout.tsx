@@ -25,7 +25,7 @@ interface Props {
 type ImpersonatorReturnSession = { user: AuthUser; clinic: AuthClinic | null; token: string };
 
 export function DashboardLayout({ children }: Props) {
-  const { user, clinic, logout, login } = useAuth();
+  const { user, clinic, token, logout, login } = useAuth();
   const { theme, toggleTheme } = useTheme();
   const { t, dir } = useLang();
   const [location] = useLocation();
@@ -46,8 +46,16 @@ export function DashboardLayout({ children }: Props) {
     }
   }, [user?.role]);
 
-  const exitImpersonation = () => {
+  const exitImpersonation = async () => {
     if (!returnSession) return;
+    if (token) {
+      await fetch("/api/auth/logout", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+      }).catch(() => {
+        // Restoring the administrator session must still work offline.
+      });
+    }
     login(returnSession.user, returnSession.clinic, returnSession.token);
     localStorage.removeItem("clinicsquad_impersonator_return");
     window.location.assign("/platform-clinics");

@@ -6,6 +6,7 @@
   "scripts": {
     "hello": "tsx ./src/hello.ts",
     "seed-demo": "tsx ./src/seed-demo.ts",
+    "test:auth": "tsx --test ./src/auth-security.test.mjs",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {

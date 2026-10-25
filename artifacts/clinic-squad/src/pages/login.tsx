@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { Shield, Eye, EyeOff, Loader2, MailWarning } from "lucide-react";
+import { Shield, Eye, EyeOff, Loader2 } from "lucide-react";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { useLang } from "@/lib/lang";
 
@@ -25,7 +25,6 @@ export default function LoginPage() {
   const { toast } = useToast();
   const { t } = useLang();
   const [showPw, setShowPw] = useState(false);
-  const [unverifiedEmail, setUnverifiedEmail] = useState<string | null>(null);
 
   const { register, handleSubmit, formState: { errors } } = useForm<FormData>({
     resolver: zodResolver(schema),
@@ -35,7 +34,6 @@ export default function LoginPage() {
   const loginMutation = useLoginUser();
 
   const onSubmit = (data: FormData) => {
-    setUnverifiedEmail(null);
     loginMutation.mutate({ data }, {
       onSuccess: (response) => {
         login(response.user as Parameters<typeof login>[0], response.clinic as Parameters<typeof login>[1], response.token);
@@ -49,16 +47,6 @@ export default function LoginPage() {
         setLocation(clinicActive ? "/dashboard" : "/pending-activation");
       },
       onError: (err: Error) => {
-        const msg = err?.message ?? "";
-        if (msg.includes("403") && msg.toLowerCase().includes("email_not_verified")) {
-          setUnverifiedEmail(data.email);
-          toast({
-            title: "Email not verified",
-            description: "Please verify your email before signing in.",
-            variant: "destructive",
-          });
-          return;
-        }
         toast({ title: "Login failed", description: "Invalid email or password.", variant: "destructive" });
       },
     });
@@ -114,25 +102,6 @@ export default function LoginPage() {
             <p className="text-sm text-muted-foreground">{t("auth.login.subtitle")}</p>
           </div>
 
-          {unverifiedEmail && (
-            <div className="mb-5 rounded-lg border border-amber-500/30 bg-amber-500/10 p-3 flex items-start gap-2 text-sm">
-              <MailWarning className="w-4 h-4 mt-0.5 text-amber-500 shrink-0" />
-              <div className="flex-1">
-                <p className="font-medium text-foreground">Email not verified</p>
-                <p className="text-xs text-muted-foreground mt-0.5">
-                  Please verify <span className="font-medium text-foreground">{unverifiedEmail}</span> before signing in.{" "}
-                  <Link
-                    href={`/resend-verification?email=${encodeURIComponent(unverifiedEmail)}`}
-                    className="text-primary hover:underline font-medium"
-                    data-testid="link-resend-verification"
-                  >
-                    Resend verification link
-                  </Link>
-                </p>
-              </div>
-            </div>
-          )}
-
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
             <div>
               <Label htmlFor="email">{t("auth.login.email")}</Label>
@@ -169,7 +138,14 @@ export default function LoginPage() {
               {errors.password && <p className="text-xs text-destructive mt-1">{errors.password.message}</p>}
             </div>
 
-            <div className="flex justify-end -mt-2">
+            <div className="flex justify-between -mt-2">
+              <Link
+                href="/resend-verification"
+                className="text-xs text-muted-foreground hover:text-primary hover:underline"
+                data-testid="link-resend-verification"
+              >
+                Resend verification
+              </Link>
               <Link
                 href="/forgot-password"
                 className="text-xs text-muted-foreground hover:text-primary hover:underline"
@@ -184,12 +160,6 @@ export default function LoginPage() {
               {t("auth.login.submit")}
             </Button>
           </form>
-
-          <div className="mt-6 p-4 rounded-lg bg-muted text-xs text-muted-foreground space-y-1">
-            <p className="font-medium text-foreground">Demo Accounts:</p>
-            <p>Admin: admin@demo.com / demo1234</p>
-            <p>SuperAdmin: super@clinicsquad.com / super1234</p>
-          </div>
 
           <p className="mt-6 text-center text-sm text-muted-foreground">
             {t("auth.login.noAccount")}{" "}
