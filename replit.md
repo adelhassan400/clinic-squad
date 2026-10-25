@@ -71,6 +71,10 @@ lib/
 - `pnpm --filter @workspace/db run push` — push DB schema changes (dev only)
 - `pnpm --filter @workspace/api-server run dev` — run API server locally
 
+## Running on Replit
+
+Use the **Start application** workflow (`bash scripts/dev.sh`) to run the frontend and API together. The web preview listens on port 5000; the API listens on port 8080 and the frontend proxies `/api` requests to it. For a fresh development database, run `pnpm --filter @workspace/db run push` and then `pnpm --filter @workspace/scripts run seed-demo` to create the schema and demo sign-in accounts.
+
 ## Auth
 
 - Password: SHA-256 hash with salt `clinicsquad_salt`, base64 encoded
