@@ -1,0 +1,1 @@
+- [Zod resolver compatibility](zod-resolver-compatibility.md) — resolver releases must support the workspace's Zod versions under pnpm's isolated type resolution.

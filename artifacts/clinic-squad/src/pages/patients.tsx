@@ -55,7 +55,8 @@ const patientSchema = z.object({
   cashCollected: z.boolean(),
   paymentStatus: z.enum(["free", "unpaid"]),
 });
-type PatientForm = z.infer<typeof patientSchema>;
+type PatientFormInput = z.input<typeof patientSchema>;
+type PatientForm = z.output<typeof patientSchema>;
 
 const checkInSchema = z.object({
   visitType: z.enum(PATIENT_VISIT_TYPE_VALUES, { message: "Visit type is required" }),
@@ -153,7 +154,7 @@ export default function PatientsPage() {
   const someVisibleSelected = selectedVisibleCount > 0 && !allVisibleSelected;
   const selectedPaidCount = (data?.data ?? []).filter((patient) => selectedPatientIds.has(patient.id) && patient.status === "paid").length;
 
-  const form = useForm<PatientForm>({
+  const form = useForm<PatientFormInput, unknown, PatientForm>({
     resolver: zodResolver(patientSchema),
     defaultValues: {
       name: "",
