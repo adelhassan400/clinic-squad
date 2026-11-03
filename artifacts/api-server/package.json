@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "export NODE_ENV=development && pnpm run build && pnpm run start",
+    "dev:sqlite": "export NODE_ENV=development DATABASE_PROVIDER=sqlite PORT=8080 SQLITE_DATABASE_PATH=../../.data/clinicsquad.sqlite && pnpm run build && pnpm run start",
     "build": "node ./build.mjs",
     "start": "node --enable-source-maps ./dist/index.mjs",
     "typecheck": "tsc -p tsconfig.json --noEmit"
