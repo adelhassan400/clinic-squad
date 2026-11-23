@@ -1,6 +1,6 @@
 const useSQLite = process.env.DATABASE_PROVIDER === "sqlite";
-const { default: app } = await import(useSQLite ? "./local-sqlite" : "./app");
-const { logger } = useSQLite ? { logger: console } : await import("./lib/logger");
+const { default: app } = await import(useSQLite ? "./local-sqlite.js" : "./app.js");
+const { logger } = useSQLite ? { logger: console } : await import("./lib/logger.js");
 
 export {};
 
