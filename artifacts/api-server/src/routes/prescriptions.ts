@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { CreatePrescriptionBody } from "@workspace/api-zod";
-import { requireClinicAccess, requireRole } from "../middlewares/auth";
+import { requireClinicAccess, requireRole } from "../middlewares/auth.js";
 import { PrescriptionService } from "../services/prescription.service";
 
 const router = Router({ mergeParams: true });
