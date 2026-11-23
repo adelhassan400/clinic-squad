@@ -148,12 +148,12 @@ export const RequestPasswordResetResponse = zod.object({
     .string()
     .nullish()
     .describe(
-      "Plain reset token. Returned in dev\/no-email mode so the user can copy the reset link directly. Will be null when email delivery is configured.",
+      "Always null. Reset tokens are never returned by the API; a superadmin shares reset links with users out of band.",
     ),
   resetUrl: zod
     .string()
     .nullish()
-    .describe("Convenience URL containing the token, suitable for sharing."),
+    .describe("Always null. Reset links are delivered out of band by the support team."),
   expiresAt: zod.coerce.date().nullish(),
 });
 
