@@ -2,17 +2,10 @@ import { Router } from "express";
 import { eq } from "drizzle-orm";
 import { db, invitationsTable, clinicsTable, usersTable } from "@workspace/db";
 import { AcceptInvitationBody } from "@workspace/api-zod";
-import { randomUUID, createHash } from "crypto";
+import { randomUUID } from "crypto";
+import { generateToken, hashPassword } from "../lib/auth-security";
 
 const router = Router();
-
-function hashPassword(password: string): string {
-  return createHash("sha256").update(password + "clinicsquad_salt").digest("hex");
-}
-
-function generateToken(userId: string): string {
-  return Buffer.from(`${userId}:${Date.now()}`).toString("base64");
-}
 
 function isUsable(status: string, expiresAt: Date): boolean {
   return status === "pending" && expiresAt.getTime() > Date.now();
@@ -72,7 +65,7 @@ router.post("/:token/accept", async (req, res) => {
   await db.insert(usersTable).values({
     id: userId,
     email: inv.email,
-    passwordHash: hashPassword(parsed.data.password),
+    passwordHash: await hashPassword(parsed.data.password),
     name: finalName,
     role: inv.role,
     clinicId: inv.clinicId,
