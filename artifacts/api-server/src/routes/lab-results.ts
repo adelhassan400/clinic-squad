@@ -3,7 +3,7 @@ import { eq, and, desc } from "drizzle-orm";
 import { db, labResultsTable, patientsTable } from "@workspace/db";
 import { CreateLabResultBody } from "@workspace/api-zod";
 import { randomUUID } from "crypto";
-import { requireClinicAccess, requireRole } from "../middlewares/auth";
+import { requireClinicAccess, requireRole } from "../middlewares/auth.js";
 
 const router = Router({ mergeParams: true });
 

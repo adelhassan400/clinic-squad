@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { CreateAppointmentBody, UpdateAppointmentBody } from "@workspace/api-zod";
-import { requireClinicAccess } from "../middlewares/auth";
-import { AppointmentService } from "../services/appointment.service";
+import { requireClinicAccess } from "../middlewares/auth.js";
+import { AppointmentService } from "../services/appointment.service.js";
 
 const router = Router({ mergeParams: true });
 router.use(requireClinicAccess);

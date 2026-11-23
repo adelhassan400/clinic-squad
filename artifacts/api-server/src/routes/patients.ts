@@ -1,8 +1,8 @@
 import { Router } from "express";
 import { z } from "zod";
 import { CreatePatientBody, PatchPatientBody } from "@workspace/api-zod";
-import { requireClinicAccess, requireRole } from "../middlewares/auth";
-import { PatientService } from "../services/patient.service";
+import { requireClinicAccess, requireRole } from "../middlewares/auth.js";
+import { PatientService } from "../services/patient.service.js";
 
 const router = Router({ mergeParams: true });
 router.use(requireClinicAccess);

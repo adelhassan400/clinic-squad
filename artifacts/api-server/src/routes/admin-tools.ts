@@ -12,7 +12,7 @@ import {
   patientsTable,
   appointmentsTable,
 } from "@workspace/db";
-import { requireAuth, requireRole } from "../middlewares/auth";
+import { requireAuth, requireRole } from "../middlewares/auth.js";
 
 const router = Router();
 

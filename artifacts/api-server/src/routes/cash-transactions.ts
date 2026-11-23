@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { and, eq, sql } from "drizzle-orm";
 import { db, cashTransactionsTable } from "@workspace/db";
-import { requireAuth, requireRole } from "../middlewares/auth";
+import { requireAuth, requireRole } from "../middlewares/auth.js";
 
 const router = Router({ mergeParams: true });
 router.use(requireAuth);

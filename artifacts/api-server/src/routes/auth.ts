@@ -19,7 +19,7 @@ import {
   hashPassword,
   verifyPassword,
   isLegacyPasswordHash,
-} from "../lib/auth-security";
+} from "../lib/auth-security.js";
 
 const router = Router();
 

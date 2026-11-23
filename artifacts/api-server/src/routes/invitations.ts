@@ -3,7 +3,7 @@ import { eq } from "drizzle-orm";
 import { db, invitationsTable, clinicsTable, usersTable } from "@workspace/db";
 import { AcceptInvitationBody } from "@workspace/api-zod";
 import { randomUUID } from "crypto";
-import { generateToken, hashPassword } from "../lib/auth-security";
+import { generateToken, hashPassword } from "../lib/auth-security.js";
 
 const router = Router();
 
