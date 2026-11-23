@@ -229,9 +229,9 @@ export interface ForgotPasswordBody {
 
 export interface ForgotPasswordResponse {
   message: string;
-  /** Plain reset token. Returned in dev/no-email mode so the user can copy the reset link directly. Will be null when email delivery is configured. */
+  /** Always null. Reset tokens are never returned by the API; a superadmin shares reset links with users out of band. */
   resetToken?: string | null;
-  /** Convenience URL containing the token, suitable for sharing. */
+  /** Always null. Reset links are delivered out of band by the support team. */
   resetUrl?: string | null;
   expiresAt?: string | null;
 }
