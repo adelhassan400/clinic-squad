@@ -124,12 +124,20 @@ interface VisitTypeBadgeProps {
   withDot?: boolean;
 }
 
+export function getVisitTypeLabel(
+  t: (key: string) => string,
+  type: string | null | undefined,
+): string {
+  const raw = type && type.trim() ? type : "";
+  const key = VISIT_TYPE_KEYS[raw];
+  return key ? t(key) : raw || t("patients.visitType.unspecified");
+}
+
 export function VisitTypeBadge({ type, className, withDot = true }: VisitTypeBadgeProps) {
   const { t } = useLang();
   const style = getVisitTypeStyle(type);
   const raw = type && type.trim() ? type : "";
-  const key = VISIT_TYPE_KEYS[raw];
-  const label = key ? t(key) : raw || t("patients.visitType.unspecified");
+  const label = getVisitTypeLabel(t, type);
   return (
     <span
       data-testid={`visit-type-badge-${raw || "Unspecified"}`}
