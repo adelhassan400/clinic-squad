@@ -2,26 +2,19 @@ import { createRoot } from "react-dom/client";
 import App from "./App";
 import "./index.css";
 import { setAuthTokenGetter, setBaseUrl } from "@workspace/api-client-react";
+import { resolveApiBaseUrl } from "@/lib/api-routing";
 
-// Preview isolation: on Vercel preview deployments (git branch alias hosts),
-// call the matching preview deployment of the API server instead of the
-// production API that vercel.json rewrites /api to. Vercel branch aliases look
-// like <project>-git-<branch-slug>-<team-scope>.vercel.app; when the full slug
-// does not fit in 63 chars, Vercel truncates it and appends a 6-char hash
-// (the API project's longer name then keeps only the hash).
-const FRONTEND_ALIAS_PREFIX = "clinic-squad-git-";
-const API_ALIAS_PREFIX = "clinic-squad-api-server-git-";
-const TEAM_SCOPE = "ahmed64653234-6553s-projects";
-{
-  const host = window.location.hostname;
-  const suffix = `-${TEAM_SCOPE}.vercel.app`;
-  if (host.startsWith(FRONTEND_ALIAS_PREFIX) && host.endsWith(suffix)) {
-    const branchPart = host.slice(FRONTEND_ALIAS_PREFIX.length, -suffix.length);
-    const hashMatch = branchPart.match(/-([a-z0-9]{6})$/);
-    const apiBranchPart = hashMatch ? hashMatch[1] : branchPart;
-    setBaseUrl(`https://${API_ALIAS_PREFIX}${apiBranchPart}${suffix.replace(".vercel.app", "")}.vercel.app`);
-  }
-}
+// Preview isolation: on Vercel preview deployments the build bakes in the
+// expected preview host and its isolated API base URL. Any other vercel.app
+// host fails closed (unroutable origin) so a preview can never reach the
+// production API through the vercel.json rewrite.
+const apiBaseUrl = resolveApiBaseUrl(window.location.hostname, {
+  expectedPreviewHost: import.meta.env.VITE_EXPECTED_PREVIEW_HOST as
+    | string
+    | undefined,
+  previewApiBase: import.meta.env.VITE_PREVIEW_API_BASE as string | undefined,
+});
+if (apiBaseUrl) setBaseUrl(apiBaseUrl);
 
 setAuthTokenGetter(() => {
   try {
