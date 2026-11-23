@@ -151,11 +151,11 @@ export function DashboardLayout({ children }: Props) {
               </Badge>
             )}
             {clinic?.subscriptionStatus === "basic" && (
-              <Badge className="bg-secondary text-secondary-foreground text-xs">Basic</Badge>
+              <Badge className="bg-secondary text-secondary-foreground text-xs">{t("plan.basic")}</Badge>
             )}
             {clinic?.subscriptionStatus === "premium" && (
               <Badge className="bg-accent text-accent-foreground text-xs">
-                <Crown className="w-3 h-3 me-1" />Premium
+                <Crown className="w-3 h-3 me-1" />{t("plan.premium")}
               </Badge>
             )}
             {clinic?.subscriptionStatus === "expired" && (
@@ -315,4 +315,4 @@ export function DashboardLayout({ children }: Props) {
       </div>
     </div>
   );
-}
+      }
