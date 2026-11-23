@@ -39,6 +39,12 @@ cd clinic-squad
 pnpm install
 ```
 
+### Environment variables
+
+* `PORT` (required): port the API server listens on.
+* `DATABASE_URL` (required in the default PostgreSQL mode): connection string for the application database.
+* `AUTH_TOKEN_SECRET` (required when `NODE_ENV=production`): secret of at least 32 characters used to sign login tokens. Outside production a fixed development-only secret is used instead.
+
 ### Type Checking and Building
 
 To run type checking across all monorepo packages, execute:
