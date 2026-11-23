@@ -120,13 +120,13 @@ export default function LoginPage() {
               <div className="flex-1">
                 <p className="font-medium text-foreground">Email not verified</p>
                 <p className="text-xs text-muted-foreground mt-0.5">
-                  Please verify <span className="font-medium text-foreground">{unverifiedEmail}</span> before signing in.{" "}
+                  Verification for <span className="font-medium text-foreground">{unverifiedEmail}</span> is temporarily unavailable. No email has been sent.{" "}
                   <Link
                     href={`/resend-verification?email=${encodeURIComponent(unverifiedEmail)}`}
                     className="text-primary hover:underline font-medium"
                     data-testid="link-resend-verification"
                   >
-                    Resend verification link
+                    Verification status
                   </Link>
                 </p>
               </div>
