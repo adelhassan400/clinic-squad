@@ -94,10 +94,10 @@ export default function ResendVerificationPage() {
         </div>
         <div>
           <h2 className="text-3xl font-serif font-bold text-sidebar-foreground leading-snug mb-4">
-            Resend verification email
+            Request a verification link
           </h2>
           <p className="text-sidebar-foreground/60 text-sm leading-relaxed">
-            Enter the email you registered with and we'll generate a fresh, single-use verification link valid for 24 hours.
+            Enter the email you registered with. Our support team will share a fresh, single-use verification link (valid for 24 hours) via your clinic's registered WhatsApp contact.
           </p>
         </div>
         <div className="text-xs text-sidebar-foreground/40">
@@ -118,9 +118,9 @@ export default function ResendVerificationPage() {
               <div className="hidden lg:block" />
               <LanguageSwitcher />
             </div>
-            <h1 className="text-2xl font-bold mb-1">Resend verification link</h1>
+            <h1 className="text-2xl font-bold mb-1">Request a verification link</h1>
             <p className="text-sm text-muted-foreground">
-              We'll generate a fresh one-time link for the email you enter below.
+              Email delivery is not configured yet, so verification links are shared by the support team via WhatsApp after you submit your email below.
             </p>
           </div>
 
@@ -152,7 +152,7 @@ export default function ResendVerificationPage() {
                 {resendMutation.isPending && (
                   <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                 )}
-                Generate verification link
+                Request verification link
               </Button>
 
               {submittedMsg && (
