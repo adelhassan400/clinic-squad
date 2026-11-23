@@ -40,6 +40,14 @@ async function resolveUser(req: Request, res: Response): Promise<AuthedUser | nu
     res.status(403).json({ error: "Account deactivated" });
     return null;
   }
+  // Check stored state on every request, including sessions issued before containment.
+  if (!user.emailVerifiedAt) {
+    res.status(403).json({
+      error: "Email verification is temporarily unavailable. This unverified account cannot sign in.",
+      code: "email_not_verified",
+    });
+    return null;
+  }
   return {
     id: user.id,
     email: user.email,
