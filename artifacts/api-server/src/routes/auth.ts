@@ -266,33 +266,20 @@ router.post("/resend-verification", async (req, res) => {
   if (!parsed.success) {
     return res.status(400).json({ error: "Invalid input" });
   }
-  const email = parsed.data.email.toLowerCase().trim();
 
-  const users = await db.select().from(usersTable).where(eq(usersTable.email, email)).limit(1);
-  const user = users[0];
-
-  const genericResponse = {
+  // The response is identical whether or not the email exists, and it never
+  // contains the verification token or link. Returning them here let anyone
+  // "verify" any account knowing only its email address, with no control of
+  // that inbox. Mail delivery is not configured yet, so verification links
+  // are delivered out of band: a superadmin can generate one through
+  // POST /api/admin/email-verification-link and share it via the clinic's
+  // registered WhatsApp contact.
+  return res.json({
     message:
-      "If the email exists and is not yet verified, a new verification link has been generated.",
+      "If the email exists and is not yet verified, a verification link can be provided by the support team via WhatsApp.",
     verifyToken: null,
     verifyUrl: null,
     expiresAt: null,
-  };
-
-  if (!user || user.emailVerifiedAt) {
-    return res.json(genericResponse);
-  }
-
-  const { verifyToken, verifyUrl, expiresAt } = await issueVerificationToken(
-    user.id,
-    originForRequest(req),
-  );
-
-  return res.json({
-    message: "Verification link generated. Use the token below to verify your email.",
-    verifyToken,
-    verifyUrl,
-    expiresAt: expiresAt.toISOString(),
   });
 });
 
@@ -331,7 +318,7 @@ router.post("/login", async (req, res) => {
   if (!user.emailVerifiedAt) {
     await recordAuthEvent(req, user.id, "login_failed");
     return res.status(403).json({
-      error: "Email not verified. Please check your inbox for the verification link.",
+      error: "Email not verified. Please contact the support team via WhatsApp to get a verification link.",
       code: "email_not_verified",
       email: user.email,
     });
