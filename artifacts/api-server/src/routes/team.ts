@@ -3,7 +3,7 @@ import { eq, and } from "drizzle-orm";
 import { db, usersTable, clinicsTable, invitationsTable } from "@workspace/db";
 import { CreateInvitationBody } from "@workspace/api-zod";
 import { randomUUID, randomBytes } from "crypto";
-import { requireAuth, requireRole, getMemberLimit } from "../middlewares/auth";
+import { requireAuth, requireRole, getMemberLimit } from "../middlewares/auth.js";
 
 const router = Router({ mergeParams: true });
 
