@@ -178,7 +178,7 @@ export function PrescriptionsContent({ initialPatientId, embedded }: Prescriptio
     } catch (err: any) {
       toast({
         title: t("presc.failed"),
-        description: err?.data?.error ?? err?.message ?? t("auth.login.submit"),
+        description: err?.data?.error ?? err?.message ?? t("presc.saveFailed"),
         variant: "destructive",
       });
     }
@@ -852,7 +852,7 @@ function LivePreview({ clinicName, clinicPhone, clinicAddress, doctorName, docto
               </div>
               <div className="shrink-0 text-right">
                 <div className="inline-block w-24 h-12 border border-slate-200 rounded bg-white/50 mb-1" />
-                <p className="text-[9px] text-slate-400 uppercase tracking-tighter">Doctor Signature</p>
+                <p className="text-[9px] text-slate-400 uppercase tracking-tighter">{t("presc.doctorSignature")}</p>
               </div>
             </div>
 
@@ -883,4 +883,4 @@ export default function PrescriptionsPage() {
       </DashboardLayout>
     </ProtectedRoute>
   );
-}
+              }
