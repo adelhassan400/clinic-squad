@@ -3,7 +3,7 @@ import { eq } from "drizzle-orm";
 import { db, financesTable } from "@workspace/db";
 import { CreateFinanceRecordBody } from "@workspace/api-zod";
 import { randomUUID } from "crypto";
-import { requireClinicAccess } from "../middlewares/auth";
+import { requireClinicAccess } from "../middlewares/auth.js";
 
 const router = Router({ mergeParams: true });
 
