@@ -1,3 +1,4 @@
+import { execFileSync } from "node:child_process";
 import { createRequire } from "node:module";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -9,8 +10,27 @@ import { rm } from "node:fs/promises";
 globalThis.require = createRequire(import.meta.url);
 
 const artifactDir = path.dirname(fileURLToPath(import.meta.url));
+const repoRoot = path.resolve(artifactDir, "..", "..");
+const tscBin = path.join(
+  repoRoot,
+  "node_modules",
+  ".bin",
+  process.platform === "win32" ? "tsc.cmd" : "tsc",
+);
+
+// The Vercel serverless runtime loads plain JavaScript only. The workspace
+// libraries ship TypeScript sources, so compile them to dist/ (their
+// package.json "exports" map "default" to dist) before the function bundle
+// is traced, otherwise the deployment crashes with ERR_MODULE_NOT_FOUND.
+function buildWorkspaceLibraries() {
+  for (const lib of ["api-zod", "db"]) {
+    const project = path.join(repoRoot, "lib", lib, "tsconfig.build.json");
+    execFileSync(tscBin, ["-p", project], { stdio: "inherit" });
+  }
+}
 
 async function buildAll() {
+  buildWorkspaceLibraries();
   const distDir = path.resolve(artifactDir, "dist");
   await rm(distDir, { recursive: true, force: true });
 
