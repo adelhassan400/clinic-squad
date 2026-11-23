@@ -114,4 +114,4 @@ export function getMemberLimit(subscriptionStatus: string): number {
     default:
       return 0;
   }
-                           }
+}
