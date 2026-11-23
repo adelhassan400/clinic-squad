@@ -1,7 +1,7 @@
 import type { Request, Response, NextFunction } from "express";
 import { eq } from "drizzle-orm";
 import { db, clinicsTable, usersTable } from "@workspace/db";
-import { verifyToken } from "../lib/auth-security";
+import { verifyToken } from "../lib/auth-security.js";
 
 export interface AuthedUser {
   id: string;
@@ -114,4 +114,4 @@ export function getMemberLimit(subscriptionStatus: string): number {
     default:
       return 0;
   }
-}
+                           }
