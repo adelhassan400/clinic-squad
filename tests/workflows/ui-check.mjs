@@ -6,6 +6,7 @@ const children = [];
 function start(command, args, env) {
   const p = spawn(command, args, {
     env: { ...process.env, ...env },
+    detached: true,
     stdio: ["ignore", "pipe", "pipe"],
   });
   children.push(p);
@@ -183,6 +184,6 @@ try {
   );
 } finally {
   await browser?.close();
-  for (const p of children) p.kill("SIGTERM");
+  for (const p of children) { try { process.kill(-p.pid, "SIGTERM"); } catch {} }
   setTimeout(() => process.exit(), 500).unref();
-        }
+    }
