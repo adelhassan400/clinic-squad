@@ -56,7 +56,7 @@ function buildInviteLink(token: string): string {
 
 export default function TeamPage() {
   const { user, clinic } = useAuth();
-  const { t } = useLang();
+  const { t, lang } = useLang();
   const { toast } = useToast();
   const qc = useQueryClient();
   const [copiedToken, setCopiedToken] = useState<string | null>(null);
@@ -162,6 +162,7 @@ export default function TeamPage() {
     <ProtectedRoute requireRole={["admin", "doctor"]}>
       <DashboardLayout>
       <div className="p-6 max-w-5xl mx-auto space-y-6">
+        <p role="status" className="rounded-lg border border-amber-500/40 bg-amber-500/10 p-4 text-sm">{lang === "ar" ? "قبول دعوات الموظفين متوقف مؤقتًا لحين تجهيز التحقق بالإيميل. يمكن إنشاء الدعوات، لكن لا يمكن قبولها الآن. لم يتم إرسال أي إيميل." : "Staff invitation acceptance is temporarily paused until email verification is ready. Invitations can be created, but cannot be accepted yet. No email has been sent."}</p>
         {/* Page header */}
         <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3">
           <div>
@@ -447,4 +448,4 @@ export default function TeamPage() {
       </DashboardLayout>
     </ProtectedRoute>
   );
-}
+        }
