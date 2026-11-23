@@ -132,7 +132,10 @@ router.post("/register-and-queue", async (req: any, res) => {
           : {}),
       },
     );
-    return res.status(201).json(patient);
+    const isAssistant = ["assistant", "secretary", "nurse"].includes(req.authUser?.role);
+    return res.status(201).json(isAssistant
+      ? { ...patient, diagnosis: null, clinicalNotes: null, chronicConditions: null }
+      : patient);
   } catch (error: any) {
     if (
       error.message ===
