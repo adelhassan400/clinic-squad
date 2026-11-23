@@ -333,3 +333,58 @@ test("change-password verifies the current password and stores scrypt", async ()
     200,
   );
 });
+
+test("verification containment rejects all issuance and consumption without side effects", async () => {
+  const account = await registerClinic("contain-verify");
+  sql(`UPDATE users SET email_verified_at=NULL WHERE id='${account.userId}'`);
+  const leaked = randomBytes(32).toString("base64url");
+  const hash = createHash("sha256").update(leaked).digest("hex");
+  const recordId = `contain-${randomBytes(8).toString("hex")}`;
+  sql(`INSERT INTO email_verification_tokens(id,user_id,token_hash,expires_at) VALUES('${recordId}','${account.userId}','${hash}',now()+interval '1 hour')`);
+  const before = sql("SELECT count(*) FROM email_verification_tokens");
+  for (const email of [account.email, uniqueEmail("absent")]) {
+    const result = await api("/auth/resend-verification", {method:"POST",body:{email}});
+    assert.equal(result.status,503);
+    assert.equal(result.json.code,"EMAIL_VERIFICATION_UNAVAILABLE");
+    for(const key of ["token","verifyToken","verifyUrl","expiresAt"])assert.equal(result.json[key],undefined);
+    assert.match(result.json.error,/No email or verification link has been sent/);
+  }
+  for(const token of [leaked,"invalid"]){
+    const result=await api("/auth/verify-email",{method:"POST",body:{token}});
+    assert.equal(result.status,503);
+    assert.equal(result.json.token,undefined);
+  }
+  assert.equal(sql("SELECT count(*) FROM email_verification_tokens"),before);
+  assert.equal(sql(`SELECT used_at IS NULL FROM email_verification_tokens WHERE id='${recordId}'`),"t");
+  assert.equal(sql(`SELECT email_verified_at IS NULL FROM users WHERE id='${account.userId}'`),"t");
+  assert.equal((await api("/auth/login",{method:"POST",body:{email:account.email,password:account.password}})).status,403);
+  // Reject an already-issued unverified session at both middleware families and profile routes.
+  for(const endpoint of ["/auth/me","/auth/events","/admin/stats"]){
+    assert.equal((await api(endpoint,{token:account.token})).status,403);
+  }
+  const clinicId=sql(`SELECT clinic_id FROM users WHERE id='${account.userId}'`);
+  assert.equal((await api(`/clinics/${clinicId}/patients`,{token:account.token})).status,403);
+  assert.equal((await api("/auth/me",{method:"PATCH",token:account.token,body:{name:"not saved"}})).status,403);
+  assert.equal((await api("/auth/change-password",{method:"POST",token:account.token,body:{currentPassword:account.password,newPassword:"not saved password"}})).status,403);
+});
+
+test("invitation containment never accepts an existing invitation or creates an account", async () => {
+  const account=await registerClinic("contain-invite");
+  const clinicId=sql(`SELECT clinic_id FROM users WHERE id='${account.userId}'`);
+  const id=`contain-${randomBytes(8).toString("hex")}`;
+  const token=randomBytes(24).toString("base64url");
+  const email=uniqueEmail("paused-invite");
+  sql(`INSERT INTO invitations(id,clinic_id,email,name,role,token,status,invited_by,expires_at) VALUES('${id}','${clinicId}','${email}','Demo paused invite','nurse','${token}','pending','${account.userId}',now()+interval '1 day')`);
+  for(const candidate of [token,"invalid"]){
+    assert.equal((await api(`/invitations/${candidate}`)).status,503);
+    const result=await api(`/invitations/${candidate}/accept`,{method:"POST",body:{name:"Demo",password:"test-only-password"}});
+    assert.equal(result.status,503);
+    assert.equal(result.json.code,"INVITATION_ACCEPTANCE_PAUSED");
+    assert.equal(result.json.token,undefined);
+  }
+  assert.equal(sql(`SELECT status FROM invitations WHERE id='${id}'`),"pending");
+  assert.equal(sql(`SELECT count(*) FROM users WHERE email='${email}'`),"0");
+  assert.equal((await api("/auth/login",{method:"POST",body:{email:account.email,password:account.password}})).status,200);
+  assert.equal((await api("/auth/me",{token:account.token})).status,200);
+  assert.equal((await api(`/clinics/${clinicId}/patients`,{token:account.token})).status,200);
+});
