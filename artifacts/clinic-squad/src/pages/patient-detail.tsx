@@ -2,6 +2,7 @@ import { useQueue, queueKey } from "@/lib/queue";
 import { useConsultationSave } from "@/hooks/use-consultation-save";
 import { useEffect, useRef, useState } from "react";
 import { useAuth } from "@/lib/auth";
+import { useLang } from "@/lib/lang";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { PrescriptionsContent } from "@/pages/prescriptions";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
@@ -58,6 +59,7 @@ function displayAge(age: number | null | undefined): string | null {
 }
 
 function PatientStatusBadge({ status }: { status: string }) {
+  const { t } = useLang();
   const map: Record<string, string> = {
     waiting:
       "bg-amber-500/15 text-amber-700 border-amber-500/40 dark:text-amber-300",
@@ -65,9 +67,9 @@ function PatientStatusBadge({ status }: { status: string }) {
     completed: "bg-accent/30 text-accent-foreground border-accent/50",
   };
   const label: Record<string, string> = {
-    waiting: "Waiting",
-    "in-progress": "In progress",
-    completed: "Completed",
+    waiting: t("status.waiting"),
+    "in-progress": t("status.inProgress"),
+    completed: t("status.completed"),
   };
   return (
     <span
@@ -83,6 +85,13 @@ function PatientStatusBadge({ status }: { status: string }) {
 }
 
 function StatusBadge({ status }: { status: string }) {
+  const { t } = useLang();
+  const label: Record<string, string> = {
+    scheduled: t("status.scheduled"),
+    completed: t("status.completed"),
+    cancelled: t("status.cancelled"),
+    no_show: t("status.noShow"),
+  };
   const map: Record<string, string> = {
     scheduled:
       "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400",
@@ -99,7 +108,7 @@ function StatusBadge({ status }: { status: string }) {
         map[status] ?? "bg-muted text-muted-foreground",
       )}
     >
-      {status.replace("_", " ")}
+      {label[status] ?? status.replace("_", " ")}
     </span>
   );
 }
@@ -112,6 +121,7 @@ export default function PatientDetailPage({ params }: Props) {
 }
 
 function PatientConsultation({ params }: Props) {
+  const { t } = useLang();
   const {
     currency: { code: currencyCode },
   } = useCurrency();
@@ -212,24 +222,24 @@ function PatientConsultation({ params }: Props) {
           afterCompleteRedirect();
         },
         onError: () =>
-          toast({ title: "Failed to finish session", variant: "destructive" }),
+          toast({ title: t("pdetail.toastFail"), variant: "destructive" }),
       },
     );
   };
 
   const handleFinish = () =>
-    finishAndGo(() => {}, "Session completed — patient sent to checkout");
+    finishAndGo(() => {}, t("pdetail.toastCompleted"));
 
   const handleFinishAndNext = () => {
     if (nextWaiting) {
       finishAndGo(
         () => navigate(`/patients/${nextWaiting.id}`),
-        `Session completed — opening ${nextWaiting.name}`,
+        `${t("pdetail.toastOpening")} ${nextWaiting.name}`,
       );
     } else {
       finishAndGo(
         () => navigate("/waiting-list"),
-        "Session completed — waiting list is empty",
+        t("pdetail.toastEmpty"),
       );
     }
   };
@@ -311,7 +321,7 @@ function PatientConsultation({ params }: Props) {
           <Link href="/waiting-list">
             <Button variant="ghost" size="sm" className="mb-6 -ml-2">
               <ArrowLeft className="w-4 h-4 mr-1.5" />
-              Back to Waiting List
+              {t("pdetail.backToWaitingList")}
             </Button>
           </Link>
 
@@ -322,10 +332,10 @@ function PatientConsultation({ params }: Props) {
             </div>
           ) : !patient ? (
             <div className="text-center py-20">
-              <p className="text-muted-foreground">Patient not found</p>
+              <p className="text-muted-foreground">{t("pdetail.notFound")}</p>
               <Link href="/patients">
                 <Button className="mt-4" size="sm">
-                  Back to Patients
+                  {t("pdetail.backToPatients")}
                 </Button>
               </Link>
             </div>
@@ -352,7 +362,7 @@ function PatientConsultation({ params }: Props) {
                         className="inline-flex items-center gap-1.5 text-sm font-semibold px-2.5 py-0.5 rounded-md bg-primary/10 text-primary border border-primary/20"
                       >
                         <Calendar className="w-3.5 h-3.5" />
-                        {age !== null ? `Age ${age}` : "Age —"}
+                        {age !== null ? `${t("pdetail.age")} ${age}` : `${t("pdetail.age")} —`}
                       </span>
                       <PatientStatusBadge status={patient.status} />
                       <VisitTypeBadge type={patient.visitType} />
@@ -396,7 +406,7 @@ function PatientConsultation({ params }: Props) {
                     className="shrink-0"
                   >
                     <Pencil className="w-3.5 h-3.5 mr-1.5" />
-                    Edit Profile
+                    {t("pdetail.editProfile")}
                   </Button>
                 </div>
 
@@ -407,7 +417,7 @@ function PatientConsultation({ params }: Props) {
                     {patient.allergies && (
                       <div>
                         <p className="text-xs font-medium text-muted-foreground mb-1">
-                          Allergies
+                          {t("pdetail.allergies")}
                         </p>
                         <p className="text-sm text-destructive">
                           {patient.allergies}
@@ -417,7 +427,7 @@ function PatientConsultation({ params }: Props) {
                     {patient.chronicConditions && (
                       <div>
                         <p className="text-xs font-medium text-muted-foreground mb-1 flex items-center gap-1">
-                          <Activity className="w-3 h-3" /> Chronic Conditions
+                          <Activity className="w-3 h-3" /> {t("pdetail.chronic")}
                         </p>
                         <p className="text-sm text-amber-700 dark:text-amber-400">
                           {patient.chronicConditions}
@@ -427,7 +437,7 @@ function PatientConsultation({ params }: Props) {
                     {patient.notes && (
                       <div>
                         <p className="text-xs font-medium text-muted-foreground mb-1">
-                          Medical Notes
+                          {t("pdetail.medicalNotes")}
                         </p>
                         <p className="text-sm">{patient.notes}</p>
                       </div>
@@ -442,11 +452,10 @@ function PatientConsultation({ params }: Props) {
                   <div>
                     <h2 className="font-semibold flex items-center gap-2">
                       <Stethoscope className="w-4 h-4 text-primary" />
-                      Doctor's Session
+                      {t("pdetail.session")}
                     </h2>
                     <p className="text-xs text-muted-foreground mt-0.5">
-                      Diagnosis and clinical notes save automatically as you
-                      type.
+                      {t("pdetail.sessionHint")}
                     </p>
                   </div>
                   <div className="flex items-center gap-2">
@@ -456,12 +465,12 @@ function PatientConsultation({ params }: Props) {
                       className="text-xs text-muted-foreground"
                     >
                       {save.status === "saving"
-                        ? "Saving…"
+                        ? t("pdetail.saving")
                         : save.status === "error"
-                          ? "Save failed. Stay on this patient and retry."
+                          ? t("pdetail.saveFailed")
                           : save.dirty
-                            ? "Unsaved changes"
-                            : "Saved"}
+                            ? t("pdetail.unsaved")
+                            : t("pdetail.saved")}
                     </span>
                     {save.dirty && (
                       <Button
@@ -472,7 +481,7 @@ function PatientConsultation({ params }: Props) {
                         }}
                         data-testid="button-retry-save"
                       >
-                        {save.status === "error" ? "Retry save" : "Save now"}
+                        {save.status === "error" ? t("pdetail.retrySave") : t("pdetail.saveNow")}
                       </Button>
                     )}
                     {patient.status !== "completed" && (
@@ -487,7 +496,7 @@ function PatientConsultation({ params }: Props) {
                           data-testid="button-finish-session"
                         >
                           <CheckCircle2 className="w-4 h-4 mr-1.5" />
-                          Finish Session
+                          {t("pdetail.finish")}
                         </Button>
                         <Button
                           size="sm"
@@ -498,14 +507,14 @@ function PatientConsultation({ params }: Props) {
                           data-testid="button-finish-and-next"
                           title={
                             nextWaiting
-                              ? `Open next: ${nextWaiting.name}`
-                              : "Waiting list is empty"
+                              ? `${t("pdetail.openNext")} ${nextWaiting.name}`
+                              : t("pdetail.waitingEmpty")
                           }
                         >
                           <SkipForward className="w-4 h-4 mr-1.5" />
                           {nextWaiting
-                            ? `Finish & Next (${nextWaiting.name})`
-                            : "Finish & Next"}
+                            ? `${t("pdetail.finishNext")} (${nextWaiting.name})`
+                            : t("pdetail.finishNext")}
                         </Button>
                       </>
                     )}
@@ -514,7 +523,7 @@ function PatientConsultation({ params }: Props) {
 
                 <div className="grid sm:grid-cols-2 gap-4">
                   <div>
-                    <Label htmlFor="diagnosis-input">Diagnosis</Label>
+                    <Label htmlFor="diagnosis-input">{t("pdetail.diagnosis")}</Label>
                     <Textarea
                       id="diagnosis-input"
                       disabled={patchPatient.isPending}
@@ -524,12 +533,12 @@ function PatientConsultation({ params }: Props) {
                         setDiagnosis(e.target.value);
                         save.edit({ diagnosis: e.target.value, clinicalNotes });
                       }}
-                      placeholder="Enter diagnosis…"
+                      placeholder={t("pdetail.diagnosisPh")}
                       className="mt-1 min-h-32"
                     />
                   </div>
                   <div>
-                    <Label htmlFor="clinical-notes-input">Clinical Notes</Label>
+                    <Label htmlFor="clinical-notes-input">{t("pdetail.clinicalNotes")}</Label>
                     <Textarea
                       id="clinical-notes-input"
                       disabled={patchPatient.isPending}
@@ -539,7 +548,7 @@ function PatientConsultation({ params }: Props) {
                         setClinicalNotes(e.target.value);
                         save.edit({ diagnosis, clinicalNotes: e.target.value });
                       }}
-                      placeholder="Examination findings, treatment plan, follow-up instructions…"
+                      placeholder={t("pdetail.clinicalNotesPh")}
                       className="mt-1 min-h-32"
                     />
                   </div>
@@ -562,12 +571,12 @@ function PatientConsultation({ params }: Props) {
                       <AlertTriangle className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
                       <div className="flex-1 min-w-0 text-xs space-y-1">
                         <p className="font-semibold text-amber-900 dark:text-amber-200 uppercase tracking-wide text-[10px]">
-                          Check before prescribing
+                          {t("pdetail.safetyTitle")}
                         </p>
                         {patient.allergies && (
                           <p>
                             <span className="font-medium text-amber-900 dark:text-amber-200">
-                              Allergies:
+                              {t("pdetail.safetyAllergies")}
                             </span>{" "}
                             <span className="text-destructive font-medium">
                               {patient.allergies}
@@ -577,7 +586,7 @@ function PatientConsultation({ params }: Props) {
                         {patient.chronicConditions && (
                           <p>
                             <span className="font-medium text-amber-900 dark:text-amber-200">
-                              Chronic:
+                              {t("pdetail.safetyChronic")}
                             </span>{" "}
                             <span className="text-amber-900 dark:text-amber-100">
                               {patient.chronicConditions}
@@ -587,7 +596,7 @@ function PatientConsultation({ params }: Props) {
                         {patient.notes && (
                           <p>
                             <span className="font-medium text-amber-900 dark:text-amber-200">
-                              Notes:
+                              {t("pdetail.safetyNotes")}
                             </span>{" "}
                             <span className="text-amber-900 dark:text-amber-100">
                               {patient.notes}
@@ -607,18 +616,16 @@ function PatientConsultation({ params }: Props) {
                   <div>
                     <h2 className="font-semibold flex items-center gap-2">
                       <History className="w-4 h-4 text-primary" />
-                      Medical History
+                      {t("pdetail.history")}
                     </h2>
                     <p className="text-xs text-muted-foreground mt-0.5">
-                      {timeline.length} event{timeline.length !== 1 ? "s" : ""}{" "}
-                      · {patientAppts.length} visit
-                      {patientAppts.length !== 1 ? "s" : ""} ·{" "}
-                      {patientRx.length} prescription
-                      {patientRx.length !== 1 ? "s" : ""}
+                      {timeline.length} · {patientAppts.length}{" "}
+                      {t("pdetail.visit")} · {patientRx.length}{" "}
+                      {t("pdetail.prescription")}
                       {totalSpent > 0 && (
                         <>
                           {" "}
-                          · Total paid:{" "}
+                          · {t("pdetail.totalPaid")}{" "}
                           <span className="font-mono">
                             {totalSpent} {currencyCode}
                           </span>
@@ -632,7 +639,7 @@ function PatientConsultation({ params }: Props) {
                   <div className="text-center py-10">
                     <History className="w-10 h-10 text-muted-foreground/30 mx-auto mb-3" />
                     <p className="text-sm text-muted-foreground">
-                      No history yet for this patient.
+                      {t("pdetail.noHistory")}
                     </p>
                   </div>
                 ) : (
@@ -660,16 +667,16 @@ function PatientConsultation({ params }: Props) {
                               <p className="text-sm font-medium">
                                 {entry.kind === "visit" ? (
                                   <>
-                                    Visit —{" "}
+                                    {t("pdetail.visit")} —{" "}
                                     <span className="text-muted-foreground font-normal">
                                       {entry.type}
                                     </span>
                                   </>
                                 ) : (
                                   <>
-                                    Prescription —{" "}
+                                    {t("pdetail.prescription")} —{" "}
                                     <span className="text-muted-foreground font-normal">
-                                      {entry.diagnosis ?? "No diagnosis"}
+                                      {entry.diagnosis ?? t("pdetail.noDiagnosis")}
                                     </span>
                                   </>
                                 )}
@@ -686,7 +693,10 @@ function PatientConsultation({ params }: Props) {
                                   </>
                                 )}
                                 {entry.kind === "rx" && (
-                                  <> · by Dr. {entry.doctorName}</>
+                                  <>
+                                    {" "}
+                                    · {t("pdetail.byDr")} {entry.doctorName}
+                                  </>
                                 )}
                               </p>
                               {entry.kind === "rx" &&
@@ -707,8 +717,10 @@ function PatientConsultation({ params }: Props) {
                               )}
                               {entry.kind === "rx" && (
                                 <span className="text-xs px-2 py-0.5 rounded bg-green-500/10 text-green-600 dark:text-green-400">
-                                  {entry.drugs.length} med
-                                  {entry.drugs.length !== 1 ? "s" : ""}
+                                  {entry.drugs.length}{" "}
+                                  {entry.drugs.length !== 1
+                                    ? t("pdetail.medMany")
+                                    : t("pdetail.medOne")}
                                 </span>
                               )}
                             </div>
@@ -734,4 +746,4 @@ function PatientConsultation({ params }: Props) {
       </DashboardLayout>
     </ProtectedRoute>
   );
-                                    }
+                    }
