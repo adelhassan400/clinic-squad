@@ -4,27 +4,29 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { AlertTriangle, CheckCircle, Crown, PhoneCall, LogOut, Shield, Sun, Moon } from "lucide-react";
 import { Link } from "wouter";
-
-const plans = [
-  {
-    id: "basic",
-    name: "Basic Plan",
-    price: "200 EGP",
-    features: ["Patient records & ePrescription", "Waiting list, check-in & checkout", "Standard appointment scheduling", "Basic financial tracking", "Staff accounts (2)"],
-  },
-  {
-    id: "premium",
-    name: "Premium Plan",
-    price: "400 EGP",
-    features: ["Everything in Basic", "Insights & analytics", "Advanced reports", "Up to 10 staff accounts", "Priority support"],
-    highlighted: true,
-  },
-];
+import { useLang } from "@/lib/lang";
 
 export default function SubscriptionExpiredPage() {
   const { clinic, logout } = useAuth();
   const { theme, toggleTheme } = useTheme();
+  const { t } = useLang();
   const isDeactivated = clinic?.status === "deactivated";
+
+  const plans = [
+    {
+      id: "basic",
+      name: t("pricing.basic.name"),
+      price: t("subx.priceBasic"),
+      features: [t("planfeat.records"), t("planfeat.queue"), t("planfeat.scheduling"), t("planfeat.finances"), t("planfeat.staff2")],
+    },
+    {
+      id: "premium",
+      name: t("pricing.premium.name"),
+      price: t("subx.pricePremium"),
+      features: [t("planfeat.allBasic"), t("planfeat.insights"), t("planfeat.reports"), t("planfeat.staff10"), t("planfeat.prioritySupport")],
+      highlighted: true,
+    },
+  ];
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
@@ -41,7 +43,7 @@ export default function SubscriptionExpiredPage() {
             {theme === "dark" ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
           </Button>
           <Button variant="ghost" size="sm" onClick={logout} data-testid="button-logout">
-            <LogOut className="w-4 h-4 mr-2" />Sign Out
+            <LogOut className="w-4 h-4 mr-2" />{t("sidebar.signOut")}
           </Button>
         </div>
       </div>
@@ -54,14 +56,14 @@ export default function SubscriptionExpiredPage() {
             <AlertTriangle className={`w-10 h-10 ${isDeactivated ? "text-amber-600" : "text-destructive"}`} />
           </div>
             <Badge className={`mb-4 text-sm px-4 py-1 ${isDeactivated ? "bg-amber-500/10 text-amber-700 border-amber-500/20 dark:text-amber-300" : "bg-destructive/10 text-destructive border-destructive/20"}`}>
-              {isDeactivated ? "Clinic Access Deactivated" : "Subscription Expired"}
+              {isDeactivated ? t("subx.deactivatedBadge") : t("subx.expiredBadge")}
             </Badge>
-            <h1 className="text-3xl font-bold mb-3">{isDeactivated ? "Your clinic access is temporarily paused" : "Your free trial has ended"}</h1>
+            <h1 className="text-3xl font-bold mb-3">{isDeactivated ? t("subx.deactivatedTitle") : t("subx.expiredTitle")}</h1>
             <p className="text-muted-foreground mb-2">
-              {isDeactivated ? <>Access for <strong>{clinic?.name}</strong> is temporarily suspended.</> : <>Your 15-day free trial for <strong>{clinic?.name}</strong> has expired.</>}
+              {isDeactivated ? <>{t("subx.deactivatedDescPre")} <strong>{clinic?.name}</strong> {t("subx.deactivatedDescPost")}</> : <>{t("subx.expiredDescPre")} <strong>{clinic?.name}</strong> {t("subx.expiredDescPost")}</>}
             </p>
             <p className="text-muted-foreground mb-10">
-              {isDeactivated ? "Choose a plan or contact support to request renewal and restore full access." : "Choose a plan to restore full access to your clinic dashboard."}
+              {isDeactivated ? t("subx.deactivatedAction") : t("subx.expiredAction")}
             </p>
 
           {/* Plans */}
@@ -74,10 +76,10 @@ export default function SubscriptionExpiredPage() {
                 }`}
               >
                 {plan.highlighted && (
-                  <Badge className="self-start mb-3 bg-primary text-primary-foreground text-xs">Recommended</Badge>
+                  <Badge className="self-start mb-3 bg-primary text-primary-foreground text-xs">{t("subx.recommended")}</Badge>
                 )}
                 <h3 className="font-bold text-lg mb-1">{plan.name}</h3>
-                <p className="text-2xl font-bold mb-4">{plan.price}<span className="text-sm font-normal text-muted-foreground">/month</span></p>
+                <p className="text-2xl font-bold mb-4">{plan.price}<span className="text-sm font-normal text-muted-foreground">{t("subx.perMonth")}</span></p>
                 <ul className="space-y-2 flex-1 mb-5">
                   {plan.features.map(f => (
                     <li key={f} className="flex items-center gap-2 text-sm">
@@ -89,7 +91,7 @@ export default function SubscriptionExpiredPage() {
                 <Link href="/subscription">
                   <Button className="w-full" variant={plan.highlighted ? "default" : "outline"} data-testid={`select-plan-${plan.id}`}>
                     <Crown className="w-3.5 h-3.5 mr-2" />
-                    Choose {plan.id === "premium" ? "Premium" : "Basic"}
+                    {t("subx.choose")} {plan.id === "premium" ? t("plan.premium") : t("plan.basic")}
                   </Button>
                 </Link>
               </div>
@@ -98,7 +100,7 @@ export default function SubscriptionExpiredPage() {
 
           {/* WhatsApp */}
           <div className="p-5 rounded-xl border border-border bg-card text-center">
-            <p className="text-sm text-muted-foreground mb-3">Need help choosing a plan? Contact us directly.</p>
+            <p className="text-sm text-muted-foreground mb-3">{t("subx.helpChoose")}</p>
             <a
               href="https://wa.me/201000000000?text=I%20need%20help%20with%20my%20ClinicSquad%20subscription"
               target="_blank"
@@ -106,7 +108,7 @@ export default function SubscriptionExpiredPage() {
             >
               <Button variant="outline" className="border-green-600 text-green-700 hover:bg-green-50 dark:text-green-400 dark:hover:bg-green-900/20">
                 <PhoneCall className="w-4 h-4 mr-2" />
-                Contact Support via WhatsApp
+                {t("subx.contactSupport")}
               </Button>
             </a>
           </div>
@@ -114,4 +116,4 @@ export default function SubscriptionExpiredPage() {
       </div>
     </div>
   );
-}
+                                                                                                                 }
