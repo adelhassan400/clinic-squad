@@ -1,6 +1,7 @@
 import type { Request, Response, NextFunction } from "express";
 import { eq } from "drizzle-orm";
 import { db, clinicsTable, usersTable } from "@workspace/db";
+import { verifyToken } from "../lib/auth-security";
 
 export interface AuthedUser {
   id: string;
@@ -18,23 +19,13 @@ declare global {
   }
 }
 
-function decodeToken(token: string): string | null {
-  try {
-    const decoded = Buffer.from(token, "base64").toString();
-    const userId = decoded.split(":")[0];
-    return userId || null;
-  } catch {
-    return null;
-  }
-}
-
 async function resolveUser(req: Request, res: Response): Promise<AuthedUser | null> {
   const header = req.headers.authorization;
   if (!header?.startsWith("Bearer ")) {
     res.status(401).json({ error: "Unauthorized" });
     return null;
   }
-  const userId = decodeToken(header.slice("Bearer ".length));
+  const userId = verifyToken(header.slice("Bearer ".length));
   if (!userId) {
     res.status(401).json({ error: "Invalid token" });
     return null;

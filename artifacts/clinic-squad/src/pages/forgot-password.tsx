@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { Shield, Loader2, Copy, CheckCircle2, ArrowRight } from "lucide-react";
+import { Shield, Loader2, CheckCircle2 } from "lucide-react";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 
 const schema = z.object({
@@ -18,10 +18,7 @@ type FormData = z.infer<typeof schema>;
 
 export default function ForgotPasswordPage() {
   const { toast } = useToast();
-  const [resetUrl, setResetUrl] = useState<string | null>(null);
-  const [resetToken, setResetToken] = useState<string | null>(null);
-  const [expiresAt, setExpiresAt] = useState<string | null>(null);
-  const [copied, setCopied] = useState(false);
+  const [submittedEmail, setSubmittedEmail] = useState<string | null>(null);
 
   const {
     register,
@@ -38,20 +35,12 @@ export default function ForgotPasswordPage() {
     requestMutation.mutate(
       { data },
       {
-        onSuccess: (response) => {
-          setResetUrl(response.resetUrl ?? null);
-          setResetToken(response.resetToken ?? null);
-          setExpiresAt(response.expiresAt ?? null);
-          if (!response.resetUrl) {
-            toast({
-              title: "Request received",
-              description: response.message,
-            });
-          }
+        onSuccess: () => {
+          setSubmittedEmail(data.email);
         },
         onError: () => {
           toast({
-            title: "Could not generate reset link",
+            title: "Could not submit the request",
             description: "Please try again in a moment.",
             variant: "destructive",
           });
@@ -60,19 +49,12 @@ export default function ForgotPasswordPage() {
     );
   };
 
-  const copyLink = async () => {
-    if (!resetUrl) return;
-    await navigator.clipboard.writeText(resetUrl);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 1500);
-  };
-
   return (
     <div className="min-h-screen bg-background flex">
       <div className="hidden lg:flex flex-col justify-between w-[45%] bg-sidebar p-12">
         <div className="flex items-center gap-3">
           <div className="w-9 h-9 rounded-xl bg-primary flex items-center justify-center">
-            <Shield className="w-5 h-5 text-primary-foreground" />
+            <Shield className="w-5 h-5 text-sidebar-foreground" />
           </div>
           <span className="font-serif font-bold text-xl text-sidebar-foreground">
             ClinicSquad
@@ -83,7 +65,7 @@ export default function ForgotPasswordPage() {
             Forgot your password?
           </h2>
           <p className="text-sidebar-foreground/60 text-sm leading-relaxed">
-            Enter your email and we'll generate a single-use link you can follow to choose a new password. Links expire after one hour.
+            Enter your email and our support team will share a single-use reset link through your clinic's registered WhatsApp contact. Links expire after one hour.
           </p>
         </div>
         <div className="text-xs text-sidebar-foreground/40">
@@ -106,11 +88,11 @@ export default function ForgotPasswordPage() {
             </div>
             <h1 className="text-2xl font-bold mb-1">Reset your password</h1>
             <p className="text-sm text-muted-foreground">
-              We'll generate a one-time link for the email you enter below.
+              Enter the email you use to sign in.
             </p>
           </div>
 
-          {!resetUrl && !resetToken ? (
+          {!submittedEmail ? (
             <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
               <div>
                 <Label htmlFor="email">Email</Label>
@@ -138,7 +120,7 @@ export default function ForgotPasswordPage() {
                 {requestMutation.isPending && (
                   <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                 )}
-                Generate Reset Link
+                Request Reset Link
               </Button>
             </form>
           ) : (
@@ -148,59 +130,17 @@ export default function ForgotPasswordPage() {
                   <CheckCircle2 className="w-5 h-5 text-primary mt-0.5 shrink-0" />
                   <div className="text-sm">
                     <p className="font-medium text-foreground">
-                      Reset link generated
+                      Request received
                     </p>
                     <p className="text-muted-foreground text-xs mt-0.5">
-                      {expiresAt
-                        ? `Valid for one hour (until ${new Date(expiresAt).toLocaleString()}).`
-                        : "Valid for one hour."}
+                      If an account exists for {submittedEmail}, our support team will share a one-time reset link through the registered WhatsApp contact. The link is valid for one hour.
                     </p>
                   </div>
                 </div>
-
-                {resetUrl && (
-                  <div className="space-y-2">
-                    <Label className="text-xs">Reset link</Label>
-                    <div className="flex gap-2">
-                      <Input
-                        readOnly
-                        value={resetUrl}
-                        data-testid="input-reset-url"
-                        className="font-mono text-xs"
-                      />
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="icon"
-                        onClick={copyLink}
-                        data-testid="button-copy-link"
-                      >
-                        {copied ? (
-                          <CheckCircle2 className="w-4 h-4 text-primary" />
-                        ) : (
-                          <Copy className="w-4 h-4" />
-                        )}
-                      </Button>
-                    </div>
-                  </div>
-                )}
-
-                {resetToken && (
-                  <p className="text-xs text-muted-foreground">
-                    Or open the link directly:{" "}
-                    <Link
-                      href={`/reset-password?token=${encodeURIComponent(resetToken)}`}
-                      className="text-primary hover:underline inline-flex items-center gap-1"
-                      data-testid="link-open-reset"
-                    >
-                      Continue <ArrowRight className="w-3 h-3" />
-                    </Link>
-                  </p>
-                )}
               </div>
 
               <p className="text-xs text-muted-foreground">
-                If the email isn't registered, no link will appear here. Check the address and try again, or ask your clinic admin.
+                Nothing arrived? Contact ClinicSquad support on WhatsApp and we'll verify your account and send the link.
               </p>
             </div>
           )}

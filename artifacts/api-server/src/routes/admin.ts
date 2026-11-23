@@ -1,7 +1,8 @@
 import { Router } from "express";
-import { randomUUID } from "crypto";
+import { randomBytes, randomUUID } from "crypto";
 import { eq, desc, inArray, or } from "drizzle-orm";
 import { requireAuth, requireRole } from "../middlewares/auth";
+import { generateToken, hashToken } from "../lib/auth-security";
 import {
   db,
   clinicsTable,
@@ -10,6 +11,7 @@ import {
   patientsTable,
   appointmentsTable,
   auditLogsTable,
+  passwordResetTokensTable,
 } from "@workspace/db";
 
 const router = Router();
@@ -342,6 +344,47 @@ router.get("/subscriptions", async (req, res) => {
   })));
 });
 
+/**
+ * Support flow for password resets: the public /api/auth/forgot-password
+ * endpoint never exposes the reset token, so a superadmin generates the link
+ * here and shares it with the user through the clinic's verified contact
+ * channel (WhatsApp support).
+ */
+router.post("/password-reset-link", async (req, res) => {
+  const email =
+    typeof req.body?.email === "string" ? req.body.email.trim().toLowerCase() : "";
+  if (!email) return res.status(400).json({ error: "Email is required" });
+
+  const user = (
+    await db.select().from(usersTable).where(eq(usersTable.email, email)).limit(1)
+  )[0];
+  if (!user) return res.status(404).json({ error: "No account found for that email" });
+
+  const plainToken = randomBytes(32).toString("base64url");
+  const expiresAt = new Date(Date.now() + 60 * 60 * 1000);
+  await db.insert(passwordResetTokensTable).values({
+    id: randomUUID(),
+    userId: user.id,
+    tokenHash: hashToken(plainToken),
+    expiresAt,
+  });
+
+  await db.insert(auditLogsTable).values({
+    id: randomUUID(),
+    adminId: req.authUser!.id,
+    adminEmail: req.authUser!.email,
+    action: "GENERATE_PASSWORD_RESET_LINK",
+    details: `Generated a password reset link for ${user.email} (${user.id})`,
+  });
+
+  const origin =
+    (typeof req.headers.origin === "string" && req.headers.origin) ||
+    `${req.protocol}://${req.get("host") ?? ""}`;
+  const resetUrl = `${origin}/reset-password?token=${encodeURIComponent(plainToken)}`;
+
+  return res.json({ email: user.email, resetUrl, expiresAt: expiresAt.toISOString() });
+});
+
 router.post("/clinics/:clinicId/impersonate", async (req, res) => {
   const clinicId = String((req.params as Record<string, unknown>).clinicId ?? "");
   const clinic = (await db.select().from(clinicsTable).where(eq(clinicsTable.id, clinicId)).limit(1))[0];
@@ -359,7 +402,7 @@ router.post("/clinics/:clinicId/impersonate", async (req, res) => {
     return res.status(409).json({ error: "The clinic owner account is blocked or deactivated" });
   }
 
-  const token = Buffer.from(`${owner.id}:${Date.now()}`).toString("base64");
+  const token = generateToken(owner.id);
   await db.insert(auditLogsTable).values({
     id: randomUUID(),
     adminId: req.authUser!.id,
