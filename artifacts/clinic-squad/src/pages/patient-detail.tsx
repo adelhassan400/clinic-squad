@@ -45,7 +45,7 @@ import {
 import { Link, useLocation } from "wouter";
 import { cn } from "@/lib/utils";
 import { openWhatsApp, whatsappPatientGreeting } from "@/lib/whatsapp";
-import { VisitTypeBadge } from "@/lib/visit-types";
+import { getVisitTypeLabel, VisitTypeBadge } from "@/lib/visit-types";
 import { LabResultsSection } from "@/components/patient/LabResultsSection";
 import { EditPatientDialog } from "@/components/patient/EditPatientDialog";
 
@@ -88,6 +88,8 @@ function StatusBadge({ status }: { status: string }) {
   const { t } = useLang();
   const label: Record<string, string> = {
     scheduled: t("status.scheduled"),
+    waiting: t("status.waiting"),
+    "in-progress": t("status.inProgress"),
     completed: t("status.completed"),
     cancelled: t("status.cancelled"),
     no_show: t("status.noShow"),
@@ -669,7 +671,7 @@ function PatientConsultation({ params }: Props) {
                                   <>
                                     {t("pdetail.visit")} —{" "}
                                     <span className="text-muted-foreground font-normal">
-                                      {entry.type}
+                                      {getVisitTypeLabel(t, entry.type)}
                                     </span>
                                   </>
                                 ) : (
@@ -746,4 +748,4 @@ function PatientConsultation({ params }: Props) {
       </DashboardLayout>
     </ProtectedRoute>
   );
-}
+                      }
