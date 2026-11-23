@@ -1,8 +1,8 @@
 import { Router } from "express";
 import { randomBytes, randomUUID } from "crypto";
 import { eq, desc, inArray, or } from "drizzle-orm";
-import { requireAuth, requireRole } from "../middlewares/auth";
-import { generateToken, hashToken } from "../lib/auth-security";
+import { requireAuth, requireRole } from "../middlewares/auth.js";
+import { generateToken, hashToken } from "../lib/auth-security.js";
 import {
   db,
   clinicsTable,
