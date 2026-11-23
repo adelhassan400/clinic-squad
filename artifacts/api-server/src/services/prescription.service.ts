@@ -83,36 +83,34 @@ export class PrescriptionService {
   }
 
   static async createPrescription(clinicId: string, doctor: { id: string, name: string }, data: any) {
-    return await db.transaction(async (tx: any) => {
-      const [patient] = await tx
-        .select()
-        .from(patientsTable)
-        .where(and(eq(patientsTable.id, data.patientId), eq(patientsTable.clinicId, clinicId)))
-        .limit(1);
+    const [patient] = await db
+      .select()
+      .from(patientsTable)
+      .where(and(eq(patientsTable.id, data.patientId), eq(patientsTable.clinicId, clinicId)))
+      .limit(1);
 
-      if (!patient) throw new Error("Patient not found");
+    if (!patient) throw new Error("Patient not found");
 
-      const id = randomUUID();
-      await tx.insert(prescriptionsTable).values({
-        id,
-        clinicId,
-        patientId: data.patientId,
-        doctorId: doctor.id,
-        doctorName: doctor.name,
-        date: data.date,
-        diagnosis: data.diagnosis ?? null,
-        notes: data.notes ?? null,
-        items: data.items.map((i: any) => ({
-          drug: i.drug,
-          dosage: i.dosage,
-          frequency: i.frequency,
-          duration: i.duration,
-          notes: i.notes ?? null,
-        })),
-      });
-
-      return this.getPrescription(clinicId, id);
+    const id = randomUUID();
+    await db.insert(prescriptionsTable).values({
+      id,
+      clinicId,
+      patientId: data.patientId,
+      doctorId: doctor.id,
+      doctorName: doctor.name,
+      date: data.date,
+      diagnosis: data.diagnosis ?? null,
+      notes: data.notes ?? null,
+      items: data.items.map((i: any) => ({
+        drug: i.drug,
+        dosage: i.dosage,
+        frequency: i.frequency,
+        duration: i.duration,
+        notes: i.notes ?? null,
+      })),
     });
+
+    return this.getPrescription(clinicId, id);
   }
 
   static async deletePrescription(clinicId: string, prescriptionId: string) {
