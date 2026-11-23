@@ -23,4 +23,4 @@ DATABASE_URL=postgresql://... pnpm test:workflows
 DATABASE_URL=postgresql://... CHROME_PATH=/usr/bin/google-chrome node tests/workflows/ui-check.mjs
 ```
 
-UI verification starts an isolated API on 8081 and preview on 5000. It covers failed-save navigation blocking, retry, latest-text flush, patient switching and browser Back. Screenshots use synthetic patients only. Existing bundle-size warnings remain.
+UI verification starts an isolated API on 8081 and preview on 5100. It covers failed-save navigation blocking, retry, latest-text flush, patient switching and browser Back. Screenshots use synthetic patients only. Existing bundle-size warnings remain.
