@@ -12,17 +12,16 @@ import {
   ResendVerificationBody,
 } from "@workspace/api-zod";
 import { randomUUID, randomBytes } from "crypto";
-import { createHash } from "crypto";
+import {
+  generateToken,
+  verifyToken,
+  hashToken,
+  hashPassword,
+  verifyPassword,
+  isLegacyPasswordHash,
+} from "../lib/auth-security";
 
 const router = Router();
-
-function hashPassword(password: string): string {
-  return createHash("sha256").update(password + "clinicsquad_salt").digest("hex");
-}
-
-function hashToken(token: string): string {
-  return createHash("sha256").update(token).digest("hex");
-}
 
 const RESET_TOKEN_TTL_MS = 60 * 60 * 1000;
 const VERIFY_TOKEN_TTL_MS = 24 * 60 * 60 * 1000;
@@ -102,10 +101,6 @@ async function recordAuthEvent(
   }
 }
 
-function generateToken(userId: string): string {
-  return Buffer.from(`${userId}:${Date.now()}`).toString("base64");
-}
-
 router.post("/register", async (req, res) => {
   const parsed = RegisterUserBody.safeParse(req.body);
   if (!parsed.success) {
@@ -144,7 +139,7 @@ router.post("/register", async (req, res) => {
   await db.insert(usersTable).values({
     id: userId,
     email,
-    passwordHash: hashPassword(password),
+    passwordHash: await hashPassword(password),
     name: ownerName,
     specialty: specialty.trim(),
     whatsappNumber: whatsappNumber.trim(),
@@ -311,9 +306,21 @@ router.post("/login", async (req, res) => {
 
   const users = await db.select().from(usersTable).where(eq(usersTable.email, email)).limit(1);
   const user = users[0];
-  if (!user || user.passwordHash !== hashPassword(password)) {
+  if (!user || !(await verifyPassword(password, user.passwordHash))) {
     if (user) await recordAuthEvent(req, user.id, "login_failed");
     return res.status(401).json({ error: "Invalid credentials" });
+  }
+
+  if (isLegacyPasswordHash(user.passwordHash)) {
+    // Transparently upgrade pre-hardening SHA-256 password hashes to scrypt.
+    try {
+      await db
+        .update(usersTable)
+        .set({ passwordHash: await hashPassword(password) })
+        .where(eq(usersTable.id, user.id));
+    } catch {
+      // The upgrade is best-effort; a failed rewrite must not block the login.
+    }
   }
 
   if (user.isBlocked) {
@@ -374,13 +381,22 @@ router.post("/forgot-password", async (req, res) => {
   const users = await db.select().from(usersTable).where(eq(usersTable.email, email)).limit(1);
   const user = users[0];
 
+  // The response is identical whether or not the email is registered, and it
+  // never contains the reset token or link. Returning them here let anyone
+  // take over an account knowing only its email address. Reset links are
+  // delivered out of band: a superadmin can generate one for the user through
+  // POST /api/admin/password-reset-link and share it via the clinic's
+  // registered WhatsApp contact.
+  const genericResponse = {
+    message:
+      "If that email is registered, a password reset link can be provided by the support team.",
+    resetToken: null,
+    resetUrl: null,
+    expiresAt: null,
+  };
+
   if (!user) {
-    return res.json({
-      message: "If that email exists, a password reset link has been generated.",
-      resetToken: null,
-      resetUrl: null,
-      expiresAt: null,
-    });
+    return res.json(genericResponse);
   }
 
   const plainToken = randomBytes(32).toString("base64url");
@@ -393,17 +409,7 @@ router.post("/forgot-password", async (req, res) => {
     expiresAt,
   });
 
-  const origin =
-    (typeof req.headers.origin === "string" && req.headers.origin) ||
-    `${req.protocol}://${req.get("host") ?? ""}`;
-  const resetUrl = `${origin}/reset-password?token=${encodeURIComponent(plainToken)}`;
-
-  return res.json({
-    message: "Password reset link generated. Use the token below to set a new password.",
-    resetToken: plainToken,
-    resetUrl,
-    expiresAt: expiresAt.toISOString(),
-  });
+  return res.json(genericResponse);
 });
 
 router.post("/reset-password", async (req, res) => {
@@ -431,7 +437,7 @@ router.post("/reset-password", async (req, res) => {
     return res.status(400).json({ error: "Invalid or expired reset token" });
   }
 
-  await db.update(usersTable).set({ passwordHash: hashPassword(password) }).where(eq(usersTable.id, record.userId));
+  await db.update(usersTable).set({ passwordHash: await hashPassword(password) }).where(eq(usersTable.id, record.userId));
   await db
     .update(passwordResetTokensTable)
     .set({ usedAt: new Date() })
@@ -459,11 +465,11 @@ router.post("/change-password", async (req, res) => {
   const user = users[0];
   if (!user) return res.status(401).json({ error: "Invalid token" });
 
-  if (user.passwordHash !== hashPassword(currentPassword)) {
+  if (!(await verifyPassword(currentPassword, user.passwordHash))) {
     return res.status(401).json({ error: "Current password is incorrect" });
   }
 
-  await db.update(usersTable).set({ passwordHash: hashPassword(newPassword) }).where(eq(usersTable.id, userId));
+  await db.update(usersTable).set({ passwordHash: await hashPassword(newPassword) }).where(eq(usersTable.id, userId));
 
   await recordAuthEvent(req, userId, "password_changed");
   return res.json({ message: "Password changed successfully." });
@@ -494,9 +500,7 @@ router.get("/events", async (req, res) => {
 function userIdFromAuth(req: any): string | null {
   const authHeader = req.headers.authorization;
   if (!authHeader?.startsWith("Bearer ")) return null;
-  const token = authHeader.replace("Bearer ", "");
-  const decoded = Buffer.from(token, "base64").toString();
-  return decoded.split(":")[0] || null;
+  return verifyToken(authHeader.slice("Bearer ".length));
 }
 
 router.get("/me", async (req, res) => {
