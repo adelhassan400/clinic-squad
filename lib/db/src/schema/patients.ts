@@ -23,6 +23,8 @@ export const patientsTable = pgTable("patients", {
   paymentCollectedBy: text("payment_collected_by"),
   paymentShiftDate: text("payment_shift_date"),
   paymentReceivedAt: timestamp("payment_received_at", { withTimezone: true }),
+  checkedInAt: timestamp("checked_in_at", { withTimezone: true }),
+  activeAppointmentId: text("active_appointment_id"),
   diagnosis: text("diagnosis"),
   clinicalNotes: text("clinical_notes"),
   chronicConditions: text("chronic_conditions"),
