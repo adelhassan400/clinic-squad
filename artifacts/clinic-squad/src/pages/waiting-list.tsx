@@ -182,7 +182,7 @@ export default function WaitingListPage() {
                 value={doctorId}
                 onChange={(e) => setDoctorId(e.target.value)}
               >
-                <option value="">All doctors</option>
+                <option value="">{t("waiting.allDoctors")}</option>
                 {(team?.members ?? [])
                   .filter((m) => ["admin", "doctor"].includes(m.role))
                   .map((m) => (
@@ -302,4 +302,4 @@ export default function WaitingListPage() {
       </DashboardLayout>
     </ProtectedRoute>
   );
-    }
+                    }
