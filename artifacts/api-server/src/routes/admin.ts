@@ -12,6 +12,7 @@ import {
   appointmentsTable,
   auditLogsTable,
   passwordResetTokensTable,
+  emailVerificationTokensTable,
 } from "@workspace/db";
 
 const router = Router();
@@ -383,6 +384,50 @@ router.post("/password-reset-link", async (req, res) => {
   const resetUrl = `${origin}/reset-password?token=${encodeURIComponent(plainToken)}`;
 
   return res.json({ email: user.email, resetUrl, expiresAt: expiresAt.toISOString() });
+});
+
+/**
+ * Generate an email verification link for a user (superadmin only). Mail
+ * delivery is not configured, so verification links are delivered out of band
+ * through the same support channel (WhatsApp) as password reset links. This is
+ * an explicit administrative verification, audit-logged like password resets.
+ */
+router.post("/email-verification-link", async (req, res) => {
+  const email =
+    typeof req.body?.email === "string" ? req.body.email.trim().toLowerCase() : "";
+  if (!email) return res.status(400).json({ error: "Email is required" });
+
+  const user = (
+    await db.select().from(usersTable).where(eq(usersTable.email, email)).limit(1)
+  )[0];
+  if (!user) return res.status(404).json({ error: "No account found for that email" });
+  if (user.emailVerifiedAt) {
+    return res.status(409).json({ error: "Email is already verified" });
+  }
+
+  const plainToken = randomBytes(32).toString("base64url");
+  const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
+  await db.insert(emailVerificationTokensTable).values({
+    id: randomUUID(),
+    userId: user.id,
+    tokenHash: hashToken(plainToken),
+    expiresAt,
+  });
+
+  await db.insert(auditLogsTable).values({
+    id: randomUUID(),
+    adminId: req.authUser!.id,
+    adminEmail: req.authUser!.email,
+    action: "GENERATE_EMAIL_VERIFICATION_LINK",
+    details: `Generated an email verification link for ${user.email} (${user.id})`,
+  });
+
+  const origin =
+    (typeof req.headers.origin === "string" && req.headers.origin) ||
+    `${req.protocol}://${req.get("host") ?? ""}`;
+  const verifyUrl = `${origin}/verify-email?token=${encodeURIComponent(plainToken)}`;
+
+  return res.json({ email: user.email, verifyUrl, expiresAt: expiresAt.toISOString() });
 });
 
 router.post("/clinics/:clinicId/impersonate", async (req, res) => {
