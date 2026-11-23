@@ -32,10 +32,10 @@ try {
     DATABASE_URL: process.env.DATABASE_URL,
   });
   start("pnpm", ["--filter", "@workspace/clinic-squad", "run", "serve"], {
-    PORT: "5000",
+    PORT: "5100",
     BASE_PATH: "/",
   });
-  for (const url of [apiBase + "/api/healthz", "http://127.0.0.1:5000"]) {
+  for (const url of [apiBase + "/api/healthz", "http://127.0.0.1:5100"]) {
     let ready = false;
     for (let n = 0; n < 100; n++) {
       try {
@@ -114,7 +114,7 @@ try {
     localStorage.setItem("clinicsquad_auth", JSON.stringify(s));
     localStorage.setItem("clinicsquad_lang", "en");
   }, state);
-  await page.goto(`http://127.0.0.1:5000/patients/${p.id}`);
+  await page.goto(`http://127.0.0.1:5100/patients/${p.id}`);
   await page.getByTestId("input-diagnosis").waitFor();
   let fail = true;
   await page.route(
@@ -185,4 +185,4 @@ try {
   await browser?.close();
   for (const p of children) p.kill("SIGTERM");
   setTimeout(() => process.exit(), 500).unref();
-}
+        }
