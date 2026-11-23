@@ -1,11 +1,19 @@
+import { useQueue, queueKey } from "@/lib/queue";
+import { useConsultationSave } from "@/hooks/use-consultation-save";
 import { useEffect, useRef, useState } from "react";
 import { useAuth } from "@/lib/auth";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { PrescriptionsContent } from "@/pages/prescriptions";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import {
-  useGetPatient, useListAppointments, useListPrescriptions, useListPatients, usePatchPatient,
-  getGetPatientQueryKey, getListAppointmentsQueryKey, getListPrescriptionsQueryKey,
+  useGetPatient,
+  useListAppointments,
+  useListPrescriptions,
+  useListPatients,
+  usePatchPatient,
+  getGetPatientQueryKey,
+  getListAppointmentsQueryKey,
+  getListPrescriptionsQueryKey,
   getListPatientsQueryKey,
 } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
@@ -17,9 +25,21 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import {
-  ArrowLeft, Phone, Calendar, Droplets, MessageCircle,
-  Pill, Stethoscope, History, CheckCircle2, Loader2, Save,
-  Pencil, Activity, AlertTriangle, SkipForward,
+  ArrowLeft,
+  Phone,
+  Calendar,
+  Droplets,
+  MessageCircle,
+  Pill,
+  Stethoscope,
+  History,
+  CheckCircle2,
+  Loader2,
+  Save,
+  Pencil,
+  Activity,
+  AlertTriangle,
+  SkipForward,
 } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import { cn } from "@/lib/utils";
@@ -28,7 +48,9 @@ import { VisitTypeBadge } from "@/lib/visit-types";
 import { LabResultsSection } from "@/components/patient/LabResultsSection";
 import { EditPatientDialog } from "@/components/patient/EditPatientDialog";
 
-interface Props { params: { id: string } }
+interface Props {
+  params: { id: string };
+}
 
 function displayAge(age: number | null | undefined): string | null {
   if (age === null || age === undefined) return null;
@@ -37,7 +59,8 @@ function displayAge(age: number | null | undefined): string | null {
 
 function PatientStatusBadge({ status }: { status: string }) {
   const map: Record<string, string> = {
-    waiting: "bg-amber-500/15 text-amber-700 border-amber-500/40 dark:text-amber-300",
+    waiting:
+      "bg-amber-500/15 text-amber-700 border-amber-500/40 dark:text-amber-300",
     "in-progress": "bg-primary/15 text-primary border-primary/40",
     completed: "bg-accent/30 text-accent-foreground border-accent/50",
   };
@@ -61,20 +84,37 @@ function PatientStatusBadge({ status }: { status: string }) {
 
 function StatusBadge({ status }: { status: string }) {
   const map: Record<string, string> = {
-    scheduled: "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400",
-    completed: "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400",
+    scheduled:
+      "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400",
+    completed:
+      "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400",
     cancelled: "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400",
-    no_show: "bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400",
+    no_show:
+      "bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400",
   };
   return (
-    <span className={cn("text-xs font-medium px-2 py-0.5 rounded capitalize", map[status] ?? "bg-muted text-muted-foreground")}>
+    <span
+      className={cn(
+        "text-xs font-medium px-2 py-0.5 rounded capitalize",
+        map[status] ?? "bg-muted text-muted-foreground",
+      )}
+    >
       {status.replace("_", " ")}
     </span>
   );
 }
 
 export default function PatientDetailPage({ params }: Props) {
-  const { currency: { code: currencyCode } } = useCurrency();
+  const { clinic } = useAuth();
+  return clinic ? (
+    <PatientConsultation key={`${clinic.id}:${params.id}`} params={params} />
+  ) : null;
+}
+
+function PatientConsultation({ params }: Props) {
+  const {
+    currency: { code: currencyCode },
+  } = useCurrency();
   const { clinic } = useAuth();
   const clinicId = clinic?.id ?? "";
   const patientId = params.id;
@@ -84,7 +124,10 @@ export default function PatientDetailPage({ params }: Props) {
   const [editOpen, setEditOpen] = useState(false);
 
   const { data: patient, isLoading } = useGetPatient(clinicId, patientId, {
-    query: { enabled: !!clinicId && !!patientId, queryKey: getGetPatientQueryKey(clinicId, patientId) }
+    query: {
+      enabled: !!clinicId && !!patientId,
+      queryKey: getGetPatientQueryKey(clinicId, patientId),
+    },
   });
 
   const patchPatient = usePatchPatient();
@@ -92,7 +135,7 @@ export default function PatientDetailPage({ params }: Props) {
   // Local state for autosave fields (mirrors server state, doctor edits drive saves).
   const [diagnosis, setDiagnosis] = useState("");
   const [clinicalNotes, setClinicalNotes] = useState("");
-  const [savedAt, setSavedAt] = useState<Date | null>(null);
+  const save = useConsultationSave(clinicId, patientId);
   const initializedRef = useRef(false);
   const transitionedRef = useRef(false);
 
@@ -100,6 +143,10 @@ export default function PatientDetailPage({ params }: Props) {
   useEffect(() => {
     if (!patient || initializedRef.current) return;
     initializedRef.current = true;
+    save.initialize({
+      diagnosis: patient.diagnosis ?? "",
+      clinicalNotes: patient.clinicalNotes ?? "",
+    });
     setDiagnosis(patient.diagnosis ?? "");
     setClinicalNotes(patient.clinicalNotes ?? "");
   }, [patient]);
@@ -113,78 +160,65 @@ export default function PatientDetailPage({ params }: Props) {
       { clinicId, patientId, data: { status: "in-progress" } },
       {
         onSuccess: () => {
-          qc.invalidateQueries({ queryKey: getGetPatientQueryKey(clinicId, patientId) });
+          qc.invalidateQueries({
+            queryKey: getGetPatientQueryKey(clinicId, patientId),
+          });
           qc.invalidateQueries({ queryKey: getListPatientsQueryKey(clinicId) });
+          qc.invalidateQueries({ queryKey: queueKey(clinicId) });
         },
       },
     );
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [patient?.status]);
 
-  // Debounced autosave for diagnosis + clinical notes.
   useEffect(() => {
-    if (!patient || !initializedRef.current) return;
-    const sameDiag = (patient.diagnosis ?? "") === diagnosis;
-    const sameNotes = (patient.clinicalNotes ?? "") === clinicalNotes;
-    if (sameDiag && sameNotes) return;
-
+    if (!save.dirty || save.status === "error") return;
     const timer = setTimeout(() => {
-      patchPatient.mutate(
-        {
-          clinicId,
-          patientId,
-          data: {
-            diagnosis: diagnosis === "" ? null : diagnosis,
-            clinicalNotes: clinicalNotes === "" ? null : clinicalNotes,
-          },
-        },
-        {
-          onSuccess: () => {
-            setSavedAt(new Date());
-            qc.invalidateQueries({ queryKey: getGetPatientQueryKey(clinicId, patientId) });
-          },
-        },
-      );
+      void save.flush().catch(() => {});
     }, 800);
     return () => clearTimeout(timer);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [diagnosis, clinicalNotes]);
+  }, [diagnosis, clinicalNotes, save]);
 
-  // Waiting-list query for "Finish & Next".
-  const { data: allPatientsResp } = useListPatients(clinicId, undefined, {
-    query: {
-      enabled: !!clinicId,
-      queryKey: getListPatientsQueryKey(clinicId),
-    },
-  });
-  const nextWaiting = (allPatientsResp?.data ?? [])
-    .filter((p) => p.status === "waiting" && p.id !== patientId)
-    .sort((a, b) => a.createdAt.localeCompare(b.createdAt))[0];
+  const { data: queue } = useQueue(clinicId);
+  const nextWaiting = queue?.data.find(
+    (p) => p.status === "waiting" && p.id !== patientId,
+  );
 
-  const finishAndGo = (afterCompleteRedirect: () => void, successTitle: string) => {
+  const finishAndGo = async (
+    afterCompleteRedirect: () => void,
+    successTitle: string,
+  ) => {
+    try {
+      await save.flush();
+    } catch {
+      return;
+    }
     patchPatient.mutate(
       {
         clinicId,
         patientId,
         data: {
           status: "completed",
-          diagnosis: diagnosis === "" ? null : diagnosis,
-          clinicalNotes: clinicalNotes === "" ? null : clinicalNotes,
         },
       },
       {
         onSuccess: () => {
           toast({ title: successTitle });
-          qc.invalidateQueries({ queryKey: getGetPatientQueryKey(clinicId, patientId) });
+          qc.invalidateQueries({
+            queryKey: getGetPatientQueryKey(clinicId, patientId),
+          });
           qc.invalidateQueries({ queryKey: getListPatientsQueryKey(clinicId) });
+          qc.invalidateQueries({ queryKey: queueKey(clinicId) });
           afterCompleteRedirect();
         },
-        onError: () => toast({ title: "Failed to finish session", variant: "destructive" }),
+        onError: () =>
+          toast({ title: "Failed to finish session", variant: "destructive" }),
       },
     );
   };
 
-  const handleFinish = () => finishAndGo(() => {}, "Session completed — patient sent to checkout");
+  const handleFinish = () =>
+    finishAndGo(() => {}, "Session completed — patient sent to checkout");
 
   const handleFinishAndNext = () => {
     if (nextWaiting) {
@@ -200,37 +234,72 @@ export default function PatientDetailPage({ params }: Props) {
     }
   };
 
-  const { data: appts } = useListAppointments(clinicId, {}, {
-    query: { enabled: !!clinicId, queryKey: getListAppointmentsQueryKey(clinicId, {}) }
-  });
-  const patientAppts = appts?.data.filter(a => a.patientId === patientId) ?? [];
-
-  const { data: rxResp } = useListPrescriptions(clinicId, { patientId }, {
-    query: {
-      enabled: !!clinicId && !!patientId,
-      queryKey: getListPrescriptionsQueryKey(clinicId, { patientId }),
+  const { data: appts } = useListAppointments(
+    clinicId,
+    {},
+    {
+      query: {
+        enabled: !!clinicId,
+        queryKey: getListAppointmentsQueryKey(clinicId, {}),
+      },
     },
-  });
+  );
+  const patientAppts =
+    appts?.data.filter((a) => a.patientId === patientId) ?? [];
+
+  const { data: rxResp } = useListPrescriptions(
+    clinicId,
+    { patientId },
+    {
+      query: {
+        enabled: !!clinicId && !!patientId,
+        queryKey: getListPrescriptionsQueryKey(clinicId, { patientId }),
+      },
+    },
+  );
   const patientRx = rxResp?.data ?? [];
 
   type TimelineEntry =
-    | { kind: "visit"; id: string; date: string; time?: string; type: string; status: string; fee?: number | null }
-    | { kind: "rx"; id: string; date: string; diagnosis: string | null | undefined; doctorName: string; drugs: string[] };
+    | {
+        kind: "visit";
+        id: string;
+        date: string;
+        time?: string;
+        type: string;
+        status: string;
+        fee?: number | null;
+      }
+    | {
+        kind: "rx";
+        id: string;
+        date: string;
+        diagnosis: string | null | undefined;
+        doctorName: string;
+        drugs: string[];
+      };
 
   const timeline: TimelineEntry[] = [
-    ...patientAppts.map(a => ({
+    ...patientAppts.map((a) => ({
       kind: "visit" as const,
-      id: a.id, date: a.date, time: a.time, type: a.type, status: a.status, fee: a.fee,
+      id: a.id,
+      date: a.date,
+      time: a.time,
+      type: a.type,
+      status: a.status,
+      fee: a.fee,
     })),
-    ...patientRx.map(p => ({
+    ...patientRx.map((p) => ({
       kind: "rx" as const,
-      id: p.id, date: p.date, diagnosis: p.diagnosis, doctorName: p.doctorName,
-      drugs: p.items.map(i => i.drug),
+      id: p.id,
+      date: p.date,
+      diagnosis: p.diagnosis,
+      doctorName: p.doctorName,
+      drugs: p.items.map((i) => i.drug),
     })),
   ].sort((a, b) => b.date.localeCompare(a.date));
 
   const totalSpent = patientAppts
-    .filter(a => a.status === "completed" && a.fee)
+    .filter((a) => a.status === "completed" && a.fee)
     .reduce((s, a) => s + (a.fee ?? 0), 0);
 
   const age = displayAge(patient?.age);
@@ -241,7 +310,8 @@ export default function PatientDetailPage({ params }: Props) {
         <div className="p-6 max-w-4xl mx-auto">
           <Link href="/waiting-list">
             <Button variant="ghost" size="sm" className="mb-6 -ml-2">
-              <ArrowLeft className="w-4 h-4 mr-1.5" />Back to Waiting List
+              <ArrowLeft className="w-4 h-4 mr-1.5" />
+              Back to Waiting List
             </Button>
           </Link>
 
@@ -253,7 +323,11 @@ export default function PatientDetailPage({ params }: Props) {
           ) : !patient ? (
             <div className="text-center py-20">
               <p className="text-muted-foreground">Patient not found</p>
-              <Link href="/patients"><Button className="mt-4" size="sm">Back to Patients</Button></Link>
+              <Link href="/patients">
+                <Button className="mt-4" size="sm">
+                  Back to Patients
+                </Button>
+              </Link>
             </div>
           ) : (
             <div className="space-y-6">
@@ -261,7 +335,9 @@ export default function PatientDetailPage({ params }: Props) {
               <div className="rounded-xl border border-border bg-card p-6">
                 <div className="flex items-start gap-5">
                   <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
-                    <span className="text-2xl font-bold text-primary">{patient.name.charAt(0)}</span>
+                    <span className="text-2xl font-bold text-primary">
+                      {patient.name.charAt(0)}
+                    </span>
                   </div>
                   <div className="flex-1">
                     <div className="flex items-center gap-2 mb-2 flex-wrap">
@@ -283,7 +359,8 @@ export default function PatientDetailPage({ params }: Props) {
                     </div>
                     <div className="flex flex-wrap gap-4 text-sm text-muted-foreground items-center">
                       <span className="flex items-center gap-1.5">
-                        <Phone className="w-3.5 h-3.5" />{patient.phone}
+                        <Phone className="w-3.5 h-3.5" />
+                        {patient.phone}
                       </span>
                       <Button
                         size="sm"
@@ -295,7 +372,7 @@ export default function PatientDetailPage({ params }: Props) {
                             whatsappPatientGreeting({
                               patientName: patient.name,
                               clinicName: clinic?.name ?? "the clinic",
-                            })
+                            }),
                           )
                         }
                         data-testid="button-whatsapp-patient"
@@ -305,7 +382,8 @@ export default function PatientDetailPage({ params }: Props) {
                       </Button>
                       {patient.bloodType && (
                         <span className="flex items-center gap-1.5">
-                          <Droplets className="w-3.5 h-3.5 text-red-500" />{patient.bloodType}
+                          <Droplets className="w-3.5 h-3.5 text-red-500" />
+                          {patient.bloodType}
                         </span>
                       )}
                     </div>
@@ -322,12 +400,18 @@ export default function PatientDetailPage({ params }: Props) {
                   </Button>
                 </div>
 
-                {(patient.allergies || patient.notes || patient.chronicConditions) && (
+                {(patient.allergies ||
+                  patient.notes ||
+                  patient.chronicConditions) && (
                   <div className="mt-5 pt-5 border-t border-border grid sm:grid-cols-3 gap-4">
                     {patient.allergies && (
                       <div>
-                        <p className="text-xs font-medium text-muted-foreground mb-1">Allergies</p>
-                        <p className="text-sm text-destructive">{patient.allergies}</p>
+                        <p className="text-xs font-medium text-muted-foreground mb-1">
+                          Allergies
+                        </p>
+                        <p className="text-sm text-destructive">
+                          {patient.allergies}
+                        </p>
                       </div>
                     )}
                     {patient.chronicConditions && (
@@ -335,12 +419,16 @@ export default function PatientDetailPage({ params }: Props) {
                         <p className="text-xs font-medium text-muted-foreground mb-1 flex items-center gap-1">
                           <Activity className="w-3 h-3" /> Chronic Conditions
                         </p>
-                        <p className="text-sm text-amber-700 dark:text-amber-400">{patient.chronicConditions}</p>
+                        <p className="text-sm text-amber-700 dark:text-amber-400">
+                          {patient.chronicConditions}
+                        </p>
                       </div>
                     )}
                     {patient.notes && (
                       <div>
-                        <p className="text-xs font-medium text-muted-foreground mb-1">Medical Notes</p>
+                        <p className="text-xs font-medium text-muted-foreground mb-1">
+                          Medical Notes
+                        </p>
                         <p className="text-sm">{patient.notes}</p>
                       </div>
                     )}
@@ -357,26 +445,45 @@ export default function PatientDetailPage({ params }: Props) {
                       Doctor's Session
                     </h2>
                     <p className="text-xs text-muted-foreground mt-0.5">
-                      Diagnosis and clinical notes save automatically as you type.
+                      Diagnosis and clinical notes save automatically as you
+                      type.
                     </p>
                   </div>
                   <div className="flex items-center gap-2">
-                    {patchPatient.isPending ? (
-                      <span className="text-xs text-muted-foreground flex items-center gap-1.5">
-                        <Loader2 className="w-3 h-3 animate-spin" /> Saving…
-                      </span>
-                    ) : savedAt ? (
-                      <span className="text-xs text-muted-foreground flex items-center gap-1.5">
-                        <Save className="w-3 h-3" /> Saved {savedAt.toLocaleTimeString()}
-                      </span>
-                    ) : null}
+                    <span
+                      role="status"
+                      data-testid="consultation-save-status"
+                      className="text-xs text-muted-foreground"
+                    >
+                      {save.status === "saving"
+                        ? "Saving…"
+                        : save.status === "error"
+                          ? "Save failed. Stay on this patient and retry."
+                          : save.dirty
+                            ? "Unsaved changes"
+                            : "Saved"}
+                    </span>
+                    {save.dirty && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => {
+                          void save.flush().catch(() => {});
+                        }}
+                        data-testid="button-retry-save"
+                      >
+                        {save.status === "error" ? "Retry save" : "Save now"}
+                      </Button>
+                    )}
                     {patient.status !== "completed" && (
                       <>
                         <Button
                           size="sm"
                           variant="outline"
                           onClick={handleFinish}
-                          disabled={patchPatient.isPending}
+                          disabled={
+                            patchPatient.isPending || save.status === "saving"
+                          }
                           data-testid="button-finish-session"
                         >
                           <CheckCircle2 className="w-4 h-4 mr-1.5" />
@@ -385,7 +492,9 @@ export default function PatientDetailPage({ params }: Props) {
                         <Button
                           size="sm"
                           onClick={handleFinishAndNext}
-                          disabled={patchPatient.isPending}
+                          disabled={
+                            patchPatient.isPending || save.status === "saving"
+                          }
                           data-testid="button-finish-and-next"
                           title={
                             nextWaiting
@@ -394,7 +503,9 @@ export default function PatientDetailPage({ params }: Props) {
                           }
                         >
                           <SkipForward className="w-4 h-4 mr-1.5" />
-                          {nextWaiting ? `Finish & Next (${nextWaiting.name})` : "Finish & Next"}
+                          {nextWaiting
+                            ? `Finish & Next (${nextWaiting.name})`
+                            : "Finish & Next"}
                         </Button>
                       </>
                     )}
@@ -406,9 +517,13 @@ export default function PatientDetailPage({ params }: Props) {
                     <Label htmlFor="diagnosis-input">Diagnosis</Label>
                     <Textarea
                       id="diagnosis-input"
+                      disabled={patchPatient.isPending}
                       data-testid="input-diagnosis"
                       value={diagnosis}
-                      onChange={e => setDiagnosis(e.target.value)}
+                      onChange={(e) => {
+                        setDiagnosis(e.target.value);
+                        save.edit({ diagnosis: e.target.value, clinicalNotes });
+                      }}
                       placeholder="Enter diagnosis…"
                       className="mt-1 min-h-32"
                     />
@@ -417,9 +532,13 @@ export default function PatientDetailPage({ params }: Props) {
                     <Label htmlFor="clinical-notes-input">Clinical Notes</Label>
                     <Textarea
                       id="clinical-notes-input"
+                      disabled={patchPatient.isPending}
                       data-testid="input-clinical-notes"
                       value={clinicalNotes}
-                      onChange={e => setClinicalNotes(e.target.value)}
+                      onChange={(e) => {
+                        setClinicalNotes(e.target.value);
+                        save.edit({ diagnosis, clinicalNotes: e.target.value });
+                      }}
                       placeholder="Examination findings, treatment plan, follow-up instructions…"
                       className="mt-1 min-h-32"
                     />
@@ -432,7 +551,9 @@ export default function PatientDetailPage({ params }: Props) {
 
               {/* Prescriptions */}
               <div className="rounded-xl border border-border bg-card p-6">
-                {(patient.allergies || patient.chronicConditions || patient.notes) && (
+                {(patient.allergies ||
+                  patient.chronicConditions ||
+                  patient.notes) && (
                   <div
                     data-testid="prescription-safety-banner"
                     className="sticky top-2 z-10 mb-5 rounded-lg border border-amber-300/70 bg-amber-50/95 dark:bg-amber-950/40 dark:border-amber-700/60 backdrop-blur p-3 shadow-sm"
@@ -445,20 +566,32 @@ export default function PatientDetailPage({ params }: Props) {
                         </p>
                         {patient.allergies && (
                           <p>
-                            <span className="font-medium text-amber-900 dark:text-amber-200">Allergies:</span>{" "}
-                            <span className="text-destructive font-medium">{patient.allergies}</span>
+                            <span className="font-medium text-amber-900 dark:text-amber-200">
+                              Allergies:
+                            </span>{" "}
+                            <span className="text-destructive font-medium">
+                              {patient.allergies}
+                            </span>
                           </p>
                         )}
                         {patient.chronicConditions && (
                           <p>
-                            <span className="font-medium text-amber-900 dark:text-amber-200">Chronic:</span>{" "}
-                            <span className="text-amber-900 dark:text-amber-100">{patient.chronicConditions}</span>
+                            <span className="font-medium text-amber-900 dark:text-amber-200">
+                              Chronic:
+                            </span>{" "}
+                            <span className="text-amber-900 dark:text-amber-100">
+                              {patient.chronicConditions}
+                            </span>
                           </p>
                         )}
                         {patient.notes && (
                           <p>
-                            <span className="font-medium text-amber-900 dark:text-amber-200">Notes:</span>{" "}
-                            <span className="text-amber-900 dark:text-amber-100">{patient.notes}</span>
+                            <span className="font-medium text-amber-900 dark:text-amber-200">
+                              Notes:
+                            </span>{" "}
+                            <span className="text-amber-900 dark:text-amber-100">
+                              {patient.notes}
+                            </span>
                           </p>
                         )}
                       </div>
@@ -477,11 +610,19 @@ export default function PatientDetailPage({ params }: Props) {
                       Medical History
                     </h2>
                     <p className="text-xs text-muted-foreground mt-0.5">
-                      {timeline.length} event{timeline.length !== 1 ? "s" : ""} ·
-                      {" "}{patientAppts.length} visit{patientAppts.length !== 1 ? "s" : ""} ·
-                      {" "}{patientRx.length} prescription{patientRx.length !== 1 ? "s" : ""}
+                      {timeline.length} event{timeline.length !== 1 ? "s" : ""}{" "}
+                      · {patientAppts.length} visit
+                      {patientAppts.length !== 1 ? "s" : ""} ·{" "}
+                      {patientRx.length} prescription
+                      {patientRx.length !== 1 ? "s" : ""}
                       {totalSpent > 0 && (
-                        <> · Total paid: <span className="font-mono">{totalSpent} {currencyCode}</span></>
+                        <>
+                          {" "}
+                          · Total paid:{" "}
+                          <span className="font-mono">
+                            {totalSpent} {currencyCode}
+                          </span>
+                        </>
                       )}
                     </p>
                   </div>
@@ -490,7 +631,9 @@ export default function PatientDetailPage({ params }: Props) {
                 {!timeline.length ? (
                   <div className="text-center py-10">
                     <History className="w-10 h-10 text-muted-foreground/30 mx-auto mb-3" />
-                    <p className="text-sm text-muted-foreground">No history yet for this patient.</p>
+                    <p className="text-sm text-muted-foreground">
+                      No history yet for this patient.
+                    </p>
                   </div>
                 ) : (
                   <ol className="relative border-l-2 border-border ml-3 space-y-5">
@@ -501,35 +644,62 @@ export default function PatientDetailPage({ params }: Props) {
                             "absolute -left-[13px] flex items-center justify-center w-6 h-6 rounded-full ring-4 ring-card",
                             entry.kind === "visit"
                               ? "bg-primary/15 text-primary"
-                              : "bg-green-500/15 text-green-600 dark:text-green-400"
+                              : "bg-green-500/15 text-green-600 dark:text-green-400",
                           )}
                         >
-                          {entry.kind === "visit"
-                            ? <Stethoscope className="w-3 h-3" />
-                            : <Pill className="w-3 h-3" />}
+                          {entry.kind === "visit" ? (
+                            <Stethoscope className="w-3 h-3" />
+                          ) : (
+                            <Pill className="w-3 h-3" />
+                          )}
                         </span>
 
                         <div className="rounded-lg border border-border bg-background/40 p-3 hover:border-primary/40 transition-colors">
                           <div className="flex items-start justify-between gap-3 flex-wrap">
                             <div className="min-w-0">
                               <p className="text-sm font-medium">
-                                {entry.kind === "visit"
-                                  ? <>Visit — <span className="text-muted-foreground font-normal">{entry.type}</span></>
-                                  : <>Prescription — <span className="text-muted-foreground font-normal">{entry.diagnosis ?? "No diagnosis"}</span></>}
+                                {entry.kind === "visit" ? (
+                                  <>
+                                    Visit —{" "}
+                                    <span className="text-muted-foreground font-normal">
+                                      {entry.type}
+                                    </span>
+                                  </>
+                                ) : (
+                                  <>
+                                    Prescription —{" "}
+                                    <span className="text-muted-foreground font-normal">
+                                      {entry.diagnosis ?? "No diagnosis"}
+                                    </span>
+                                  </>
+                                )}
                               </p>
                               <p className="text-xs text-muted-foreground mt-0.5">
                                 {formatDate(entry.date)}
-                                {entry.kind === "visit" && entry.time && <> · <span className="font-mono">{entry.time}</span></>}
-                                {entry.kind === "rx" && <> · by Dr. {entry.doctorName}</>}
+                                {entry.kind === "visit" && entry.time && (
+                                  <>
+                                    {" "}
+                                    ·{" "}
+                                    <span className="font-mono">
+                                      {entry.time}
+                                    </span>
+                                  </>
+                                )}
+                                {entry.kind === "rx" && (
+                                  <> · by Dr. {entry.doctorName}</>
+                                )}
                               </p>
-                              {entry.kind === "rx" && entry.drugs.length > 0 && (
-                                <p className="text-xs text-muted-foreground/80 mt-1.5 truncate">
-                                  {entry.drugs.join(" · ")}
-                                </p>
-                              )}
+                              {entry.kind === "rx" &&
+                                entry.drugs.length > 0 && (
+                                  <p className="text-xs text-muted-foreground/80 mt-1.5 truncate">
+                                    {entry.drugs.join(" · ")}
+                                  </p>
+                                )}
                             </div>
                             <div className="flex items-center gap-2 shrink-0">
-                              {entry.kind === "visit" && <StatusBadge status={entry.status} />}
+                              {entry.kind === "visit" && (
+                                <StatusBadge status={entry.status} />
+                              )}
                               {entry.kind === "visit" && entry.fee != null && (
                                 <span className="text-xs font-mono text-muted-foreground bg-muted px-2 py-0.5 rounded">
                                   {entry.fee} {currencyCode}
@@ -537,7 +707,8 @@ export default function PatientDetailPage({ params }: Props) {
                               )}
                               {entry.kind === "rx" && (
                                 <span className="text-xs px-2 py-0.5 rounded bg-green-500/10 text-green-600 dark:text-green-400">
-                                  {entry.drugs.length} med{entry.drugs.length !== 1 ? "s" : ""}
+                                  {entry.drugs.length} med
+                                  {entry.drugs.length !== 1 ? "s" : ""}
                                 </span>
                               )}
                             </div>
@@ -563,4 +734,4 @@ export default function PatientDetailPage({ params }: Props) {
       </DashboardLayout>
     </ProtectedRoute>
   );
-}
+                                    }

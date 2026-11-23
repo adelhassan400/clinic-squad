@@ -1,3 +1,4 @@
+import { useGuardedLocation } from "@/lib/guarded-location";
 import { Switch, Route, Router as WouterRouter } from "wouter";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
@@ -76,7 +77,10 @@ function Router() {
       <Route path="/admin" component={AdminPage} />
       <Route path="/platform-finances" component={PlatformFinancesPage} />
       <Route path="/platform-clinics" component={PlatformClinicsPage} />
-      <Route path="/platform-clinics/:clinicId" component={PlatformClinicDetailPage} />
+      <Route
+        path="/platform-clinics/:clinicId"
+        component={PlatformClinicDetailPage}
+      />
       <Route path="/platform-payments" component={PlatformPaymentsPage} />
       <Route path="/platform-settings" component={PlatformSettingsPage} />
       <Route path="/platform-growth" component={PlatformGrowthPage} />
@@ -94,7 +98,10 @@ function App() {
           <CurrencyProvider>
             <AuthProvider>
               <TooltipProvider>
-                <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
+                <WouterRouter
+                  hook={useGuardedLocation}
+                  base={import.meta.env.BASE_URL.replace(/\/$/, "")}
+                >
                   <Router />
                 </WouterRouter>
                 <Toaster />

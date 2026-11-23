@@ -442,6 +442,8 @@ export const PatientStatus = {
 } as const;
 
 export interface Patient {
+  checkedInAt?: string | null;
+  activeAppointmentId?: string | null;
   id: string;
   clinicId: string;
   code?: string | null;

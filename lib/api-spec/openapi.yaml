@@ -1684,6 +1684,13 @@ components:
     Patient:
       type: object
       properties:
+        checkedInAt:
+          type: string
+          format: date-time
+          nullable: true
+        activeAppointmentId:
+          type: string
+          nullable: true
         id:
           type: string
         clinicId:
