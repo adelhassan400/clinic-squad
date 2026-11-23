@@ -1,15 +1,13 @@
 import type { Request } from "express";
 import { Router } from "express";
 import { and, desc, eq, gt, isNull } from "drizzle-orm";
-import { db, usersTable, clinicsTable, passwordResetTokensTable, emailVerificationTokensTable, authEventsTable } from "@workspace/db";
+import { db, usersTable, clinicsTable, passwordResetTokensTable, authEventsTable } from "@workspace/db";
 import {
   RegisterUserBody,
   LoginUserBody,
   RequestPasswordResetBody,
   ResetPasswordBody,
   ChangePasswordBody,
-  VerifyEmailBody,
-  ResendVerificationBody,
 } from "@workspace/api-zod";
 import { randomUUID, randomBytes } from "crypto";
 import {
@@ -21,10 +19,12 @@ import {
   isLegacyPasswordHash,
 } from "../lib/auth-security.js";
 
+import { requireAuth } from "../middlewares/auth.js";
+
 const router = Router();
 
 const RESET_TOKEN_TTL_MS = 60 * 60 * 1000;
-const VERIFY_TOKEN_TTL_MS = 24 * 60 * 60 * 1000;
+
 
 async function createRequestNumber(): Promise<string> {
   for (let attempt = 0; attempt < 5; attempt += 1) {
@@ -52,24 +52,6 @@ type AuthEventType =
   | "password_changed"
   | "password_reset"
   | "email_verified";
-
-function originForRequest(req: Request): string {
-  if (typeof req.headers.origin === "string" && req.headers.origin) return req.headers.origin;
-  return `${req.protocol}://${req.get("host") ?? ""}`;
-}
-
-async function issueVerificationToken(userId: string, origin: string) {
-  const plainToken = randomBytes(32).toString("base64url");
-  const expiresAt = new Date(Date.now() + VERIFY_TOKEN_TTL_MS);
-  await db.insert(emailVerificationTokensTable).values({
-    id: randomUUID(),
-    userId,
-    tokenHash: hashToken(plainToken),
-    expiresAt,
-  });
-  const verifyUrl = `${origin}/verify-email?token=${encodeURIComponent(plainToken)}`;
-  return { verifyToken: plainToken, verifyUrl, expiresAt };
-}
 
 function clientIp(req: Request): string | null {
   const fwd = req.headers["x-forwarded-for"];
@@ -183,118 +165,15 @@ router.post("/register", async (req, res) => {
   });
 });
 
-router.post("/verify-email", async (req, res) => {
-  const parsed = VerifyEmailBody.safeParse(req.body);
-  if (!parsed.success) {
-    return res.status(400).json({ error: "Invalid input", details: parsed.error.issues });
-  }
-  const { token } = parsed.data;
-  const tokenHash = hashToken(token);
-
-  const rows = await db
-    .select()
-    .from(emailVerificationTokensTable)
-    .where(
-      and(
-        eq(emailVerificationTokensTable.tokenHash, tokenHash),
-        isNull(emailVerificationTokensTable.usedAt),
-        gt(emailVerificationTokensTable.expiresAt, new Date()),
-      ),
-    )
-    .limit(1);
-
-  const record = rows[0];
-  if (!record) {
-    return res.status(400).json({ error: "Invalid or expired verification token" });
-  }
-
-  const now = new Date();
-  await db
-    .update(usersTable)
-    .set({ emailVerifiedAt: now })
-    .where(eq(usersTable.id, record.userId));
-  await db
-    .update(emailVerificationTokensTable)
-    .set({ usedAt: now })
-    .where(eq(emailVerificationTokensTable.id, record.id));
-
-  const users = await db.select().from(usersTable).where(eq(usersTable.id, record.userId)).limit(1);
-  const user = users[0];
-  if (!user) return res.status(404).json({ error: "User not found" });
-
-  const clinics = await db.select().from(clinicsTable).where(eq(clinicsTable.id, user.clinicId)).limit(1);
-  const clinic = clinics[0];
-  if (!clinic) return res.status(404).json({ error: "Clinic not found" });
-
-  if (clinic.subscriptionStatus === "trial" && new Date() > clinic.trialEndDate) {
-    await db.update(clinicsTable).set({ subscriptionStatus: "expired" }).where(eq(clinicsTable.id, clinic.id));
-    clinic.subscriptionStatus = "expired";
-  }
-
-  await recordAuthEvent(req, user.id, "email_verified");
-
-  const userObj = {
-    id: user.id,
-    email: user.email,
-    role: user.role,
-    clinicId: user.clinicId,
-    name: user.name,
-    specialty: user.specialty,
-    whatsappNumber: user.whatsappNumber,
-    isBlocked: user.isBlocked,
-    emailVerifiedAt: user.emailVerifiedAt?.toISOString() ?? null,
-  };
-  const clinicObj = {
-    id: clinic.id,
-    requestNumber: clinic.requestNumber ?? null,
-    name: clinic.name,
-    phone: clinic.phone ?? null,
-    address: clinic.address ?? null,
-    ownerId: clinic.ownerId,
-    status: clinic.status,
-    subscriptionStatus: clinic.subscriptionStatus,
-    trialEndDate: clinic.trialEndDate.toISOString(),
-    subscriptionPlan: clinic.subscriptionPlan,
-    createdAt: clinic.createdAt.toISOString(),
-  };
-
-  return res.json({ user: userObj, clinic: clinicObj, token: generateToken(user.id) });
-});
-
-router.post("/resend-verification", async (req, res) => {
-  const parsed = ResendVerificationBody.safeParse(req.body);
-  if (!parsed.success) {
-    return res.status(400).json({ error: "Invalid input" });
-  }
-  const email = parsed.data.email.toLowerCase().trim();
-
-  const users = await db.select().from(usersTable).where(eq(usersTable.email, email)).limit(1);
-  const user = users[0];
-
-  const genericResponse = {
-    message:
-      "If the email exists and is not yet verified, a new verification link has been generated.",
-    verifyToken: null,
-    verifyUrl: null,
-    expiresAt: null,
-  };
-
-  if (!user || user.emailVerifiedAt) {
-    return res.json(genericResponse);
-  }
-
-  const { verifyToken, verifyUrl, expiresAt } = await issueVerificationToken(
-    user.id,
-    originForRequest(req),
-  );
-
-  return res.json({
-    message: "Verification link generated. Use the token below to verify your email.",
-    verifyToken,
-    verifyUrl,
-    expiresAt: expiresAt.toISOString(),
+// Temporary containment: previously returned verification tokens were public.
+// Reject all of them, including outstanding links, without reading or changing DB rows.
+const verificationUnavailable = (_req: Request, res: import("express").Response) =>
+  res.status(503).json({
+    error: "Email verification is temporarily unavailable. No email or verification link has been sent.",
+    code: "EMAIL_VERIFICATION_UNAVAILABLE",
   });
-});
+router.post("/verify-email", verificationUnavailable);
+router.post("/resend-verification", verificationUnavailable);
 
 router.post("/login", async (req, res) => {
   const parsed = LoginUserBody.safeParse(req.body);
@@ -331,7 +210,7 @@ router.post("/login", async (req, res) => {
   if (!user.emailVerifiedAt) {
     await recordAuthEvent(req, user.id, "login_failed");
     return res.status(403).json({
-      error: "Email not verified. Please check your inbox for the verification link.",
+      error: "Email verification is temporarily unavailable. This unverified account cannot sign in. No email has been sent.",
       code: "email_not_verified",
       email: user.email,
     });
@@ -447,7 +326,7 @@ router.post("/reset-password", async (req, res) => {
   return res.json({ message: "Password updated successfully. You can now sign in." });
 });
 
-router.post("/change-password", async (req, res) => {
+router.post("/change-password", requireAuth, async (req, res) => {
   const userId = userIdFromAuth(req);
   if (!userId) return res.status(401).json({ error: "Unauthorized" });
 
@@ -475,7 +354,7 @@ router.post("/change-password", async (req, res) => {
   return res.json({ message: "Password changed successfully." });
 });
 
-router.get("/events", async (req, res) => {
+router.get("/events", requireAuth, async (req, res) => {
   const userId = userIdFromAuth(req);
   if (!userId) return res.status(401).json({ error: "Unauthorized" });
 
@@ -503,7 +382,7 @@ function userIdFromAuth(req: any): string | null {
   return verifyToken(authHeader.slice("Bearer ".length));
 }
 
-router.get("/me", async (req, res) => {
+router.get("/me", requireAuth, async (req, res) => {
   const userId = userIdFromAuth(req);
   if (!userId) return res.status(401).json({ error: "Unauthorized" });
 
@@ -516,7 +395,7 @@ router.get("/me", async (req, res) => {
   return res.json({ id: user.id, email: user.email, role: user.role, clinicId: user.clinicId, name: user.name, specialty: user.specialty, whatsappNumber: user.whatsappNumber, isBlocked: user.isBlocked, emailVerifiedAt: user.emailVerifiedAt?.toISOString() ?? null });
 });
 
-router.patch("/me", async (req, res) => {
+router.patch("/me", requireAuth, async (req, res) => {
   const userId = userIdFromAuth(req);
   if (!userId) return res.status(401).json({ error: "Unauthorized" });
 
