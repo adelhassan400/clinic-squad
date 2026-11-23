@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
 import { Search, User, Phone, X } from "lucide-react";
 import { useAuth } from "@/lib/auth";
+import { useLang } from "@/lib/lang";
 import { useListPatients, getListPatientsQueryKey } from "@workspace/api-client-react";
 import { cn } from "@/lib/utils";
 
@@ -9,6 +10,7 @@ const MAX_RESULTS = 8;
 
 export function GlobalSearch() {
   const { clinic } = useAuth();
+  const { t } = useLang();
   const clinicId = clinic?.id ?? "";
   const [, setLocation] = useLocation();
 
@@ -108,7 +110,7 @@ export function GlobalSearch() {
           onChange={(e) => { setQuery(e.target.value); setOpen(true); }}
           onFocus={() => { if (query) setOpen(true); }}
           onKeyDown={onInputKey}
-          placeholder="Search patients (PT-0001, name)…"
+          placeholder={t("gsearch.placeholder")}
           className={cn(
             "w-full h-9 ps-9 pe-16 rounded-lg text-sm",
             "bg-muted/40 border border-border focus:bg-background",
@@ -122,7 +124,7 @@ export function GlobalSearch() {
             type="button"
             onClick={() => { setQuery(""); setOpen(false); inputRef.current?.focus(); }}
             className="absolute end-2 top-1/2 -translate-y-1/2 p-1 rounded text-muted-foreground hover:text-foreground hover:bg-muted"
-            aria-label="Clear"
+            aria-label={t("gsearch.clear")}
           >
             <X className="w-3.5 h-3.5" />
           </button>
@@ -136,10 +138,10 @@ export function GlobalSearch() {
       {showDropdown && (
         <div className="absolute z-50 mt-1.5 w-full rounded-lg border border-border bg-popover shadow-lg overflow-hidden">
           {isFetching && results.length === 0 ? (
-            <div className="px-3 py-4 text-xs text-muted-foreground text-center">Searching…</div>
+            <div className="px-3 py-4 text-xs text-muted-foreground text-center">{t("gsearch.searching")}</div>
           ) : results.length === 0 ? (
             <div className="px-3 py-4 text-xs text-muted-foreground text-center">
-              No patients match "{debounced}"
+              {t("gsearch.noMatchPre")} "{debounced}"
             </div>
           ) : (
             <ul role="listbox" className="max-h-80 overflow-y-auto py-1">
@@ -180,7 +182,7 @@ export function GlobalSearch() {
               ))}
               {data && data.total > results.length && (
                 <li className="px-3 py-2 text-[11px] text-muted-foreground text-center border-t border-border">
-                  Showing {results.length} of {data.total} — refine your search
+                  {t("gsearch.showing")} {results.length} {t("gsearch.of")} {data.total} {t("gsearch.refine")}
                 </li>
               )}
             </ul>
