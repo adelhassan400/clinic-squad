@@ -53,13 +53,13 @@ export default function LoginPage() {
         if (msg.includes("403") && msg.toLowerCase().includes("email_not_verified")) {
           setUnverifiedEmail(data.email);
           toast({
-            title: "Email not verified",
-            description: "Please verify your email before signing in.",
+            title: t("auth.login.unverifiedTitle"),
+            description: t("auth.login.unverifiedToast"),
             variant: "destructive",
           });
           return;
         }
-        toast({ title: "Login failed", description: "Invalid email or password.", variant: "destructive" });
+        toast({ title: t("auth.login.failedTitle"), description: t("auth.login.failedDesc"), variant: "destructive" });
       },
     });
   };
@@ -118,15 +118,15 @@ export default function LoginPage() {
             <div className="mb-5 rounded-lg border border-amber-500/30 bg-amber-500/10 p-3 flex items-start gap-2 text-sm">
               <MailWarning className="w-4 h-4 mt-0.5 text-amber-500 shrink-0" />
               <div className="flex-1">
-                <p className="font-medium text-foreground">Email not verified</p>
+                <p className="font-medium text-foreground">{t("auth.login.unverifiedTitle")}</p>
                 <p className="text-xs text-muted-foreground mt-0.5">
-                  Verification for <span className="font-medium text-foreground">{unverifiedEmail}</span> is temporarily unavailable. No email has been sent.{" "}
+                  {t("auth.login.unverifiedPre")} <span className="font-medium text-foreground">{unverifiedEmail}</span> {t("auth.login.unavailablePost")}{" "}
                   <Link
                     href={`/resend-verification?email=${encodeURIComponent(unverifiedEmail)}`}
                     className="text-primary hover:underline font-medium"
                     data-testid="link-resend-verification"
                   >
-                    Verification status
+                    {t("auth.login.verificationStatus")}
                   </Link>
                 </p>
               </div>
@@ -184,12 +184,6 @@ export default function LoginPage() {
               {t("auth.login.submit")}
             </Button>
           </form>
-
-          <div className="mt-6 p-4 rounded-lg bg-muted text-xs text-muted-foreground space-y-1">
-            <p className="font-medium text-foreground">Demo Accounts:</p>
-            <p>Admin: admin@demo.com / demo1234</p>
-            <p>SuperAdmin: super@clinicsquad.com / super1234</p>
-          </div>
 
           <p className="mt-6 text-center text-sm text-muted-foreground">
             {t("auth.login.noAccount")}{" "}
