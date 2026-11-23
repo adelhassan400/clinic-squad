@@ -70,6 +70,7 @@ router.post("/:token/accept", async (req, res) => {
     role: inv.role,
     clinicId: inv.clinicId,
     isBlocked: false,
+    emailVerifiedAt: new Date(),
   });
 
   await db
