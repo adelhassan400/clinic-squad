@@ -343,7 +343,7 @@ function PatientConsultation({ params }: Props) {
             <div className="space-y-6">
               {/* Profile card */}
               <div className="rounded-xl border border-border bg-card p-6">
-                <div className="flex items-start gap-5">
+                <div className="flex flex-col sm:flex-row items-start gap-5">
                   <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
                     <span className="text-2xl font-bold text-primary">
                       {patient.name.charAt(0)}
@@ -462,7 +462,7 @@ function PatientConsultation({ params }: Props) {
                     <span
                       role="status"
                       data-testid="consultation-save-status"
-                      className="text-xs text-muted-foreground"
+                      className="text-xs text-muted-foreground whitespace-nowrap"
                     >
                       {save.status === "saving"
                         ? t("pdetail.saving")
@@ -746,4 +746,4 @@ function PatientConsultation({ params }: Props) {
       </DashboardLayout>
     </ProtectedRoute>
   );
-                    }
+}
