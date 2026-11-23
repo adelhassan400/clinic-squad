@@ -1,20 +1,26 @@
 -- Align invitations table with lib/db/src/schema/invitations.ts (merged 2026-11-23).
 -- The production database predates the plain-token invitation flow and only had
 -- token_hash; the API inserts/looks up `token`, so every team invitation failed
--- with a 500. Applied to production on 2026-11-23 when the invitations table had
--- zero rows; token_hash is kept for history but no longer written by the app.
+-- with a 500. Applied to production by hand on 2026-11-23 when invitations had
+-- zero rows. token_hash is kept for history but is no longer written by the app.
+--
+-- Empty-table environments: safe as-is. Nonempty legacy tables: existing rows get
+-- NULL token, the unique index still builds (Postgres treats NULLs as distinct),
+-- no data is lost, and legacy pending invites simply cannot be accepted through
+-- the new token flow (accept them manually or re-invite).
 
 ALTER TABLE invitations ADD COLUMN IF NOT EXISTS token text;
-
--- Backfill nothing: no rows existed when this was applied. For safety on other
--- environments, existing rows keep a NULL token and simply cannot be accepted
--- through the new token flow.
 
 ALTER TABLE invitations ALTER COLUMN token_hash DROP NOT NULL;
 
 CREATE UNIQUE INDEX IF NOT EXISTS invitations_token_unique ON invitations (token);
 
--- On production (table was empty) the column was additionally set NOT NULL to
--- match the drizzle schema exactly:
+-- ACTUAL PRODUCTION STATE (verified 2026-11-23, project wandering-hill-53830531):
+--   token      text NOT NULL   (column was added NOT NULL because the table was
+--                              empty; stricter than this migration leaves it)
+--   token_hash text NULL       (NOT NULL dropped)
+--   indexes    invitations_token_unique UNIQUE (token)
+-- If you are applying this to an EMPTY table and want to match production
+-- exactly, also run:
 --   ALTER TABLE invitations ALTER COLUMN token SET NOT NULL;
--- Apply that too if invitations is empty in your environment.
+-- Do NOT run that on a nonempty table: rows with NULL token would fail it.
