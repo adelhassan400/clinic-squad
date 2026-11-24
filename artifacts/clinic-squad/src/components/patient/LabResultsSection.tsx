@@ -12,6 +12,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { useLang } from "@/lib/lang";
+import { apiErrorText } from "@/lib/error-i18n";
 import { FlaskConical, Plus, Paperclip, Download, Trash2, X, Loader2 } from "lucide-react";
 import { formatDate } from "@/lib/utils";
 
@@ -108,7 +109,7 @@ export function LabResultsSection({ clinicId, patientId }: Props) {
     } catch (err: any) {
       toast({
         title: t("lab.failAdd"),
-        description: err?.data?.error ?? err?.message ?? t("editp.tryAgain"),
+        description: apiErrorText(err, t("editp.tryAgain")),
         variant: "destructive",
       });
     }
@@ -123,7 +124,7 @@ export function LabResultsSection({ clinicId, patientId }: Props) {
     } catch (err: any) {
       toast({
         title: t("lab.failDelete"),
-        description: err?.message,
+        description: apiErrorText(err, t("lab.failDelete")),
         variant: "destructive",
       });
     }
