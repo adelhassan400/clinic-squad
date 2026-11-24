@@ -219,7 +219,7 @@ export function DashboardLayout({ children }: Props) {
             </div>
             <div className="flex-1 min-w-0">
               <p className="text-xs font-semibold text-sidebar-foreground truncate">{user?.name}</p>
-              <p className="text-xs text-sidebar-foreground/50 capitalize">{user?.role}</p>
+              <p className="text-xs text-sidebar-foreground/50 capitalize">{user?.role && t("team.role." + user.role) !== "team.role." + user.role ? t("team.role." + user.role) : user?.role}</p>
             </div>
           </div>
           <div className="flex gap-2 mt-2 px-1">
