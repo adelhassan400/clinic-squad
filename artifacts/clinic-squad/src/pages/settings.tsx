@@ -32,17 +32,17 @@ import { z } from "zod";
 
 const passwordSchema = z
   .object({
-    currentPassword: z.string().min(1, "Current password is required"),
-    newPassword: z.string().min(6, "At least 6 characters"),
-    confirmPassword: z.string().min(6, "At least 6 characters"),
+    currentPassword: z.string().min(1, "x.pwCurrentReq"),
+    newPassword: z.string().min(6, "x.pwAtLeast6"),
+    confirmPassword: z.string().min(6, "x.pwAtLeast6"),
   })
   .refine((d) => d.newPassword === d.confirmPassword, {
     path: ["confirmPassword"],
-    message: "Passwords do not match",
+    message: "x.pwMismatch",
   })
   .refine((d) => d.currentPassword !== d.newPassword, {
     path: ["newPassword"],
-    message: "New password must be different from current",
+    message: "x.pwSame",
   });
 type PasswordFormData = z.infer<typeof passwordSchema>;
 
@@ -54,13 +54,13 @@ function eventMeta(type: string): {
 } {
   switch (type) {
     case "login_success":
-      return { label: "Successful sign-in", Icon: CheckCircle2, fg: "text-primary", bg: "bg-primary/10" };
+      return { label: "x.evt.login_success", Icon: CheckCircle2, fg: "text-primary", bg: "bg-primary/10" };
     case "login_failed":
-      return { label: "Failed sign-in attempt", Icon: XCircle, fg: "text-destructive", bg: "bg-destructive/10" };
+      return { label: "x.evt.login_failed", Icon: XCircle, fg: "text-destructive", bg: "bg-destructive/10" };
     case "password_changed":
-      return { label: "Password changed", Icon: KeyRound, fg: "text-accent", bg: "bg-accent/10" };
+      return { label: "x.evt.password_changed", Icon: KeyRound, fg: "text-accent", bg: "bg-accent/10" };
     case "password_reset":
-      return { label: "Password reset via link", Icon: KeyRound, fg: "text-accent", bg: "bg-accent/10" };
+      return { label: "x.evt.password_reset", Icon: KeyRound, fg: "text-accent", bg: "bg-accent/10" };
     default:
       return { label: type, Icon: Activity, fg: "text-muted-foreground", bg: "bg-muted" };
   }
@@ -110,7 +110,7 @@ export default function SettingsPage() {
       updateUser({ ...(user as any), specialty: updated.specialty ?? null });
       toast({ title: t("settings.profile.updated") });
     } catch (err: any) {
-      toast({ title: "Failed to update", description: err?.message, variant: "destructive" });
+      toast({ title: t("x.updateFailed"), description: err?.message, variant: "destructive" });
     }
   }
 
@@ -121,15 +121,15 @@ export default function SettingsPage() {
       });
       passwordForm.reset();
       authEvents.refetch();
-      toast({ title: t("settings.pw.changed"), description: "Use your new password next time you sign in." });
+      toast({ title: t("settings.pw.changed"), description: t("x.useNewPw") });
     } catch (err: any) {
       const status = err?.status;
       toast({
-        title: "Couldn't change password",
+        title: t("x.pwChangeFailed"),
         description:
           status === 401
-            ? "Your current password is incorrect."
-            : "Please double-check your input and try again.",
+            ? t("x.pwCurrentWrong")
+            : t("x.checkInput"),
         variant: "destructive",
       });
     }
@@ -159,7 +159,7 @@ export default function SettingsPage() {
   async function saveClinicIdentity() {
     if (!clinic?.id) return;
     if (!clinicName.trim()) {
-      toast({ title: "Clinic name is required", variant: "destructive" });
+      toast({ title: t("x.clinicNameReq"), variant: "destructive" });
       return;
     }
     try {
@@ -180,8 +180,8 @@ export default function SettingsPage() {
       toast({ title: t("settings.clinic.updated") });
     } catch (err: any) {
       toast({
-        title: "Failed to update clinic",
-        description: err?.data?.error ?? err?.message ?? "Try again",
+        title: t("x.clinicUpdateFailed"),
+        description: err?.data?.error ?? err?.message ?? t("x.tryAgain"),
         variant: "destructive",
       });
     }
@@ -320,7 +320,7 @@ export default function SettingsPage() {
                       type="button"
                       className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
                       onClick={() => setShowPw((v) => !v)}
-                      aria-label="Toggle password visibility"
+                      aria-label={t("x.togglePw")}
                     >
                       {showPw ? (
                         <EyeOff className="w-4 h-4" />
@@ -331,7 +331,7 @@ export default function SettingsPage() {
                   </div>
                   {passwordForm.formState.errors.currentPassword && (
                     <p className="text-xs text-destructive mt-1">
-                      {passwordForm.formState.errors.currentPassword.message}
+                      {t(passwordForm.formState.errors.currentPassword.message ?? "")}
                     </p>
                   )}
                 </div>
@@ -342,7 +342,7 @@ export default function SettingsPage() {
                     <Input
                       id="newPassword"
                       type={showPw ? "text" : "password"}
-                      placeholder="At least 6 characters"
+                      placeholder={t("x.pwAtLeast6")}
                       autoComplete="new-password"
                       {...passwordForm.register("newPassword")}
                       data-testid="input-new-password"
@@ -350,7 +350,7 @@ export default function SettingsPage() {
                     />
                     {passwordForm.formState.errors.newPassword && (
                       <p className="text-xs text-destructive mt-1">
-                        {passwordForm.formState.errors.newPassword.message}
+                        {t(passwordForm.formState.errors.newPassword.message ?? "")}
                       </p>
                     )}
                   </div>
@@ -359,7 +359,7 @@ export default function SettingsPage() {
                     <Input
                       id="confirmPassword"
                       type={showPw ? "text" : "password"}
-                      placeholder="Repeat new password"
+                      placeholder={t("x.repeatPw")}
                       autoComplete="new-password"
                       {...passwordForm.register("confirmPassword")}
                       data-testid="input-confirm-password"
@@ -367,7 +367,7 @@ export default function SettingsPage() {
                     />
                     {passwordForm.formState.errors.confirmPassword && (
                       <p className="text-xs text-destructive mt-1">
-                        {passwordForm.formState.errors.confirmPassword.message}
+                        {t(passwordForm.formState.errors.confirmPassword.message ?? "")}
                       </p>
                     )}
                   </div>
@@ -417,7 +417,7 @@ export default function SettingsPage() {
                   <Loader2 className="w-4 h-4 animate-spin" /> {t("presc.saving")}
                 </div>
               ) : authEvents.isError ? (
-                <p className="text-sm text-destructive">Couldn't load activity. Try again.</p>
+                <p className="text-sm text-destructive">{t("x.activityLoadFailed")}</p>
               ) : (authEvents.data?.length ?? 0) === 0 ? (
                 <p className="text-sm text-muted-foreground py-2">{t("settings.security.empty")}</p>
               ) : (
@@ -437,7 +437,7 @@ export default function SettingsPage() {
                         </div>
                         <div className="min-w-0 flex-1">
                           <div className="flex items-baseline gap-2 flex-wrap">
-                            <p className="text-sm font-medium">{meta.label}</p>
+                            <p className="text-sm font-medium">{t(meta.label)}</p>
                             <p className="text-xs text-muted-foreground">
                               {formatEventTime(evt.createdAt as unknown as string)}
                             </p>
@@ -459,7 +459,7 @@ export default function SettingsPage() {
               <h2 className="font-semibold mb-4">{t("sidebar.secure.title")}</h2>
               <div className="flex items-center gap-3 text-sm text-muted-foreground">
                 <Shield className="w-4 h-4 shrink-0" />
-                <span>Your data is secured with role-based access control. Only authorized staff can access patient information.</span>
+                <span>{t("x.secureNote")}</span>
               </div>
             </div>
           </div>
