@@ -48,7 +48,7 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
 import { useForm, Controller } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
+import { lzResolver } from "@/lib/error-i18n";
 import { z } from "zod";
 import {
   Plus,
@@ -591,7 +591,7 @@ export default function AppointmentsPage() {
   const patchPatient = useCheckIn(clinicId);
 
   const form = useForm<ApptForm>({
-    resolver: zodResolver(apptSchema),
+    resolver: lzResolver(apptSchema),
     defaultValues: {
       patientId: "",
       date: currentDate,
