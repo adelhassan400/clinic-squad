@@ -67,6 +67,7 @@ function PatientStatusBadge({ status }: { status: string }) {
     completed: "bg-accent/30 text-accent-foreground border-accent/50",
   };
   const label: Record<string, string> = {
+    registered: t("status.registered"),
     waiting: t("status.waiting"),
     "in-progress": t("status.inProgress"),
     completed: t("status.completed"),
