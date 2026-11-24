@@ -228,10 +228,7 @@ export default function DashboardPage() {
                 />
                 <div>
                   <p className="font-semibold text-sm">
-                    {t("dash.trial.days").replace(
-                      "d",
-                      trialDaysLeft.toString(),
-                    )}
+                    {`${trialDaysLeft} ${t("dash.trial.days")}`}
                   </p>
                   <p className="text-xs text-muted-foreground">
                     {t("dash.trial.note")}
