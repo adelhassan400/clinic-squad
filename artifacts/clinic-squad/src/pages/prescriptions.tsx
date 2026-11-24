@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import { useLocation, useSearch } from "wouter";
 import { useAuth } from "@/lib/auth";
 import { useLang } from "@/lib/lang";
+import { apiErrorText } from "@/lib/error-i18n";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import {
@@ -178,7 +179,7 @@ export function PrescriptionsContent({ initialPatientId, embedded }: Prescriptio
     } catch (err: any) {
       toast({
         title: t("presc.failed"),
-        description: err?.data?.error ?? err?.message ?? t("presc.saveFailed"),
+        description: apiErrorText(err, t("presc.saveFailed")),
         variant: "destructive",
       });
     }
@@ -191,7 +192,7 @@ export function PrescriptionsContent({ initialPatientId, embedded }: Prescriptio
       await queryClient.invalidateQueries({ queryKey: getListPrescriptionsQueryKey(clinicId) });
       toast({ title: t("presc.deleted") });
     } catch (err: any) {
-      toast({ title: t("presc.failedDelete"), description: err?.message, variant: "destructive" });
+      toast({ title: t("presc.failedDelete"), description: apiErrorText(err, t("presc.failedDelete")), variant: "destructive" });
     }
   }
 
