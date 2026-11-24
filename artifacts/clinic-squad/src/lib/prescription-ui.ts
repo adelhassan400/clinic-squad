@@ -31,6 +31,11 @@ export const DURATION_PRESETS: Preset[] = [
   { en: "1 month", ar: "شهر واحد" },
 ];
 
+// Value stored in the form: always the canonical English string, whatever the UI language.
+export function presetValue(preset: Preset): string {
+  return preset.en;
+}
+
 export function presetLabel(preset: Preset, lang: string): string {
   return lang === "ar" ? preset.ar : preset.en;
 }
