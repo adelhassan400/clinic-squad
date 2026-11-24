@@ -282,8 +282,8 @@ export default function SubscriptionPage() {
                       </label>
                     ) : (
                       <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-                        <a href={paymentProof} target="_blank" rel="noopener noreferrer" className="shrink-0" aria-label="Open receipt preview">
-                          <img src={paymentProof} alt="Uploaded payment receipt preview" className="h-24 w-24 rounded-md border border-border object-cover" />
+                        <a href={paymentProof} target="_blank" rel="noopener noreferrer" className="shrink-0" aria-label={t("x.openReceipt")}>
+                          <img src={paymentProof} alt={t("x.receiptAlt")} className="h-24 w-24 rounded-md border border-border object-cover" />
                         </a>
                         <div className="min-w-0 flex-1">
                           <div className="flex items-center gap-2 text-sm font-medium">
@@ -294,7 +294,7 @@ export default function SubscriptionPage() {
                         </div>
                         <div className="flex gap-2">
                           <label htmlFor="receipt-upload" className="inline-flex h-9 cursor-pointer items-center justify-center rounded-md border border-input bg-background px-3 text-xs font-medium hover:bg-accent hover:text-accent-foreground">{t("sub.replace")}</label>
-                          <Button type="button" size="icon" variant="ghost" onClick={clearReceipt} aria-label="Remove receipt">
+                          <Button type="button" size="icon" variant="ghost" onClick={clearReceipt} aria-label={t("x.removeReceipt")}>
                             <X className="h-4 w-4" />
                           </Button>
                         </div>
