@@ -17,7 +17,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
 import { useForm, Controller } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
+import { lzResolver } from "@/lib/error-i18n";
 import { z } from "zod";
 import { Plus, TrendingUp, TrendingDown, Loader2, Banknote } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from "recharts";
@@ -84,7 +84,7 @@ export default function FinancesPage() {
   const createMutation = useCreateFinanceRecord();
 
   const form = useForm<FinanceForm>({
-    resolver: zodResolver(financeSchema),
+    resolver: lzResolver(financeSchema),
     defaultValues: { type: "income", category: "", amount: 0, description: "", date: new Date().toISOString().split("T")[0] },
   });
 
