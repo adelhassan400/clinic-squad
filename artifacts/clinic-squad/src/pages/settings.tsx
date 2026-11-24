@@ -5,6 +5,7 @@ import { useCurrency } from "@/lib/currency";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { useLang } from "@/lib/lang";
+import { apiErrorText } from "@/lib/error-i18n";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -27,7 +28,7 @@ import { formatDate, getTrialDaysLeft } from "@/lib/utils";
 import { useUpdateProfile, useChangePassword, useListAuthEvents, getListAuthEventsQueryKey, useUpdateClinic } from "@workspace/api-client-react";
 import { useToast } from "@/hooks/use-toast";
 import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
+import { lzResolver } from "@/lib/error-i18n";
 import { z } from "zod";
 
 const passwordSchema = z
@@ -102,7 +103,7 @@ export default function SettingsPage() {
   const changePassword = useChangePassword();
   const authEvents = useListAuthEvents({ query: { queryKey: getListAuthEventsQueryKey(), staleTime: 30_000 } });
   const passwordForm = useForm<PasswordFormData>({
-    resolver: zodResolver(passwordSchema),
+    resolver: lzResolver(passwordSchema),
     defaultValues: { currentPassword: "", newPassword: "", confirmPassword: "" },
   });
 
@@ -112,7 +113,7 @@ export default function SettingsPage() {
       updateUser({ ...(user as any), specialty: updated.specialty ?? null });
       toast({ title: t("settings.profile.updated") });
     } catch (err: any) {
-      toast({ title: t("x.updateFailed"), description: err?.message, variant: "destructive" });
+      toast({ title: t("x.updateFailed"), description: apiErrorText(err, t("x.updateFailed")), variant: "destructive" });
     }
   }
 
@@ -183,7 +184,7 @@ export default function SettingsPage() {
     } catch (err: any) {
       toast({
         title: t("x.clinicUpdateFailed"),
-        description: err?.data?.error ?? err?.message ?? t("x.tryAgain"),
+        description: apiErrorText(err, t("x.tryAgain")),
         variant: "destructive",
       });
     }
