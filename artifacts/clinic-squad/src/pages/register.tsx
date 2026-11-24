@@ -47,8 +47,8 @@ export default function RegisterPage() {
           login(response.user as AuthUser, response.clinic as AuthClinic, response.token);
         }
         toast({
-          title: "Request received",
-          description: "Contact our support team via WhatsApp to activate your trial.",
+          title: t("x.reqReceived"),
+          description: t("x.reqReceivedDesc"),
         });
         setLocation("/pending-activation");
       },
@@ -127,7 +127,7 @@ export default function RegisterPage() {
               <Label htmlFor="clinicName">{t("auth.register.name")}</Label>
               <Input
                 id="clinicName"
-                placeholder="Cairo Medical Center"
+                placeholder={t("x.clinicNamePh")}
                 {...register("clinicName")}
                 data-testid="input-clinic-name"
                 className="mt-1.5"
@@ -139,7 +139,7 @@ export default function RegisterPage() {
               <Label htmlFor="ownerName">{t("auth.register.owner")}</Label>
               <Input
                 id="ownerName"
-                placeholder="Dr. Ahmed Hassan"
+                placeholder={t("x.doctorNamePh")}
                 {...register("ownerName")}
                 data-testid="input-owner-name"
                 className="mt-1.5"
@@ -151,7 +151,7 @@ export default function RegisterPage() {
               <Label htmlFor="specialty">{t("auth.register.specialty") || "Medical Specialty"}</Label>
               <Input
                 id="specialty"
-                placeholder="Cardiology, Dermatology, etc."
+                placeholder={t("x.specialtyPh")}
                 {...register("specialty")}
                 data-testid="input-specialty"
                 className="mt-1.5"
@@ -191,7 +191,7 @@ export default function RegisterPage() {
                 <Input
                   id="password"
                   type={showPw ? "text" : "password"}
-                  placeholder="Min. 6 characters"
+                  placeholder={t("x.min6")}
                   {...register("password")}
                   data-testid="input-password"
                   className="pr-10"
