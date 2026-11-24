@@ -73,7 +73,9 @@ export function resolveApiBaseUrl(host: string, env: RuntimeEnv): string | null 
   if (host === "localhost" || host === "127.0.0.1" || host === "[::1]") return null;
   if (host.endsWith(".vercel.app")) {
     if (env.expectedPreviewHost && env.previewApiBase && host === env.expectedPreviewHost) {
-      return env.previewApiBase;
+      // Same-origin /api: vercel.json forwards only this host to the preview API with a
+      // server-side bypass header; every other non-production host is denied there.
+      return null;
     }
     // Any other Vercel host (random per-deployment URLs, other branches,
     // stale aliases): fail closed rather than reach the production API.
