@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
+import { lzResolver } from "@/lib/error-i18n";
 import { z } from "zod";
 import { useQueryClient } from "@tanstack/react-query";
 import { Redirect } from "wouter";
@@ -71,7 +71,7 @@ export default function TeamPage() {
 
   const { register, handleSubmit, reset, setValue, watch, formState: { errors } } =
     useForm<InviteForm>({
-      resolver: zodResolver(inviteSchema),
+      resolver: lzResolver(inviteSchema),
       defaultValues: { email: "", name: "", role: "assistant" },
     });
 
