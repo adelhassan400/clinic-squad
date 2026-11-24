@@ -3,7 +3,8 @@ import { eq } from "drizzle-orm";
 import { db, financesTable } from "@workspace/db";
 import { CreateFinanceRecordBody } from "@workspace/api-zod";
 import { randomUUID } from "crypto";
-import { requireClinicAccess } from "../middlewares/auth.js";
+import { requireClinicAccess, requireRole } from "../middlewares/auth.js";
+import { FINANCE_ROLES } from "../lib/access-policy.js";
 
 const router = Router({ mergeParams: true });
 
@@ -13,6 +14,8 @@ function getParam(params: unknown, key: string): string {
 }
 
 router.use(requireClinicAccess);
+// Finance data is admin/doctor only in the UI (pages/finances.tsx); enforce it server-side too.
+router.use(requireRole(...FINANCE_ROLES));
 
 router.get("/", async (req, res) => {
   const clinicId = getParam(req.params, "clinicId");
