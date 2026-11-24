@@ -43,8 +43,8 @@ test("local development hosts use the dev proxy", () => {
   assert.equal(resolveApiBaseUrl("127.0.0.1", PREVIEW), null);
 });
 
-test("the expected preview branch alias uses the preview API", () => {
-  assert.equal(resolveApiBaseUrl(PREVIEW.expectedPreviewHost, PREVIEW), PREVIEW.previewApiBase);
+test("the expected preview branch alias uses same-origin /api (vercel.json proxies it to the preview API)", () => {
+  assert.equal(resolveApiBaseUrl(PREVIEW.expectedPreviewHost, PREVIEW), null);
   assert.ok(PREVIEW.previewApiBase.includes(TEAM_SCOPE));
 });
 
