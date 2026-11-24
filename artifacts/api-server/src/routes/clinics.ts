@@ -168,7 +168,13 @@ router.post("/:clinicId/subscription", async (req, res) => {
   });
 });
 
-router.get("/:clinicId/dashboard", requireActiveClinic, async (req, res) => {
+// Clinic data stays closed until the clinic is activated; finance summary is finance-roles only.
+router.use("/:clinicId/dashboard", requireActiveClinic);
+router.use("/:clinicId/appointments/today", requireActiveClinic);
+router.use("/:clinicId/appointments/tomorrow", requireActiveClinic);
+router.use("/:clinicId/finances/summary", requireActiveClinic, requireRole(...FINANCE_ROLES));
+
+router.get("/:clinicId/dashboard", async (req, res) => {
   const { clinicId } = req.params;
 
   const clinic = (await db.select().from(clinicsTable).where(eq(clinicsTable.id, clinicId)).limit(1))[0];
@@ -214,7 +220,7 @@ router.get("/:clinicId/dashboard", requireActiveClinic, async (req, res) => {
   }, req.authUser!.role));
 });
 
-router.get("/:clinicId/appointments/today", requireActiveClinic, async (req, res) => {
+router.get("/:clinicId/appointments/today", async (req, res) => {
   const { clinicId } = req.params;
   const today = new Date().toISOString().split("T")[0];
   const [appointments, patients] = await Promise.all([
@@ -237,7 +243,7 @@ router.get("/:clinicId/appointments/today", requireActiveClinic, async (req, res
 // Tomorrow's scheduled appointments — for WhatsApp reminder workflow.
 // Includes patient phone (joined client-side here for simplicity) so the UI
 // can deep-link to wa.me without a second round-trip.
-router.get("/:clinicId/appointments/tomorrow", requireActiveClinic, async (req, res) => {
+router.get("/:clinicId/appointments/tomorrow", async (req, res) => {
   const { clinicId } = req.params;
   const tomorrowDate = new Date();
   tomorrowDate.setDate(tomorrowDate.getDate() + 1);
@@ -261,7 +267,7 @@ router.get("/:clinicId/appointments/tomorrow", requireActiveClinic, async (req, 
   return res.json(list);
 });
 
-router.get("/:clinicId/finances/summary", requireActiveClinic, requireRole(...FINANCE_ROLES), async (req, res) => {
+router.get("/:clinicId/finances/summary", async (req, res) => {
   const { clinicId } = req.params;
   const year = parseInt(req.query.year as string) || new Date().getFullYear();
 
