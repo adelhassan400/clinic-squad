@@ -76,6 +76,7 @@ import { openWhatsApp, whatsappAppointmentReminder } from "@/lib/whatsapp";
 import {
   PATIENT_VISIT_TYPES,
   VisitTypeBadge,
+  getVisitTypeLabel,
   getVisitTypeStyle,
 } from "@/lib/visit-types";
 
@@ -872,9 +873,9 @@ export default function AppointmentsPage() {
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        {PATIENT_VISIT_TYPES.map((t) => (
-                          <SelectItem key={t} value={t}>
-                            {t}
+                        {PATIENT_VISIT_TYPES.map((vt) => (
+                          <SelectItem key={vt} value={vt}>
+                            {getVisitTypeLabel(t, vt)}
                           </SelectItem>
                         ))}
                       </SelectContent>
