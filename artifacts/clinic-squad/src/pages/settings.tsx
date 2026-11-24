@@ -209,7 +209,7 @@ export default function SettingsPage() {
                 <div>
                   <p className="font-semibold">{user?.name}</p>
                   <p className="text-sm text-muted-foreground">{user?.email}</p>
-                  <Badge className="mt-1 text-xs capitalize">{user?.role}</Badge>
+                  <Badge className="mt-1 text-xs capitalize">{user?.role ? t("team.role." + user.role) : ""}</Badge>
                 </div>
               </div>
               {isDoctor && (
