@@ -1200,6 +1200,7 @@ const translations: Record<string, Record<Lang, string>> = {
   "x.queueDoctor": { en: "Queue doctor", ar: "طبيب الطابور" },
   "x.queueRefreshFailed": { en: "Queue refresh failed.", ar: "تعذر تحديث الطابور." },
   "x.retry": { en: "Retry", ar: "إعادة المحاولة" },
+  "team.role.superadmin": { en: "Super Admin", ar: "مدير المنصة" },
 };
 
 const LangContext = createContext<LangContextType | undefined>(undefined);
