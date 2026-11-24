@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Link } from "wouter";
 import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
+import { lzResolver } from "@/lib/error-i18n";
 import { z } from "zod";
 import { useRequestPasswordReset } from "@workspace/api-client-react";
 import { Button } from "@/components/ui/button";
@@ -28,7 +28,7 @@ export default function ForgotPasswordPage() {
     handleSubmit,
     formState: { errors },
   } = useForm<FormData>({
-    resolver: zodResolver(schema),
+    resolver: lzResolver(schema),
     defaultValues: { email: "" },
   });
 
