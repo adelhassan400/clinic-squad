@@ -1,10 +1,45 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
-  "rewrites": [
+  "routes": [
     {
-      "source": "/api/:path*",
-      "destination": "https://clinic-squad-api-server-tau.vercel.app/api/:path*"
+      "src": "/api/(.*)",
+      "has": [
+        {
+          "type": "host",
+          "value": "clinic-squad.vercel.app"
+        }
+      ],
+      "dest": "https://clinic-squad-api-server-tau.vercel.app/api/$1"
     },
+    {
+      "src": "/api/(.*)",
+      "has": [
+        {
+          "type": "host",
+          "value": "clinic-squad-git-uifix-ahmed64653234-6553s-projects.vercel.app"
+        }
+      ],
+      "dest": "https://clinic-squad-api-server-git-uifix-ahmed64653234-6553s-projects.vercel.app/api/$1",
+      "transforms": [
+        {
+          "type": "request.headers",
+          "op": "set",
+          "target": {
+            "key": "x-vercel-protection-bypass"
+          },
+          "args": "$PREVIEW_API_BYPASS",
+          "env": [
+            "PREVIEW_API_BYPASS"
+          ]
+        }
+      ]
+    },
+    {
+      "src": "/api/(.*)",
+      "status": 404
+    }
+  ],
+  "rewrites": [
     {
       "source": "/((?!api/|assets/).*)",
       "destination": "/index.html"
