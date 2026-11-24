@@ -66,17 +66,19 @@ function eventMeta(type: string): {
   }
 }
 
-function formatEventTime(iso: string): string {
+function formatEventTime(iso: string, lang: string): string {
+  const loc = lang === "ar" ? "ar-EG" : "en-US";
+  const rtf = new Intl.RelativeTimeFormat(loc, { numeric: "auto" });
   const d = new Date(iso);
   const diffMs = Date.now() - d.getTime();
   const mins = Math.floor(diffMs / 60_000);
-  if (mins < 1) return "just now";
-  if (mins < 60) return `${mins}m ago`;
+  if (mins < 1) return rtf.format(0, "second");
+  if (mins < 60) return rtf.format(-mins, "minute");
   const hrs = Math.floor(mins / 60);
-  if (hrs < 24) return `${hrs}h ago`;
+  if (hrs < 24) return rtf.format(-hrs, "hour");
   const days = Math.floor(hrs / 24);
-  if (days < 7) return `${days}d ago`;
-  return d.toLocaleString();
+  if (days < 7) return rtf.format(-days, "day");
+  return d.toLocaleString(loc);
 }
 
 function shortUA(ua: string): string {
@@ -89,7 +91,7 @@ function shortUA(ua: string): string {
 
 export default function SettingsPage() {
   const { user, clinic, updateUser, updateClinic } = useAuth();
-  const { t } = useLang();
+  const { t, lang } = useLang();
   const { toast } = useToast();
   const [specialty, setSpecialty] = useState(user?.specialty ?? "");
   useEffect(() => { setSpecialty(user?.specialty ?? ""); }, [user?.specialty]);
@@ -439,7 +441,7 @@ export default function SettingsPage() {
                           <div className="flex items-baseline gap-2 flex-wrap">
                             <p className="text-sm font-medium">{t(meta.label)}</p>
                             <p className="text-xs text-muted-foreground">
-                              {formatEventTime(evt.createdAt as unknown as string)}
+                              {formatEventTime(evt.createdAt as unknown as string, lang)}
                             </p>
                           </div>
                           <p className="text-xs text-muted-foreground truncate">
