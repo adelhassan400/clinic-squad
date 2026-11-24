@@ -159,7 +159,7 @@ export default function InsightsPage() {
       counts[a.status] = (counts[a.status] ?? 0) + 1;
     }
     return Object.entries(counts).map(([status, count]) => ({
-      name: t(`status.${status.replace("_", "")}`) || status.replace("_", " "),
+      name: t(`status.${status.replace(/[_-]([a-z])/g, (_m, c) => c.toUpperCase())}`),
       value: count,
       color: STATUS_COLORS[status] ?? "#94a3b8",
     }));
