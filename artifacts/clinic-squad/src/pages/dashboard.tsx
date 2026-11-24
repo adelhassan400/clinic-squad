@@ -152,7 +152,7 @@ export default function DashboardPage() {
 
   const handleSendReminder = (a: TomorrowAppt) => {
     if (!a.patientPhone) {
-      toast({ title: "No phone number on file", variant: "destructive" });
+      toast({ title: t("x.noPhone"), variant: "destructive" });
       return;
     }
     const message = whatsappAppointmentReminder({
@@ -188,7 +188,7 @@ export default function DashboardPage() {
           });
         },
         onError: () =>
-          toast({ title: "Check-in failed", variant: "destructive" }),
+          toast({ title: t("x.checkinFailed"), variant: "destructive" }),
       },
     );
   };
