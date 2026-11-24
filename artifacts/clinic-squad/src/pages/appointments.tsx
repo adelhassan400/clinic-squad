@@ -886,7 +886,7 @@ export default function AppointmentsPage() {
                 <Label>{t("appt.notes")}</Label>
                 <Input
                   {...form.register("notes")}
-                  placeholder="Optional..."
+                  placeholder={t("x.optional")}
                   className="mt-1"
                 />
               </div>
