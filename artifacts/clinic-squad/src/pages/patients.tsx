@@ -92,7 +92,7 @@ type PatientForm = z.infer<typeof patientSchema>;
 
 const checkInSchema = z.object({
   visitType: z.enum(PATIENT_VISIT_TYPE_VALUES, {
-    message: "Visit type is required",
+    message: "x.visitTypeRequired",
   }),
 });
 type CheckInForm = z.infer<typeof checkInSchema>;
@@ -709,7 +709,7 @@ export default function PatientsPage() {
                                 }),
                               )
                             }
-                            title="Send WhatsApp message"
+                            title={t("x.sendWhatsapp")}
                             data-testid={`whatsapp-patient-${patient.id}`}
                           >
                             <MessageCircle className="w-3.5 h-3.5" />
@@ -894,7 +894,7 @@ export default function PatientsPage() {
                   )}
                   {form.formState.errors.visitType && (
                     <p className="text-xs text-destructive mt-1">
-                      {form.formState.errors.visitType.message}
+                      {t(form.formState.errors.visitType.message ?? "")}
                     </p>
                   )}
                 </div>
@@ -980,7 +980,7 @@ export default function PatientsPage() {
                   <Label>{t("patients.clinicalNotes")}</Label>
                   <Input
                     {...form.register("notes")}
-                    placeholder="Chronic conditions, history..."
+                    placeholder={t("x.chronicPh")}
                     className="mt-1"
                   />
                 </div>
@@ -1063,7 +1063,7 @@ export default function PatientsPage() {
                 />
                 {checkInForm.formState.errors.visitType && (
                   <p className="text-xs text-destructive mt-1">
-                    {checkInForm.formState.errors.visitType.message}
+                    {t(checkInForm.formState.errors.visitType.message ?? "")}
                   </p>
                 )}
               </div>
