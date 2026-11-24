@@ -93,7 +93,10 @@ function AppointmentStatusBadge({ status }: { status: string }) {
         map[status] ?? "bg-muted text-muted-foreground",
       )}
     >
-      {status.replace("_", " ")}
+      {(() => {
+        const k = "status." + status.replace(/[_-]([a-z])/g, (_m, c) => c.toUpperCase());
+        return t(k) === k ? status.replace("_", " ") : t(k);
+      })()}
     </span>
   );
 }
