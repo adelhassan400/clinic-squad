@@ -230,7 +230,7 @@ export function PrescriptionsContent({ initialPatientId, embedded }: Prescriptio
 
       {/* Create form + live preview */}
       {showForm && isAdmin && (
-        <div className="grid lg:grid-cols-[1fr_minmax(0,420px)] gap-5 mb-6">
+        <div className="grid grid-cols-[minmax(0,1fr)] lg:grid-cols-[minmax(0,1fr)_minmax(0,420px)] gap-5 mb-6">
         <form
           onSubmit={handleSubmit}
           className="rounded-xl border border-border bg-card p-6 space-y-4"
