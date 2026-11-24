@@ -475,7 +475,7 @@ export function PrescriptionsContent({ initialPatientId, embedded }: Prescriptio
           <p className="text-sm text-muted-foreground">{t("presc.empty")}</p>
         </div>
       ) : (
-        <div className="grid gap-3">
+        <div className="grid grid-cols-[minmax(0,1fr)] gap-3">
           {filtered.map((p) => (
             <div
               key={p.id}
@@ -484,7 +484,7 @@ export function PrescriptionsContent({ initialPatientId, embedded }: Prescriptio
             >
               <div className="min-w-0 flex-1 pr-4">
                 <div className="flex items-center gap-2 mb-1">
-                  <p className="font-semibold truncate">{p.patientName}</p>
+                  <p className="font-semibold truncate min-w-0">{p.patientName}</p>
                   <span className="text-[10px] text-muted-foreground px-1.5 py-0.5 rounded-full bg-muted border border-border">
                     {new Date(p.date).toLocaleDateString(lang === "ar" ? "ar-EG" : "en-US")}
                   </span>
@@ -496,7 +496,7 @@ export function PrescriptionsContent({ initialPatientId, embedded }: Prescriptio
                   {p.items.map((i) => i.drug).join(", ")}
                 </p>
               </div>
-              <div className="flex items-center gap-1">
+              <div className="flex items-center gap-1 shrink-0">
                 <Button
                   variant="ghost"
                   size="icon"
