@@ -1201,6 +1201,9 @@ const translations: Record<string, Record<Lang, string>> = {
   "x.queueRefreshFailed": { en: "Queue refresh failed.", ar: "تعذر تحديث الطابور." },
   "x.retry": { en: "Retry", ar: "إعادة المحاولة" },
   "team.role.superadmin": { en: "Super Admin", ar: "مدير المنصة" },
+  "x.egBlood": { en: "e.g. O+", ar: "مثال: O+" },
+  "x.egAllergy": { en: "e.g. Penicillin", ar: "مثال: بنسلين" },
+  "x.egTransfer": { en: "e.g. Transfer ID #987654321", ar: "مثال: رقم التحويل 987654321#" },
 };
 
 const LangContext = createContext<LangContextType | undefined>(undefined);
