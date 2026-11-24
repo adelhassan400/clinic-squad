@@ -2,6 +2,7 @@ import type { Request, Response, NextFunction } from "express";
 import { eq } from "drizzle-orm";
 import { db, clinicsTable, usersTable } from "@workspace/db";
 import { verifyToken } from "../lib/auth-security.js";
+import { isPreActivationClinicStatus } from "../lib/access-policy.js";
 
 export interface AuthedUser {
   id: string;
@@ -92,6 +93,36 @@ export async function requireClinicAccess(
     const clinic = (await db.select({ status: clinicsTable.status }).from(clinicsTable).where(eq(clinicsTable.id, user.clinicId)).limit(1))[0];
     if (clinic?.status === "blocked" || clinic?.status === "deactivated") {
       res.status(403).json({ error: "Clinic access is deactivated", code: "CLINIC_DEACTIVATED" });
+      return;
+    }
+    // Clinics awaiting activation may not use clinic data until an admin activates them.
+    if (isPreActivationClinicStatus(clinic?.status)) {
+      res.status(403).json({ error: "Clinic is awaiting activation", code: "CLINIC_PENDING" });
+      return;
+    }
+  }
+  next();
+}
+
+/**
+ * For routers that only use requireAuth: blocks clinic data access while the
+ * user's clinic is awaiting activation (superadmins bypass). Does not touch
+ * subscription or expiry handling.
+ */
+export async function requireActiveClinic(
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> {
+  const user = req.authUser;
+  if (!user) {
+    res.status(401).json({ error: "Unauthorized" });
+    return;
+  }
+  if (user.role !== "superadmin") {
+    const clinic = (await db.select({ status: clinicsTable.status }).from(clinicsTable).where(eq(clinicsTable.id, user.clinicId)).limit(1))[0];
+    if (isPreActivationClinicStatus(clinic?.status)) {
+      res.status(403).json({ error: "Clinic is awaiting activation", code: "CLINIC_PENDING" });
       return;
     }
   }
