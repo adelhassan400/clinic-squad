@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import {
   canCreatePrescription,
   presetLabel,
+  presetValue,
   FREQUENCY_PRESETS,
   DURATION_PRESETS,
 } from "./prescription-ui.ts";
@@ -14,6 +15,13 @@ test("admin, doctor and superadmin can create prescriptions", () => {
 test("nurse, assistant, secretary and missing roles cannot", () => {
   for (const r of ["nurse", "assistant", "secretary", "", undefined, null]) {
     assert.equal(canCreatePrescription(r as string | undefined | null), false);
+  }
+});
+
+test("stored preset value stays English in every UI language", () => {
+  for (const p of [...FREQUENCY_PRESETS, ...DURATION_PRESETS]) {
+    assert.equal(presetValue(p), p.en);
+    assert.notEqual(presetValue(p), presetLabel(p, "ar"));
   }
 });
 
