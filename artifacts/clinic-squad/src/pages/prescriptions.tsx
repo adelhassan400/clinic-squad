@@ -53,7 +53,7 @@ import {
   Loader2,
 } from "lucide-react";
 import { printPrescription, sendPrescriptionWhatsApp, type ClinicBranding } from "@/lib/prescription";
-import { canCreatePrescription, presetLabel, FREQUENCY_PRESETS, DURATION_PRESETS } from "@/lib/prescription-ui";
+import { canCreatePrescription, presetLabel, presetValue, FREQUENCY_PRESETS, DURATION_PRESETS } from "@/lib/prescription-ui";
 
 interface ItemForm {
   drug: string;
@@ -374,7 +374,7 @@ export function PrescriptionsContent({ initialPatientId, embedded }: Prescriptio
                           <button
                             key={preset.en}
                             type="button"
-                            onClick={() => updateItem(idx, { frequency: presetLabel(preset, lang) })}
+                            onClick={() => updateItem(idx, { frequency: presetValue(preset) })}
                             className="text-[10px] px-1.5 py-0.5 rounded border border-border bg-background hover:bg-primary/10 hover:border-primary/40 hover:text-primary text-muted-foreground transition-colors"
                           >
                             {presetLabel(preset, lang)}
@@ -398,7 +398,7 @@ export function PrescriptionsContent({ initialPatientId, embedded }: Prescriptio
                           <button
                             key={preset.en}
                             type="button"
-                            onClick={() => updateItem(idx, { duration: presetLabel(preset, lang) })}
+                            onClick={() => updateItem(idx, { duration: presetValue(preset) })}
                             className="text-[10px] px-1.5 py-0.5 rounded border border-border bg-background hover:bg-primary/10 hover:border-primary/40 hover:text-primary text-muted-foreground transition-colors"
                           >
                             {presetLabel(preset, lang)}
