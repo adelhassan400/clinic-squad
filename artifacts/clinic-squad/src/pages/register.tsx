@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Link, useLocation } from "wouter";
 import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
+import { lzResolver } from "@/lib/error-i18n";
 import { z } from "zod";
 import { ApiError, useRegisterUser } from "@workspace/api-client-react";
 import { useAuth, type AuthClinic, type AuthUser } from "@/lib/auth";
@@ -34,7 +34,7 @@ export default function RegisterPage() {
   const [showPw, setShowPw] = useState(false);
 
   const { register, handleSubmit, formState: { errors } } = useForm<FormData>({
-    resolver: zodResolver(schema),
+    resolver: lzResolver(schema),
     defaultValues: { clinicName: "", ownerName: "", specialty: "", whatsappNumber: "", email: "", password: "" },
   });
 
