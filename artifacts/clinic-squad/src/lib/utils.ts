@@ -6,7 +6,8 @@ export function cn(...inputs: ClassValue[]) {
 }
 
 export function formatDate(dateStr: string) {
-  return new Date(dateStr).toLocaleDateString("en-US", {
+  const loc = typeof localStorage !== "undefined" && localStorage.getItem("clinic_lang") === "ar" ? "ar-EG" : "en-US";
+  return new Date(dateStr).toLocaleDateString(loc, {
     year: "numeric",
     month: "short",
     day: "numeric",
