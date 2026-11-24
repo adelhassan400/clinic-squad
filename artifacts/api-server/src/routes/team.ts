@@ -3,7 +3,7 @@ import { eq, and } from "drizzle-orm";
 import { db, usersTable, clinicsTable, invitationsTable } from "@workspace/db";
 import { CreateInvitationBody } from "@workspace/api-zod";
 import { randomUUID, randomBytes } from "crypto";
-import { requireAuth, requireRole, getMemberLimit } from "../middlewares/auth.js";
+import { requireAuth, requireRole, requireActiveClinic, getMemberLimit } from "../middlewares/auth.js";
 
 const router = Router({ mergeParams: true });
 
@@ -22,7 +22,7 @@ function isPending(status: string, expiresAt: Date): boolean {
   return status === "pending" && expiresAt.getTime() > Date.now();
 }
 
-router.use(requireAuth);
+router.use(requireAuth, requireActiveClinic);
 
 // Ensure the authed user belongs to the clinic in the URL.
 router.use((req, res, next): void => {
