@@ -38,7 +38,7 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
 import { useForm, Controller } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
+import { lzResolver } from "@/lib/error-i18n";
 import { z } from "zod";
 import {
   Plus,
@@ -223,7 +223,7 @@ export default function PatientsPage() {
   ).length;
 
   const form = useForm<PatientForm>({
-    resolver: zodResolver(patientSchema),
+    resolver: lzResolver(patientSchema),
     defaultValues: {
       name: "",
       phone: "",
@@ -236,7 +236,7 @@ export default function PatientsPage() {
   });
 
   const checkInForm = useForm<CheckInForm>({
-    resolver: zodResolver(checkInSchema),
+    resolver: lzResolver(checkInSchema),
     defaultValues: { visitType: "New Consultation" },
   });
 
