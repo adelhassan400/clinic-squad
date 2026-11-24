@@ -19,6 +19,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { useLang } from "@/lib/lang";
+import { apiErrorText } from "@/lib/error-i18n";
 import { Loader2 } from "lucide-react";
 
 interface Props {
@@ -92,7 +93,7 @@ export function EditPatientDialog({ patient, clinicId, open, onOpenChange }: Pro
     } catch (err: any) {
       toast({
         title: t("editp.fail"),
-        description: err?.data?.error ?? err?.message ?? t("editp.tryAgain"),
+        description: apiErrorText(err, t("editp.tryAgain")),
         variant: "destructive",
       });
     }
