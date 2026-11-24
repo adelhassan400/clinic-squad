@@ -737,7 +737,7 @@ export default function PatientsPage() {
 
         {/* Add Patient Dialog — master record only */}
         <Dialog open={addOpen} onOpenChange={setAddOpen}>
-          <DialogContent className="max-w-lg">
+          <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>{t("patients.addDialog.title")}</DialogTitle>
               <DialogDescription>
