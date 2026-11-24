@@ -902,7 +902,7 @@ export default function PatientsPage() {
                   <Label>{t("patients.bloodType")}</Label>
                   <Input
                     {...form.register("bloodType")}
-                    placeholder="e.g. O+"
+                    placeholder={t("x.egBlood")}
                     className="mt-1"
                   />
                 </div>
@@ -972,7 +972,7 @@ export default function PatientsPage() {
                   <Label>{t("patients.allergies")}</Label>
                   <Input
                     {...form.register("allergies")}
-                    placeholder="e.g. Penicillin"
+                    placeholder={t("x.egAllergy")}
                     className="mt-1"
                   />
                 </div>
