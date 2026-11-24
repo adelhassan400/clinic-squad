@@ -3,7 +3,8 @@ import { eq } from "drizzle-orm";
 import { db, clinicsTable, usersTable, subscriptionsTable, patientsTable, appointmentsTable, financesTable } from "@workspace/db";
 import { UpdateClinicBody } from "@workspace/api-zod";
 import { randomUUID } from "crypto";
-import { requireAuth } from "../middlewares/auth.js";
+import { requireAuth, requireRole, requireActiveClinic } from "../middlewares/auth.js";
+import { FINANCE_ROLES, dashboardForRole } from "../lib/access-policy.js";
 import type { Request, Response, NextFunction } from "express";
 
 const router = Router();
@@ -167,7 +168,7 @@ router.post("/:clinicId/subscription", async (req, res) => {
   });
 });
 
-router.get("/:clinicId/dashboard", async (req, res) => {
+router.get("/:clinicId/dashboard", requireActiveClinic, async (req, res) => {
   const { clinicId } = req.params;
 
   const clinic = (await db.select().from(clinicsTable).where(eq(clinicsTable.id, clinicId)).limit(1))[0];
@@ -199,7 +200,8 @@ router.get("/:clinicId/dashboard", async (req, res) => {
     trialDaysLeft = Math.max(0, Math.ceil((clinic.trialEndDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)));
   }
 
-  return res.json({
+  // Revenue and expenses are finance data: only finance roles get real values.
+  return res.json(dashboardForRole({
     totalPatients,
     newPatientsThisMonth,
     todayAppointments,
@@ -209,10 +211,10 @@ router.get("/:clinicId/dashboard", async (req, res) => {
     upcomingAppointments,
     subscriptionStatus: clinic.subscriptionStatus,
     trialDaysLeft,
-  });
+  }, req.authUser!.role));
 });
 
-router.get("/:clinicId/appointments/today", async (req, res) => {
+router.get("/:clinicId/appointments/today", requireActiveClinic, async (req, res) => {
   const { clinicId } = req.params;
   const today = new Date().toISOString().split("T")[0];
   const [appointments, patients] = await Promise.all([
@@ -235,7 +237,7 @@ router.get("/:clinicId/appointments/today", async (req, res) => {
 // Tomorrow's scheduled appointments — for WhatsApp reminder workflow.
 // Includes patient phone (joined client-side here for simplicity) so the UI
 // can deep-link to wa.me without a second round-trip.
-router.get("/:clinicId/appointments/tomorrow", async (req, res) => {
+router.get("/:clinicId/appointments/tomorrow", requireActiveClinic, async (req, res) => {
   const { clinicId } = req.params;
   const tomorrowDate = new Date();
   tomorrowDate.setDate(tomorrowDate.getDate() + 1);
@@ -259,7 +261,7 @@ router.get("/:clinicId/appointments/tomorrow", async (req, res) => {
   return res.json(list);
 });
 
-router.get("/:clinicId/finances/summary", async (req, res) => {
+router.get("/:clinicId/finances/summary", requireActiveClinic, requireRole(...FINANCE_ROLES), async (req, res) => {
   const { clinicId } = req.params;
   const year = parseInt(req.query.year as string) || new Date().getFullYear();
 
