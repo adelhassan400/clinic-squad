@@ -266,7 +266,7 @@ export default function FinancesPage() {
               </div>
               <div>
                 <Label>{t("finances.category")} *</Label>
-                <Input {...form.register("category")} placeholder="Consultation, Supplies, Rent..." className="mt-1" />
+                <Input {...form.register("category")} placeholder={t("x.finCategoryPh")} className="mt-1" />
                 {form.formState.errors.category && <p className="text-xs text-destructive mt-1">{form.formState.errors.category.message}</p>}
               </div>
               <div>
@@ -276,7 +276,7 @@ export default function FinancesPage() {
               </div>
               <div>
                 <Label>{t("finances.description")} *</Label>
-                <Input {...form.register("description")} placeholder="Brief description..." className="mt-1" />
+                <Input {...form.register("description")} placeholder={t("x.finDescPh")} className="mt-1" />
                 {form.formState.errors.description && <p className="text-xs text-destructive mt-1">{form.formState.errors.description.message}</p>}
               </div>
               <div>
