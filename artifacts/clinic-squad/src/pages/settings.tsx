@@ -144,7 +144,7 @@ export default function SettingsPage() {
 
   // Clinic identity (name, phone, address) — editable by admin/superadmin only
   const updateClinicMutation = useUpdateClinic();
-  const isAdminOrOwner = user?.role === "admin" || user?.role === "doctor";
+  const isAdminOrOwner = user?.role === "admin";
   const [clinicName, setClinicName] = useState(clinic?.name ?? "");
   const [clinicPhone, setClinicPhone] = useState(clinic?.phone ?? "");
   const [clinicAddress, setClinicAddress] = useState(clinic?.address ?? "");
