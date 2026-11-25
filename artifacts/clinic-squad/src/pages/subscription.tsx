@@ -251,7 +251,7 @@ export default function SubscriptionPage() {
               <div className="space-y-4">
                 <div>
                   <label className="text-xs font-medium mb-1.5 block">{t("sub.promoLabel")}</label>
-                  <input type="text" className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm uppercase" placeholder="e.g. SAVE20" value={promoCode} onChange={(e) => setPromoCode(e.target.value.toUpperCase())} />
+                  <input type="text" className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm uppercase" placeholder={t("x.egPromo")} value={promoCode} onChange={(e) => setPromoCode(e.target.value.toUpperCase())} />
                   {promoCode && !selectedPromo && <p className="mt-1 text-xs text-muted-foreground">{t("sub.promoNotFound")}</p>}
                 </div>
                 <div>
