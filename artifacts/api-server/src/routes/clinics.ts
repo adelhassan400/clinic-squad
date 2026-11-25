@@ -54,7 +54,7 @@ router.get("/:clinicId", async (req, res) => {
   return res.json(serializeClinic(clinic));
 });
 
-router.patch("/:clinicId", async (req, res) => {
+router.patch("/:clinicId", requireRole("admin", "superadmin"), async (req, res) => {
   const { clinicId } = req.params;
   const parsed = UpdateClinicBody.safeParse(req.body);
   if (!parsed.success) {
@@ -102,7 +102,7 @@ router.get("/:clinicId/subscription", async (req, res) => {
   });
 });
 
-router.post("/:clinicId/subscription", async (req, res) => {
+router.post("/:clinicId/subscription", requireRole("admin", "superadmin"), async (req, res) => {
   const { clinicId } = req.params;
   const body = req.body as any;
   const planType = body.planType;
