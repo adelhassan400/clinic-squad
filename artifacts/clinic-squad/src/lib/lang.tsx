@@ -587,6 +587,7 @@ const translations: Record<string, Record<Lang, string>> = {
   "plan.trial": { en: "Trial", ar: "تجربة" },
   "plan.basic": { en: "Basic", ar: "أساسي" },
   "plan.premium": { en: "Premium", ar: "مميز" },
+  "plan.expired": { en: "Expired", ar: "منتهي" },
   "plan.trial.desc": { en: "15-day evaluation", ar: "تقييم لمدة 15 يوماً" },
   "plan.basic.desc": { en: "200 EGP / month", ar: "200 ج.م / شهرياً" },
   "plan.premium.desc": { en: "400 EGP / month", ar: "400 ج.م / شهرياً" },
