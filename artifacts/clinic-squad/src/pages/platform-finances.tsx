@@ -36,7 +36,7 @@ interface RevenueReport {
   month: number | null;
 }
 
-function normalizeRevenueReport(data: Partial<RevenueReport> | null | undefined, fallbackYear: number): RevenueReport {
+function normalizeRevenueReport(data: Partial<RevenueReport> | null | undefined, fallbackYear: number, deletedLabel = "Deleted clinic"): RevenueReport {
   return {
     year: typeof data?.year === "number" ? data.year : fallbackYear,
     totalCollected: Number(data?.totalCollected) || 0,
@@ -56,7 +56,7 @@ function normalizeRevenueReport(data: Partial<RevenueReport> | null | undefined,
     })) : [],
     topClinics: Array.isArray(data?.topClinics) ? data.topClinics.map((item) => ({
       clinicId: String(item.clinicId ?? ""),
-      clinicName: String(item.clinicName ?? "Deleted clinic"),
+      clinicName: String(item.clinicName ?? deletedLabel),
       amount: Number(item.amount) || 0,
       count: Number(item.count) || 0,
     })) : [],
@@ -99,7 +99,7 @@ export default function PlatformFinancesPage() {
       const params = new URLSearchParams({ year: String(year) });
       if (month !== null) params.set("month", String(month));
       const data = await customFetch<Partial<RevenueReport>>(`/api/admin/finance-report?${params.toString()}`);
-      return normalizeRevenueReport(data, year);
+      return normalizeRevenueReport(data, year, t("x.deletedClinic"));
     },
     enabled: !!user,
     staleTime: 30_000,
@@ -115,7 +115,7 @@ export default function PlatformFinancesPage() {
   const downloadCsv = () => {
     if (!report) return;
     const rows = [
-      ["Clinic", "Plan", "Billing period", "Duration months", "Amount", "Transaction reference", "Date"],
+      lang === "ar" ? ["العيادة", "الخطة", "فترة الفوترة", "عدد الأشهر", "المبلغ", "مرجع التحويل", "التاريخ"] : ["Clinic", "Plan", "Billing period", "Duration months", "Amount", "Transaction reference", "Date"],
       ...report.transactions.map((item) => [
         item.clinicName,
         item.planType,
