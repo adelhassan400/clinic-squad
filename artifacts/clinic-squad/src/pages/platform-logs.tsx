@@ -11,6 +11,34 @@ import { Button } from "@/components/ui/button";
 
 interface AuditLog { id: string; adminEmail: string; action: string; details: string; createdAt: string; }
 
+const AUDIT_ACTIONS_AR: Record<string, string> = {
+  UPDATE_GLOBAL_SETTINGS: "تحديث إعدادات المنصة",
+  CREATE_BROADCAST: "إنشاء إعلان",
+  ACTIVATE_BROADCAST: "تفعيل إعلان",
+  ARCHIVE_BROADCAST: "أرشفة إعلان",
+  CREATE_PROMO_CODE: "إنشاء كود خصم",
+  ACTIVATE_PROMO_CODE: "تفعيل كود خصم",
+  DISABLE_PROMO_CODE: "تعطيل كود خصم",
+  EXTEND_TRIAL: "تمديد الفترة التجريبية",
+};
+
+function auditActionLabel(action: string, lang: string) {
+  return lang === "ar" && AUDIT_ACTIONS_AR[action] ? AUDIT_ACTIONS_AR[action] : action;
+}
+
+function auditDetailsLabel(details: string, lang: string) {
+  if (lang !== "ar") return details;
+  let m: RegExpMatchArray | null;
+  if (details === "Updated pricing and payment contact settings") return "تم تحديث الأسعار وبيانات التواصل للدفع";
+  if ((m = details.match(/^Created broadcast: (.+)$/s))) return "تم إنشاء إعلان: " + m[1];
+  if ((m = details.match(/^Updated broadcast: (.+)$/s))) return "تم تحديث إعلان: " + m[1];
+  if ((m = details.match(/^Created (.+) \((\d+(?:\.\d+)?)% discount\)$/s))) return "تم إنشاء " + m[1] + " (خصم " + m[2] + "%)";
+  if ((m = details.match(/^Updated promo code: (.+)$/s))) return "تم تحديث كود الخصم: " + m[1];
+  if ((m = details.match(/^Extended trial for (.+) by (\d+) days$/s))) return "تم تمديد الفترة التجريبية لعيادة " + m[1] + " بمقدار " + m[2] + " يوم";
+  return details;
+}
+
+
 export default function PlatformLogsPage() {
   const { t, lang } = useLang();
   const [search, setSearch] = useState("");
@@ -19,8 +47,8 @@ export default function PlatformLogsPage() {
   const filteredLogs = useMemo(() => {
     const query = search.trim().toLowerCase();
     if (!query) return logs;
-    return logs.filter((log) => `${log.adminEmail} ${log.action} ${log.details}`.toLowerCase().includes(query));
-  }, [logs, search]);
+    return logs.filter((log) => `${log.adminEmail} ${log.action} ${log.details} ${auditActionLabel(log.action, lang)} ${auditDetailsLabel(log.details, lang)}`.toLowerCase().includes(query));
+  }, [logs, search, lang]);
   const today = new Date().toDateString();
   const todayCount = logs.filter((log) => new Date(log.createdAt).toDateString() === today).length;
   const actionCount = new Set(logs.map((log) => log.action)).size;
@@ -31,7 +59,7 @@ export default function PlatformLogsPage() {
         <div className="mx-auto max-w-6xl space-y-6 p-6">
           <div><div className="flex items-center gap-2"><ShieldCheck className="h-6 w-6 text-primary" /><h1 className="text-2xl font-bold">{t("platformLogs.title")}</h1></div><p className="mt-1 text-sm text-muted-foreground">{t("platformLogs.subtitle")}</p></div>
           <div className="grid gap-4 sm:grid-cols-3"><div className="rounded-xl border border-border bg-card p-5"><History className="h-4 w-4 text-primary" /><p className="mt-3 text-xs uppercase tracking-wide text-muted-foreground">{t("platformLogs.total")}</p><p className="mt-1 text-2xl font-bold">{logs.length}</p></div><div className="rounded-xl border border-border bg-card p-5"><Calendar className="h-4 w-4 text-blue-600" /><p className="mt-3 text-xs uppercase tracking-wide text-muted-foreground">{t("platformLogs.today")}</p><p className="mt-1 text-2xl font-bold text-blue-600">{todayCount}</p></div><div className="rounded-xl border border-border bg-card p-5"><Activity className="h-4 w-4 text-green-600" /><p className="mt-3 text-xs uppercase tracking-wide text-muted-foreground">{t("platformLogs.actionTypes")}</p><p className="mt-1 text-2xl font-bold text-green-600">{actionCount}</p></div></div>
-          <section className="overflow-hidden rounded-xl border border-border bg-card"><div className="flex flex-col gap-3 border-b border-border bg-muted/20 p-5 sm:flex-row sm:items-center"><div className="flex items-center gap-2"><History className="h-4 w-4 text-primary" /><div><h2 className="font-semibold">{t("platformLogs.historyTitle")}</h2><p className="mt-1 text-xs text-muted-foreground">{t("platformLogs.historySubtitle")}</p></div></div><div className="relative sm:ms-auto"><Search className="absolute start-3 top-2.5 h-4 w-4 text-muted-foreground" /><Input className="h-9 w-full ps-9 sm:w-72" placeholder={t("platformLogs.search")} value={search} onChange={(event) => setSearch(event.target.value)} /></div></div>{auditQ.isLoading ? <div className="py-14 text-center text-sm text-muted-foreground">{t("platformLogs.loading")}</div> : filteredLogs.length === 0 ? <div className="py-14 text-center text-sm text-muted-foreground">{t("platformLogs.empty")}</div> : <div className="divide-y divide-border">{filteredLogs.map((log) => <div key={log.id} className="px-5 py-4 hover:bg-muted/20"><div className="flex flex-col gap-2 sm:flex-row sm:items-start"><div className="flex min-w-0 flex-1 items-start gap-3"><div className="mt-0.5 rounded-lg bg-primary/10 p-2 text-primary"><Activity className="h-4 w-4" /></div><div className="min-w-0"><p className="text-sm font-semibold">{log.action}</p><p className="mt-1 text-sm text-muted-foreground">{log.details}</p><p className="mt-2 text-xs text-muted-foreground">{log.adminEmail}</p></div></div><span className="whitespace-nowrap text-xs text-muted-foreground">{formatDate(log.createdAt)}</span></div></div>)}</div>}</section>
+          <section className="overflow-hidden rounded-xl border border-border bg-card"><div className="flex flex-col gap-3 border-b border-border bg-muted/20 p-5 sm:flex-row sm:items-center"><div className="flex items-center gap-2"><History className="h-4 w-4 text-primary" /><div><h2 className="font-semibold">{t("platformLogs.historyTitle")}</h2><p className="mt-1 text-xs text-muted-foreground">{t("platformLogs.historySubtitle")}</p></div></div><div className="relative sm:ms-auto"><Search className="absolute start-3 top-2.5 h-4 w-4 text-muted-foreground" /><Input className="h-9 w-full ps-9 sm:w-72" placeholder={t("platformLogs.search")} value={search} onChange={(event) => setSearch(event.target.value)} /></div></div>{auditQ.isLoading ? <div className="py-14 text-center text-sm text-muted-foreground">{t("platformLogs.loading")}</div> : filteredLogs.length === 0 ? <div className="py-14 text-center text-sm text-muted-foreground">{t("platformLogs.empty")}</div> : <div className="divide-y divide-border">{filteredLogs.map((log) => <div key={log.id} className="px-5 py-4 hover:bg-muted/20"><div className="flex flex-col gap-2 sm:flex-row sm:items-start"><div className="flex min-w-0 flex-1 items-start gap-3"><div className="mt-0.5 rounded-lg bg-primary/10 p-2 text-primary"><Activity className="h-4 w-4" /></div><div className="min-w-0"><p className="text-sm font-semibold">{auditActionLabel(log.action, lang)}</p><p className="mt-1 text-sm text-muted-foreground">{auditDetailsLabel(log.details, lang)}</p><p className="mt-2 text-xs text-muted-foreground">{log.adminEmail}</p></div></div><span className="whitespace-nowrap text-xs text-muted-foreground">{formatDate(log.createdAt)}</span></div></div>)}</div>}</section>
           <div className="rounded-xl border border-primary/20 bg-primary/5 p-5"><div className="flex gap-3"><ShieldCheck className="mt-0.5 h-5 w-5 shrink-0 text-primary" /><div><h2 className="font-semibold">{t("platformLogs.securityTitle")}</h2><p className="mt-1 text-sm text-muted-foreground">{t("platformLogs.securityText")}</p></div><Button className="ms-auto hidden sm:inline-flex" variant="outline" onClick={() => auditQ.refetch()}>{t("platformLogs.refresh")}</Button></div></div>
         </div>
       </DashboardLayout>
