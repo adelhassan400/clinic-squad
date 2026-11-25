@@ -1204,6 +1204,9 @@ const translations: Record<string, Record<Lang, string>> = {
   "x.egBlood": { en: "e.g. O+", ar: "مثال: O+" },
   "x.egAllergy": { en: "e.g. Penicillin", ar: "مثال: بنسلين" },
   "x.egTransfer": { en: "e.g. Transfer ID #987654321", ar: "مثال: رقم التحويل 987654321#" },
+  "x.egPromo": { en: "e.g. SAVE20", ar: "مثال: SAVE20" },
+  "x.deletedClinic": { en: "Deleted clinic", ar: "عيادة محذوفة" },
+  "x.assignedOnActivation": { en: "Assigned during activation", ar: "يُحدد عند التفعيل" },
 };
 
 const LangContext = createContext<LangContextType | undefined>(undefined);
