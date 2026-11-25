@@ -54,7 +54,7 @@ function Badge({ children, tone = "muted" }: { children: React.ReactNode; tone?:
 }
 
 export default function PlatformClinicsPage() {
-  const { t } = useLang();
+  const { t, lang } = useLang();
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<DirectoryFilter>("all");
   const [selectedClinicIds, setSelectedClinicIds] = useState<Set<string>>(new Set());
@@ -170,7 +170,7 @@ export default function PlatformClinicsPage() {
   };
 
   const exportClinics = () => {
-    const header = ["Clinic", "Status", "Subscription", "Engagement score", "Created"];
+    const header = lang === "ar" ? ["العيادة", "الحالة", "الاشتراك", "درجة التفاعل", "تاريخ الإنشاء"] : ["Clinic", "Status", "Subscription", "Engagement score", "Created"];
     const rows = filteredClinics.map((clinic) => [clinic.name, clinic.status, clinic.subscriptionStatus, engagementByClinic.get(clinic.id)?.engagementScore ?? 0, clinic.createdAt]);
     const csv = [header, ...rows].map((row) => row.map((value) => `"${String(value).replaceAll('"', '""')}"`).join(",")).join("\n");
     const url = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8" }));
