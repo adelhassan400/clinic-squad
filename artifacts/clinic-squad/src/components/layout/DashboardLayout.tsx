@@ -79,7 +79,7 @@ export function DashboardLayout({ children }: Props) {
           { href: "/insights", labelKey: "sidebar.insights", icon: BarChart2 },
           { href: "/finances", labelKey: "sidebar.finances", icon: TrendingUp },
           { href: "/subscription", labelKey: "sidebar.subscription", icon: Crown },
-          { href: "/team", labelKey: "sidebar.team", icon: Users },
+          ...(user?.role === "admin" || (!!user && clinic?.ownerId === user.id) ? [{ href: "/team", labelKey: "sidebar.team", icon: Users }] : []),
           { href: "/settings", labelKey: "sidebar.settings", icon: Settings },
         ]
       : [
