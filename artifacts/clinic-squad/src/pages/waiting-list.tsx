@@ -23,11 +23,14 @@ import {
   ArrowRight,
   Loader2,
   CheckCircle2,
+  HeartPulse,
 } from "lucide-react";
 import { useLocation } from "wouter";
 import { cn } from "@/lib/utils";
 import { VisitTypeBadge } from "@/lib/visit-types";
 import { useToast } from "@/hooks/use-toast";
+import { VitalsDialog } from "@/components/VitalsDialog";
+import { useTodayVisits, formatVitals } from "@/lib/visit-records";
 
 function displayAge(age: number | null | undefined): string {
   if (age === null || age === undefined) return "—";
@@ -119,6 +122,10 @@ export default function WaitingListPage() {
   );
 
   const patchPatient = usePatchPatient();
+
+  const { data: visitsToday } = useTodayVisits(clinicId);
+  const visitByPatient = new Map((visitsToday?.data ?? []).map((v) => [v.patientId, v]));
+  const [vitalsFor, setVitalsFor] = useState<{ id: string; name: string } | null>(null);
 
   const active = data?.data ?? [];
 
@@ -278,6 +285,36 @@ export default function WaitingListPage() {
                         paymentAmount={p.paymentAmount}
                       />
                       <StatusPill status={p.status} />
+                      {(() => {
+                        const v = visitByPatient.get(p.id);
+                        const chips = formatVitals(v?.vitals);
+                        return (
+                          <>
+                            {v?.ready && (
+                              <span
+                                data-testid={`ready-${p.id}`}
+                                className="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full border border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300"
+                              >
+                                <CheckCircle2 className="w-3 h-3" /> {t("vitals.ready")}
+                              </span>
+                            )}
+                            {chips.length > 0 && (
+                              <span className="text-[10px] text-muted-foreground leading-tight">{chips.slice(0, 3).join(" · ")}</span>
+                            )}
+                            {p.status !== "completed" && (
+                              <button
+                                type="button"
+                                onClick={() => setVitalsFor({ id: p.id, name: p.name })}
+                                data-testid={`vitals-btn-${p.id}`}
+                                className="inline-flex items-center gap-1 text-[11px] font-medium text-primary hover:underline"
+                              >
+                                <HeartPulse className="w-3 h-3" />
+                                {v?.vitals ? t("vitals.edit") : t("vitals.add")}
+                              </button>
+                            )}
+                          </>
+                        );
+                      })()}
                     </div>
                     <Button
                       size="sm"
@@ -300,6 +337,14 @@ export default function WaitingListPage() {
             )}
           </div>
         </div>
+        <VitalsDialog
+          open={!!vitalsFor}
+          onOpenChange={(o) => !o && setVitalsFor(null)}
+          clinicId={clinicId}
+          patientId={vitalsFor?.id ?? ""}
+          patientName={vitalsFor?.name ?? ""}
+          initial={vitalsFor ? visitByPatient.get(vitalsFor.id)?.vitals : null}
+        />
       </DashboardLayout>
     </ProtectedRoute>
   );
