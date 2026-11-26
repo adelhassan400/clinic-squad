@@ -113,7 +113,7 @@ export default function FinancesPage() {
   }) ?? [];
 
   return (
-    <ProtectedRoute requireRole={["admin", "doctor", "superadmin"]}>
+    <ProtectedRoute requireRole={["admin", "doctor", "manager", "superadmin"]}>
       <DashboardLayout>
         <div className="p-6 max-w-6xl mx-auto">
           <div className="flex items-center justify-between mb-6">
