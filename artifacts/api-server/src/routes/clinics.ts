@@ -3,8 +3,8 @@ import { eq } from "drizzle-orm";
 import { db, clinicsTable, usersTable, subscriptionsTable, patientsTable, appointmentsTable, financesTable } from "@workspace/db";
 import { UpdateClinicBody } from "@workspace/api-zod";
 import { randomUUID } from "crypto";
-import { requireAuth, requireRole, requireActiveClinic } from "../middlewares/auth.js";
-import { FINANCE_ROLES, dashboardForRole } from "../lib/access-policy.js";
+import { requireAuth, requireRole, requireActiveClinic, requireFinanceAccess } from "../middlewares/auth.js";
+import { dashboardForRole } from "../lib/access-policy.js";
 import type { Request, Response, NextFunction } from "express";
 
 const router = Router();
@@ -191,7 +191,7 @@ router.post("/:clinicId/subscription", async (req, res) => {
 router.use("/:clinicId/dashboard", requireActiveClinic);
 router.use("/:clinicId/appointments/today", requireActiveClinic);
 router.use("/:clinicId/appointments/tomorrow", requireActiveClinic);
-router.use("/:clinicId/finances/summary", requireActiveClinic, requireRole(...FINANCE_ROLES));
+router.use("/:clinicId/finances/summary", requireActiveClinic, requireFinanceAccess);
 
 router.get("/:clinicId/dashboard", async (req, res) => {
   const { clinicId } = req.params;
@@ -236,7 +236,7 @@ router.get("/:clinicId/dashboard", async (req, res) => {
     upcomingAppointments,
     subscriptionStatus: clinic.subscriptionStatus,
     trialDaysLeft,
-  }, req.authUser!.role));
+  }, req.authUser!.id === clinic.ownerId ? "admin" : req.authUser!.role));
 });
 
 router.get("/:clinicId/appointments/today", async (req, res) => {
