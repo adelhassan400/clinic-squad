@@ -12,6 +12,7 @@ import {
   useListPrescriptions,
   useListPatients,
   usePatchPatient,
+  useCreateAppointment,
   getGetPatientQueryKey,
   getListAppointmentsQueryKey,
   getListPrescriptionsQueryKey,
@@ -144,6 +145,15 @@ function PatientConsultation({ params }: Props) {
   });
 
   const patchPatient = usePatchPatient();
+  const createAppt = useCreateAppointment();
+  const [followDate, setFollowDate] = useState("");
+  const [followTime, setFollowTime] = useState("10:00");
+  const addDaysISO = (n: number) => {
+    const d = new Date();
+    d.setDate(d.getDate() + n);
+    const pad = (x: number) => String(x).padStart(2, "0");
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+  };
 
   // Local state for autosave fields (mirrors server state, doctor edits drive saves).
   const [diagnosis, setDiagnosis] = useState("");
@@ -215,7 +225,19 @@ function PatientConsultation({ params }: Props) {
         },
       },
       {
-        onSuccess: () => {
+        onSuccess: async () => {
+          if (followDate) {
+            try {
+              await createAppt.mutateAsync({
+                clinicId,
+                data: { patientId, date: followDate, time: followTime || "10:00", type: "Follow-up", notes: null },
+              });
+              qc.invalidateQueries({ queryKey: getListAppointmentsQueryKey(clinicId) });
+              toast({ title: t("pdetail.followBooked") });
+            } catch {
+              toast({ title: t("pdetail.followFailed"), variant: "destructive" });
+            }
+          }
           toast({ title: successTitle });
           qc.invalidateQueries({
             queryKey: getGetPatientQueryKey(clinicId, patientId),
@@ -249,11 +271,11 @@ function PatientConsultation({ params }: Props) {
 
   const { data: appts } = useListAppointments(
     clinicId,
-    {},
+    { limit: 1000 } as Parameters<typeof useListAppointments>[1],
     {
       query: {
         enabled: !!clinicId,
-        queryKey: getListAppointmentsQueryKey(clinicId, {}),
+        queryKey: getListAppointmentsQueryKey(clinicId, { limit: 1000 } as Parameters<typeof useListAppointments>[1]),
       },
     },
   );
@@ -523,6 +545,46 @@ function PatientConsultation({ params }: Props) {
                     )}
                   </div>
                 </div>
+
+                {patient.status !== "completed" && (
+                  <div className="mb-4 rounded-lg border border-border bg-muted/20 p-3" data-testid="followup-box">
+                    <p className="text-xs font-semibold mb-2 flex items-center gap-1.5">
+                      <Calendar className="w-3.5 h-3.5 text-primary" />
+                      {t("pdetail.followTitle")}
+                    </p>
+                    <div className="flex flex-wrap items-center gap-2">
+                      {[3, 7, 14, 30].map((n) => (
+                        <Button
+                          key={n}
+                          type="button"
+                          size="sm"
+                          variant={followDate === addDaysISO(n) ? "secondary" : "outline"}
+                          className="h-8 text-xs"
+                          onClick={() => setFollowDate(followDate === addDaysISO(n) ? "" : addDaysISO(n))}
+                          data-testid={`follow-${n}`}
+                        >
+                          {t("pdetail.followAfter")} {n} {t("pdetail.followDays")}
+                        </Button>
+                      ))}
+                      <input
+                        type="date"
+                        value={followDate}
+                        min={addDaysISO(1)}
+                        onChange={(e) => setFollowDate(e.target.value)}
+                        className="h-8 rounded-md border border-border bg-background px-2 text-xs"
+                        data-testid="follow-date"
+                      />
+                      <input
+                        type="time"
+                        value={followTime}
+                        onChange={(e) => setFollowTime(e.target.value)}
+                        className="h-8 rounded-md border border-border bg-background px-2 text-xs"
+                        data-testid="follow-time"
+                      />
+                    </div>
+                    <p className="text-[11px] text-muted-foreground mt-2">{t("pdetail.followHint")}</p>
+                  </div>
+                )}
 
                 <div className="grid sm:grid-cols-2 gap-4">
                   <div>
