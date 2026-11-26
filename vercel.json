@@ -16,10 +16,10 @@
       "has": [
         {
           "type": "host",
-          "value": "clinic-squad-git-lcopy-ahmed64653234-6553s-projects.vercel.app"
+          "value": "clinic-squad-git-pset-ahmed64653234-6553s-projects.vercel.app"
         }
       ],
-      "dest": "https://clinic-squad-api-server-git-lcopy-ahmed64653234-6553s-projects.vercel.app/api/$1",
+      "dest": "https://clinic-squad-api-server-git-pset-ahmed64653234-6553s-projects.vercel.app/api/$1",
       "transforms": [
         {
           "type": "request.headers",

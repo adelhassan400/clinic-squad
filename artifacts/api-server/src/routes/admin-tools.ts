@@ -31,6 +31,17 @@ async function writeAudit(req: any, action: string, details: string) {
   });
 }
 
+/** Digits-only WhatsApp number for wa.me links. Egyptian local 01XXXXXXXXX becomes 201XXXXXXXXX. */
+function normalizeWhatsapp(value: unknown, fallback: string) {
+  const raw = typeof value === "string" ? value.trim() : "";
+  if (!raw) return fallback;
+  let digits = raw.replace(/[^\d+]/g, "");
+  if (digits.startsWith("00")) digits = digits.slice(2);
+  if (digits.startsWith("+")) digits = digits.slice(1);
+  if (digits.length === 11 && digits.startsWith("0")) digits = "20" + digits.slice(1);
+  return digits || fallback;
+}
+
 function cleanText(value: unknown, fallback = "") {
   return typeof value === "string" ? value.trim() : fallback;
 }
@@ -93,7 +104,7 @@ router.put("/settings", async (req, res) => {
     premiumMonthlyPrice: cleanText(body.premiumMonthlyPrice, current?.premiumMonthlyPrice ?? "400"),
     vodafoneCashNumber: cleanText(body.vodafoneCashNumber, current?.vodafoneCashNumber ?? "01009360198"),
     instapayHandle: cleanText(body.instapayHandle, current?.instapayHandle ?? ""),
-    whatsappNumber: cleanText(body.whatsappNumber, current?.whatsappNumber ?? "201009360198"),
+    whatsappNumber: normalizeWhatsapp(body.whatsappNumber, current?.whatsappNumber ?? "201009360198"),
     updatedAt: new Date(),
   };
   const settings = current

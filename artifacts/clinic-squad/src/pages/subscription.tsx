@@ -4,6 +4,7 @@ import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { useCreateSubscription, getGetSubscriptionQueryKey, getGetClinicQueryKey, customFetch } from "@workspace/api-client-react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
+import { sanitizePhone } from "@/lib/whatsapp";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { CheckCircle, Crown, Shield, PhoneCall, Loader2, Upload, Image as ImageIcon, X } from "lucide-react";
@@ -317,7 +318,7 @@ export default function SubscriptionPage() {
                 {t("sub.submitFor")} {selected === "premium" ? t("plan.premium") : t("plan.basic")}
               </Button>
               <a
-                href={`https://wa.me/${settingsQ.data?.whatsappNumber ?? "201009360198"}?text=Hi!%20I%20have%20paid%20${finalAmount}%20EGP%20for%20the%20${selected === "premium" ? "Premium" : "Basic"}%20Plan%20(${durationMonths}%20months)%20for%20clinic:%20${encodeURIComponent(clinic?.name ?? "")}.%20Ref:%20${encodeURIComponent(transactionRef || "N/A")}`}
+                href={`https://wa.me/${sanitizePhone(settingsQ.data?.whatsappNumber || "201009360198")}?text=Hi!%20I%20have%20paid%20${finalAmount}%20EGP%20for%20the%20${selected === "premium" ? "Premium" : "Basic"}%20Plan%20(${durationMonths}%20months)%20for%20clinic:%20${encodeURIComponent(clinic?.name ?? "")}.%20Ref:%20${encodeURIComponent(transactionRef || "N/A")}`}
                 target="_blank"
                 rel="noopener noreferrer"
               >
