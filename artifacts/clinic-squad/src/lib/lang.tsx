@@ -120,6 +120,7 @@ const translations: Record<string, Record<Lang, string>> = {
   "sidebar.platformGrowth": { en: "Growth Tools", ar: "أدوات النمو" },
   "sidebar.platformLogs": { en: "System Logs", ar: "سجلات النظام" },
   "sidebar.team": { en: "Team", ar: "الفريق" },
+  "sidebar.records": { en: "Medical records", ar: "السجلات الطبية" },
   "sidebar.prescriptions": { en: "ePrescription", ar: "الوصفة الإلكترونية" },
   "sidebar.subscription": { en: "Subscription", ar: "الاشتراك" },
   "sidebar.secure.title": { en: "Secure Access", ar: "الوصول الآمن" },
@@ -190,6 +191,18 @@ const translations: Record<string, Record<Lang, string>> = {
   "presc.diagnosis": { en: "Diagnosis", ar: "التشخيص" },
   "presc.diagnosisPh": { en: "e.g. Acute pharyngitis", ar: "مثال: التهاب الحلق الحاد" },
   "presc.medications": { en: "Medications", ar: "الأدوية" },
+  "patients.dupTitle": { en: "This phone number is already registered:", ar: "رقم التليفون ده مسجل قبل كده:" },
+  "patients.dupOpen": { en: "Open", ar: "افتح" },
+  "patients.dupHint": { en: "Open the existing file, or continue if this is a different family member.", ar: "افتح الملف الموجود، أو كمّل لو ده فرد تاني من العيلة." },
+  "pdetail.followTitle": { en: "Follow-up visit", ar: "ميعاد المتابعة" },
+  "pdetail.followAfter": { en: "After", ar: "بعد" },
+  "pdetail.followDays": { en: "days", ar: "يوم" },
+  "pdetail.followHint": { en: "Booked as an appointment when you finish the visit. Leave empty for no follow-up.", ar: "بيتحجز كميعاد لما تنهي الزيارة. سيبه فاضي لو مفيش متابعة." },
+  "pdetail.followBooked": { en: "Follow-up booked", ar: "اتحجز ميعاد المتابعة" },
+  "pdetail.followFailed": { en: "Visit finished, but the follow-up could not be booked", ar: "الزيارة خلصت، بس ميعاد المتابعة ما اتحجزش" },
+  "presc.copyLast": { en: "Copy last prescription", ar: "انسخ آخر روشتة" },
+  "presc.copyLastNone": { en: "No earlier prescription for this patient", ar: "مفيش روشتة سابقة للمريض ده" },
+  "presc.copyLastDone": { en: "Copied. Edit, then save.", ar: "اتنسخت. عدّل واحفظ." },
   "presc.addMedBtn": { en: "Add medication", ar: "أضف دواء" },
   "presc.drugName": { en: "Drug name", ar: "اسم الدواء" },
   "presc.drugNamePh": { en: "e.g. Amoxicillin 500mg", ar: "مثال: أموكسيسيلين 500 مجم" },
@@ -422,6 +435,8 @@ const translations: Record<string, Record<Lang, string>> = {
   "appt.actions": { en: "Actions", ar: "الإجراءات" },
   "appt.today": { en: "Today", ar: "اليوم" },
   "appt.scheduleAt": { en: "Schedule at", ar: "جدولة في" },
+  "appt.pickDate": { en: "Pick a date", ar: "اختر التاريخ" },
+  "appt.searchListPh": { en: "Search by name, phone or date (2026-11-26)", ar: "ابحث بالاسم أو الرقم أو التاريخ (2026-11-26)" },
   "appt.viewDay": { en: "View day", ar: "عرض اليوم" },
   "appt.viewList": { en: "View list", ar: "عرض القائمة" },
   "appt.appointment": { en: "appointment", ar: "موعد" },
@@ -1248,4 +1263,4 @@ export function useLang() {
   const context = useContext(LangContext);
   if (!context) throw new Error("useLang must be used within LangProvider");
   return context;
-    }
+                               }
