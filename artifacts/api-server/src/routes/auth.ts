@@ -20,6 +20,14 @@ import {
 } from "../lib/auth-security.js";
 
 import { requireAuth } from "../middlewares/auth.js";
+import { z } from "zod";
+
+// Founders who do not practice as a doctor register with practicesAsDoctor=false: role "manager",
+// no specialty. Omitted or true keeps the existing physician founder behavior.
+const RegisterBody = RegisterUserBody.extend({
+  specialty: z.string().optional(),
+  practicesAsDoctor: z.boolean().optional(),
+});
 
 const router = Router();
 
@@ -84,11 +92,15 @@ async function recordAuthEvent(
 }
 
 router.post("/register", async (req, res) => {
-  const parsed = RegisterUserBody.safeParse(req.body);
+  const parsed = RegisterBody.safeParse(req.body);
   if (!parsed.success) {
     return res.status(400).json({ error: "Invalid input", details: parsed.error.issues });
   }
-  const { password, clinicName, ownerName, specialty, whatsappNumber } = parsed.data;
+  const { password, clinicName, ownerName, specialty, whatsappNumber, practicesAsDoctor } = parsed.data;
+  const isPhysician = practicesAsDoctor !== false;
+  if (isPhysician && (!specialty || specialty.trim().length < 2)) {
+    return res.status(400).json({ error: "Invalid input", details: [{ path: ["specialty"], message: "Medical specialty is required for a practicing doctor" }] });
+  }
   const email = parsed.data.email.trim().toLowerCase();
 
   const existing = await db.select().from(usersTable).where(eq(usersTable.email, email)).limit(1);
@@ -123,9 +135,9 @@ router.post("/register", async (req, res) => {
     email,
     passwordHash: await hashPassword(password),
     name: ownerName,
-    specialty: specialty.trim(),
+    specialty: isPhysician ? specialty!.trim() : null,
     whatsappNumber: whatsappNumber.trim(),
-    role: "doctor",
+    role: isPhysician ? "doctor" : "manager",
     clinicId,
     isBlocked: false,
     emailVerifiedAt: now,
@@ -134,10 +146,10 @@ router.post("/register", async (req, res) => {
   const user = {
     id: userId,
     email,
-    role: "doctor",
+    role: isPhysician ? "doctor" : "manager",
     clinicId: clinicId,
     name: ownerName,
-    specialty: specialty.trim(),
+    specialty: isPhysician ? specialty!.trim() : null,
     whatsappNumber: whatsappNumber.trim(),
     isBlocked: false,
     emailVerifiedAt: now.toISOString(),
