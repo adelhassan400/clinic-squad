@@ -24,7 +24,7 @@ const AR: Record<string, string> = {
   "Staff invitation acceptance is temporarily paused until email verification is available. No account has been created.": "قبول دعوات الموظفين متوقف مؤقتاً حتى يتوفر التحقق من البريد الإلكتروني. لم يتم إنشاء أي حساب.",
   "Select at least one clinic": "اختر عيادة واحدة على الأقل",
   "Receipt must be a JPG, PNG, or WebP image": "يجب أن يكون الإيصال صورة بصيغة JPG أو PNG أو WebP",
-  "Receipt image is too large (max 5 MB)": "صورة الإيصال كبيرة جداً (الحد الأقصى 5 ميجابايت)",
+  "Receipt image is too large (max 1 MB)": "صورة الإيصال كبيرة جداً (الحد الأقصى 1 ميجابايت)",
   "Promo code not found": "كود الخصم غير موجود",
   "Promo code already exists": "كود الخصم موجود بالفعل",
   "Plan member limit reached": "تم الوصول إلى الحد الأقصى لعدد الأعضاء في الباقة",
