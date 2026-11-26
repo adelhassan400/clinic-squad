@@ -143,8 +143,8 @@ router.post("/:clinicId/subscription", async (req, res) => {
     if (!imageDataUrl.test(paymentProof)) {
       return res.status(400).json({ error: "Receipt must be a JPG, PNG, or WebP image" });
     }
-    if (paymentProof.length > 7_000_000) {
-      return res.status(413).json({ error: "Receipt image is too large (max 5 MB)" });
+    if (paymentProof.length > 1_400_000) {
+      return res.status(413).json({ error: "Receipt image is too large (max 1 MB)" });
     }
   } else {
     return res.status(400).json({ error: "Payment receipt image is required" });
