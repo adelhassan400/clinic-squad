@@ -52,6 +52,7 @@ import {
   MapPin,
   Phone as PhoneIcon,
   Loader2,
+  Copy,
 } from "lucide-react";
 import { printPrescription, sendPrescriptionWhatsApp, type ClinicBranding } from "@/lib/prescription";
 import { canCreatePrescription, presetLabel, presetValue, FREQUENCY_PRESETS, DURATION_PRESETS } from "@/lib/prescription-ui";
@@ -103,6 +104,72 @@ export function PrescriptionsContent({ initialPatientId, embedded }: Prescriptio
       queryKey: getListPrescriptionsQueryKey(clinicId, listParams),
     },
   });
+
+  // Whole-clinic history: feeds "copy last prescription" and drug memory.
+  const { data: allRxResp } = useListPrescriptions(clinicId, undefined, {
+    query: {
+      enabled: !!clinicId && canPrescribe,
+      queryKey: getListPrescriptionsQueryKey(clinicId, undefined),
+    },
+  });
+  const allRx = allRxResp?.data ?? [];
+
+  // Drug memory: what this clinic prescribed before, most used first, with the latest dose/frequency/duration.
+  const drugMemory = useMemo(() => {
+    const map = new Map<string, { drug: string; count: number; at: string; dosage: string; frequency: string; duration: string }>();
+    for (const rx of allRx) {
+      const at = `${rx.date}|${(rx as any).createdAt ?? ""}`;
+      for (const it of rx.items) {
+        const name = it.drug.trim();
+        if (!name) continue;
+        const key = name.toLowerCase();
+        const prev = map.get(key);
+        if (!prev) {
+          map.set(key, { drug: name, count: 1, at, dosage: it.dosage, frequency: it.frequency, duration: it.duration });
+        } else {
+          prev.count += 1;
+          if (at > prev.at) Object.assign(prev, { at, dosage: it.dosage, frequency: it.frequency, duration: it.duration });
+        }
+      }
+    }
+    return [...map.values()].sort((a, b) => b.count - a.count).slice(0, 300);
+  }, [allRx]);
+
+  const lastRxForPatient = useMemo(() => {
+    const mine = allRx.filter((r) => r.patientId === patientId);
+    return mine.sort((a, b) => `${b.date}|${(b as any).createdAt ?? ""}`.localeCompare(`${a.date}|${(a as any).createdAt ?? ""}`))[0];
+  }, [allRx, patientId]);
+
+  function copyLast() {
+    if (!lastRxForPatient) {
+      toast({ title: t("presc.copyLastNone"), variant: "destructive" });
+      return;
+    }
+    setItems(
+      lastRxForPatient.items.map((i) => ({
+        drug: i.drug,
+        dosage: i.dosage ?? "",
+        frequency: i.frequency ?? "",
+        duration: i.duration ?? "",
+        notes: i.notes ?? "",
+      })),
+    );
+    if (!diagnosis.trim() && lastRxForPatient.diagnosis) setDiagnosis(lastRxForPatient.diagnosis);
+    toast({ title: t("presc.copyLastDone") });
+  }
+
+  function onDrugChange(idx: number, value: string) {
+    const hit = drugMemory.find((m) => m.drug.toLowerCase() === value.trim().toLowerCase());
+    setItems((prev) =>
+      prev.map((it, i) => {
+        if (i !== idx) return it;
+        if (hit && !it.dosage && !it.frequency && !it.duration) {
+          return { ...it, drug: value, dosage: hit.dosage, frequency: hit.frequency, duration: hit.duration };
+        }
+        return { ...it, drug: value };
+      }),
+    );
+  }
 
   const { data: patientsResp } = useListPatients(clinicId, { limit: 1000 }, {
     query: {
@@ -289,6 +356,19 @@ export function PrescriptionsContent({ initialPatientId, embedded }: Prescriptio
                 {t("presc.medications")} <span className="text-destructive">*</span>
                 <span className="text-xs font-normal text-muted-foreground">({items.filter(i => i.drug.trim()).length})</span>
               </Label>
+              <div className="flex flex-wrap gap-2">
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                className="shrink-0"
+                disabled={!patientId || !lastRxForPatient}
+                onClick={copyLast}
+                data-testid="button-copy-last-rx"
+              >
+                <Copy className="w-3.5 h-3.5 me-1.5" />
+                {t("presc.copyLast")}
+              </Button>
               <Button
                 type="button"
                 size="sm"
@@ -297,10 +377,16 @@ export function PrescriptionsContent({ initialPatientId, embedded }: Prescriptio
                 onClick={() => setItems((prev) => [...prev, blankItem()])}
                 data-testid="button-add-medication"
               >
-                <Plus className="w-3.5 h-3.5 mr-1.5" />
+                <Plus className="w-3.5 h-3.5 me-1.5" />
                 {t("presc.addMedBtn")}
               </Button>
+              </div>
             </div>
+            <datalist id="drug-memory">
+              {drugMemory.map((m) => (
+                <option key={m.drug} value={m.drug} />
+              ))}
+            </datalist>
             {items.map((item, idx) => (
               <div
                 key={idx}
@@ -339,7 +425,9 @@ export function PrescriptionsContent({ initialPatientId, embedded }: Prescriptio
                     </Label>
                     <Input
                       value={item.drug}
-                      onChange={(e) => updateItem(idx, { drug: e.target.value })}
+                      onChange={(e) => onDrugChange(idx, e.target.value)}
+                      list="drug-memory"
+                      autoComplete="off"
                       placeholder={t("presc.drugNamePh")}
                       className="mt-1 font-medium"
                       data-testid={`item-drug-${idx}`}
@@ -885,4 +973,4 @@ export default function PrescriptionsPage() {
       </DashboardLayout>
     </ProtectedRoute>
   );
-              }
+}
