@@ -14,7 +14,8 @@ import {
   getListPatientsQueryKey,
   type Prescription,
 } from "@workspace/api-client-react";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQueryClient, useQuery } from "@tanstack/react-query";
+import { customFetch } from "@workspace/api-client-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -53,6 +54,7 @@ import {
   Phone as PhoneIcon,
   Loader2,
   Copy,
+  Save,
 } from "lucide-react";
 import { printPrescription, sendPrescriptionWhatsApp, type ClinicBranding } from "@/lib/prescription";
 import { canCreatePrescription, presetLabel, presetValue, FREQUENCY_PRESETS, DURATION_PRESETS } from "@/lib/prescription-ui";
@@ -139,6 +141,63 @@ export function PrescriptionsContent({ initialPatientId, embedded }: Prescriptio
     const mine = allRx.filter((r) => r.patientId === patientId);
     return mine.sort((a, b) => `${b.date}|${(b as any).createdAt ?? ""}`.localeCompare(`${a.date}|${(a as any).createdAt ?? ""}`))[0];
   }, [allRx, patientId]);
+
+  // Prescription templates (doctor and admin only; each doctor sees their own).
+  const canTemplates = user?.role === "doctor" || user?.role === "admin";
+  type Tpl = { id: string; name: string; diagnosis: string | null; items: ItemForm[] };
+  const { data: tplData } = useQuery({
+    queryKey: ["rx-templates", clinicId],
+    queryFn: () => customFetch<{ data: Tpl[] }>(`/api/clinics/${clinicId}/prescription-templates`),
+    enabled: !!clinicId && canTemplates,
+    retry: false,
+  });
+  const templates = tplData?.data ?? [];
+  const [tplName, setTplName] = useState("");
+  const [tplOpen, setTplOpen] = useState(false);
+
+  function loadTemplate(id: string) {
+    const tpl = templates.find((x) => x.id === id);
+    if (!tpl) return;
+    setItems(
+      tpl.items.map((i) => ({
+        drug: i.drug ?? "",
+        dosage: i.dosage ?? "",
+        frequency: i.frequency ?? "",
+        duration: i.duration ?? "",
+        notes: i.notes ?? "",
+      })),
+    );
+    if (!diagnosis.trim() && tpl.diagnosis) setDiagnosis(tpl.diagnosis);
+    toast({ title: t("tpl.loaded") });
+  }
+
+  async function saveTemplate() {
+    const name = tplName.trim();
+    const filled = items.filter((i) => i.drug.trim());
+    if (!name || !filled.length) return;
+    try {
+      await customFetch(`/api/clinics/${clinicId}/prescription-templates`, {
+        method: "POST",
+        body: JSON.stringify({ name, diagnosis: diagnosis.trim() || null, items: filled }),
+      });
+      queryClient.invalidateQueries({ queryKey: ["rx-templates", clinicId] });
+      toast({ title: t("tpl.saved") });
+      setTplName("");
+      setTplOpen(false);
+    } catch {
+      toast({ title: t("tpl.failed"), variant: "destructive" });
+    }
+  }
+
+  async function deleteTemplate(id: string) {
+    if (!window.confirm(t("tpl.confirmDelete"))) return;
+    try {
+      await customFetch(`/api/clinics/${clinicId}/prescription-templates/${id}`, { method: "DELETE" });
+      queryClient.invalidateQueries({ queryKey: ["rx-templates", clinicId] });
+    } catch {
+      toast({ title: t("tpl.failed"), variant: "destructive" });
+    }
+  }
 
   function copyLast() {
     if (!lastRxForPatient) {
@@ -357,6 +416,34 @@ export function PrescriptionsContent({ initialPatientId, embedded }: Prescriptio
                 <span className="text-xs font-normal text-muted-foreground">({items.filter(i => i.drug.trim()).length})</span>
               </Label>
               <div className="flex flex-wrap gap-2">
+              {canTemplates && templates.length > 0 && (
+                <select
+                  data-testid="select-rx-template"
+                  value=""
+                  onChange={(e) => loadTemplate(e.target.value)}
+                  className="h-9 rounded-md border border-border bg-background px-2 text-sm max-w-[11rem]"
+                  aria-label={t("tpl.load")}
+                >
+                  <option value="">{t("tpl.pick")}</option>
+                  {templates.map((x) => (
+                    <option key={x.id} value={x.id}>{x.name}</option>
+                  ))}
+                </select>
+              )}
+              {canTemplates && (
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  className="shrink-0"
+                  disabled={!items.some((i) => i.drug.trim())}
+                  onClick={() => setTplOpen((o) => !o)}
+                  data-testid="button-save-template"
+                >
+                  <Save className="w-3.5 h-3.5 me-1.5" />
+                  {t("tpl.save")}
+                </Button>
+              )}
               <Button
                 type="button"
                 size="sm"
@@ -382,6 +469,34 @@ export function PrescriptionsContent({ initialPatientId, embedded }: Prescriptio
               </Button>
               </div>
             </div>
+            {canTemplates && tplOpen && (
+              <div className="flex flex-wrap items-center gap-2 rounded-lg border border-border bg-muted/30 p-3">
+                <Input
+                  value={tplName}
+                  onChange={(e) => setTplName(e.target.value)}
+                  placeholder={t("tpl.namePh")}
+                  maxLength={80}
+                  className="flex-1 min-w-[10rem]"
+                  data-testid="input-template-name"
+                />
+                <Button type="button" size="sm" onClick={saveTemplate} disabled={!tplName.trim()} data-testid="button-confirm-template">
+                  {t("vitals.save")}
+                </Button>
+                {templates.length > 0 && (
+                  <select
+                    value=""
+                    onChange={(e) => e.target.value && deleteTemplate(e.target.value)}
+                    className="h-9 rounded-md border border-border bg-background px-2 text-xs text-destructive"
+                    aria-label={t("tpl.delete")}
+                  >
+                    <option value="">{t("tpl.delete")}</option>
+                    {templates.map((x) => (
+                      <option key={x.id} value={x.id}>{x.name}</option>
+                    ))}
+                  </select>
+                )}
+              </div>
+            )}
             <datalist id="drug-memory">
               {drugMemory.map((m) => (
                 <option key={m.drug} value={m.drug} />
