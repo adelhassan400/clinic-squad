@@ -1,23 +1,48 @@
 name: Daily Database Backup
 
+# Nightly encrypted dump of the production Neon database.
+#
+# This repository is PUBLIC, and anyone signed in to GitHub can download workflow
+# artifacts of a public repository. So the dump is encrypted before it is uploaded.
+# Without the BACKUP_PASSPHRASE repository secret the job fails on purpose and
+# uploads nothing.
+#
+# Restore (on your own computer, needs openssl, gzip and psql):
+#   1. Download the artifact zip from the Actions run page and unzip it.
+#   2. openssl enc -d -aes-256-cbc -pbkdf2 -iter 600000 -in FILE.sql.gz.enc -out backup.sql.gz
+#      (it asks for the passphrase)
+#   3. gunzip backup.sql.gz
+#   4. psql "$EMPTY_DATABASE_URL" -f backup.sql   (restore into a new, empty database)
+
 on:
   schedule:
     - cron: '0 3 * * *' # Runs every day at 3:00 AM UTC
   workflow_dispatch:
 
+permissions:
+  contents: read
+
+concurrency:
+  group: db-backup
+  cancel-in-progress: false
+
 jobs:
   backup:
-    name: Backup Neon PostgreSQL
+    name: Backup Neon PostgreSQL (encrypted)
     runs-on: ubuntu-latest
     timeout-minutes: 15
 
     env:
       DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      BACKUP_PASSPHRASE: ${{ secrets.BACKUP_PASSPHRASE }}
       PG_VERSION: '17'
 
     steps:
-      - name: Check out repository
-        uses: actions/checkout@v4
+      - name: Check required secrets
+        shell: bash
+        run: |
+          test -n "$DATABASE_URL" || { echo "DATABASE_URL secret is not set" >&2; exit 1; }
+          test -n "$BACKUP_PASSPHRASE" || { echo "BACKUP_PASSPHRASE secret is not set. Refusing to create an unencrypted backup." >&2; exit 1; }
 
       - name: Install PostgreSQL Client
         run: |
@@ -25,19 +50,30 @@ jobs:
           yes '' | sudo /usr/share/postgresql-common/pgdg/apt.postgresql.org.sh
           sudo apt install -y postgresql-client-${{ env.PG_VERSION }}
 
-      - name: Create Database Dump
+      - name: Create encrypted database dump
+        shell: bash
         run: |
-          TIMESTAMP=$(date +'%Y-%m-%d_%H-%M-%S')
-          BACKUP_FILE="clinicsquad_backup_${TIMESTAMP}.sql.gz"
-          
-          echo "Generating backup: $BACKUP_FILE"
-          pg_dump "$DATABASE_URL" | gzip > "$BACKUP_FILE"
-          
-          echo "BACKUP_FILE=$BACKUP_FILE" >> $GITHUB_ENV
+          set -euo pipefail
+          umask 077
+          TIMESTAMP=$(date -u +'%Y-%m-%d_%H-%M-%S')
+          BACKUP_FILE="clinicsquad_backup_${TIMESTAMP}.sql.gz.enc"
 
-      - name: Upload Backup Artifact
+          # No plain-text copy of the dump is ever written to disk.
+          pg_dump --no-owner --no-privileges "$DATABASE_URL" \
+            | gzip \
+            | openssl enc -aes-256-cbc -pbkdf2 -iter 600000 -salt -pass env:BACKUP_PASSPHRASE \
+            > "$BACKUP_FILE"
+
+          # Prove the file can be decrypted and is a valid gzip dump.
+          openssl enc -d -aes-256-cbc -pbkdf2 -iter 600000 -pass env:BACKUP_PASSPHRASE -in "$BACKUP_FILE" | gzip -t
+          echo "Encrypted backup created and verified ($(stat -c %s "$BACKUP_FILE") bytes)."
+
+          echo "BACKUP_FILE=$BACKUP_FILE" >> "$GITHUB_ENV"
+
+      - name: Upload encrypted backup artifact
         uses: actions/upload-artifact@v4
         with:
           name: db-backup-${{ env.BACKUP_FILE }}
           path: ${{ env.BACKUP_FILE }}
           retention-days: 30
+          if-no-files-found: error
