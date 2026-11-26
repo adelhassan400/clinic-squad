@@ -817,6 +817,11 @@ const translations: Record<string, Record<Lang, string>> = {
   "platformSettings.paymentSubtitle": { en: "These details are shown to clinic administrators when they submit a manual payment.", ar: "تظهر هذه البيانات لمديري العيادات عند إرسال دفعة يدوية." },
   "platformSettings.save": { en: "Save platform settings", ar: "حفظ إعدادات المنصة" },
   "platformSettings.saved": { en: "Platform settings saved.", ar: "تم حفظ إعدادات المنصة." },
+  "platformSettings.saving": { en: "Saving...", ar: "جارٍ الحفظ..." },
+  "platformSettings.savedShort": { en: "Saved", ar: "تم الحفظ" },
+  "platformSettings.unsaved": { en: "You have unsaved changes.", ar: "لديك تغييرات غير محفوظة." },
+  "platformSettings.leaveConfirm": { en: "You have unsaved changes. Leave this page without saving?", ar: "لديك تغييرات غير محفوظة. هل تريد المغادرة بدون حفظ؟" },
+  "platformSettings.whatsappHint": { en: "Saved as digits with the country code, e.g. 201009360198.", ar: "يتم حفظه كأرقام مع كود الدولة، مثال: 201009360198." },
   "platformSettings.saveFailed": { en: "Could not save platform settings.", ar: "تعذر حفظ إعدادات المنصة." },
   "platformPayments.historySubtitle": { en: "Recent manual subscription payments", ar: "أحدث مدفوعات الاشتراك اليدوية" },
   "platformPayments.emptyHistory": { en: "No confirmed payments yet.", ar: "لا توجد مدفوعات مؤكدة بعد." },
@@ -1242,4 +1247,4 @@ export function useLang() {
   const context = useContext(LangContext);
   if (!context) throw new Error("useLang must be used within LangProvider");
   return context;
-    }
+}
