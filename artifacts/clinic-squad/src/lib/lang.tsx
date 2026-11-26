@@ -476,7 +476,7 @@ const translations: Record<string, Record<Lang, string>> = {
   "team.toast.failed": { en: "Failed to send invitation", ar: "فشل إرسال الدعوة" },
   "team.toast.failedTitle": { en: "Error", ar: "خطأ" },
   "team.toast.revoked": { en: "Invitation revoked", ar: "تم إلغاء الدعوة" },
-  "team.confirm.remove": { en: "Are you sure you want to remove this member?", ar: "هل أنت متأكد من إزالة هذا العضو؟" },
+  "team.confirm.remove": { en: "Remove this member? Their access ends immediately. Patient, prescription and payment records they created are kept.", ar: "إزالة هذا العضو؟ سيتوقف وصوله فوراً. تبقى سجلات المرضى والوصفات والمدفوعات التي أنشأها." },
   "team.toast.removed": { en: "Member removed", ar: "تم إزالة العضو" },
   "team.toast.copied": { en: "Link copied to clipboard", ar: "تم نسخ الرابط" },
   "team.toast.copyFailed": { en: "Failed to copy link", ar: "فشل نسخ الرابط" },
