@@ -2,9 +2,9 @@ CREATE TABLE IF NOT EXISTS system_settings (
   id text PRIMARY KEY DEFAULT 'global',
   basic_monthly_price text NOT NULL DEFAULT '200',
   premium_monthly_price text NOT NULL DEFAULT '400',
-  vodafone_cash_number text NOT NULL DEFAULT '01000000000',
-  instapay_handle text NOT NULL DEFAULT 'clinicsquad@instapay',
-  whatsapp_number text NOT NULL DEFAULT '201000000000',
+  vodafone_cash_number text NOT NULL DEFAULT '01009360198',
+  instapay_handle text NOT NULL DEFAULT '',
+  whatsapp_number text NOT NULL DEFAULT '201009360198',
   updated_at timestamptz NOT NULL DEFAULT now()
 );
 
