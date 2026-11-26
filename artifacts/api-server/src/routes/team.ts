@@ -107,7 +107,7 @@ router.delete("/members/:userId", requireTeamManager, async (req, res) => {
   return res.status(204).send();
 });
 
-router.get("/invitations", async (req, res) => {
+router.get("/invitations", requireTeamManager, async (req, res) => {
   const clinicId = getParam(req.params, "clinicId");
   const all = await db
     .select()
