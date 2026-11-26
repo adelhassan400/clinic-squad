@@ -207,7 +207,7 @@ export default function InsightsPage() {
   // Basic clinics see the upgrade lock; trials temporarily receive full Premium access.
   if (!hasInsightsAccess) {
     return (
-      <ProtectedRoute requireRole={["admin", "doctor", "superadmin"]}>
+      <ProtectedRoute requireRole={["admin", "doctor", "manager", "superadmin"]}>
         <DashboardLayout>
           <div className="p-6 max-w-4xl mx-auto">
             <h1 className="text-2xl font-bold mb-2 flex items-center gap-2">
@@ -236,7 +236,7 @@ export default function InsightsPage() {
   }
 
   return (
-    <ProtectedRoute requireRole={["admin", "doctor", "superadmin"]}>
+    <ProtectedRoute requireRole={["admin", "doctor", "manager", "superadmin"]}>
       <DashboardLayout>
         <div className="p-6 max-w-6xl mx-auto space-y-6">
 
