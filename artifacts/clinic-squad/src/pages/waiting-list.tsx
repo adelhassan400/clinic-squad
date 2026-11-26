@@ -202,7 +202,7 @@ export default function WaitingListPage() {
             </p>
           )}
           <div className="rounded-xl border border-border bg-card overflow-x-auto">
-            <div className="grid min-w-[990px] grid-cols-[40px_90px_minmax(150px,1.2fr)_45px_minmax(100px,1fr)_125px_150px_150px] gap-2 px-3 py-3 border-b border-border bg-muted/30 text-xs font-medium text-muted-foreground uppercase tracking-wider">
+            <div className="hidden md:grid md:min-w-[990px] md:grid-cols-[40px_90px_minmax(150px,1.2fr)_45px_minmax(100px,1fr)_125px_150px_150px] gap-2 px-3 py-3 border-b border-border bg-muted/30 text-xs font-medium text-muted-foreground uppercase tracking-wider">
               <span className="text-center">#</span>
               <span>{t("patients.id")}</span>
               <span>{t("patients.name")}</span>
@@ -236,7 +236,7 @@ export default function WaitingListPage() {
                     key={p.id}
                     data-testid={`waiting-row-${p.id}`}
                     className={cn(
-                      "grid min-w-[990px] grid-cols-[40px_90px_minmax(150px,1.2fr)_45px_minmax(100px,1fr)_125px_150px_150px] gap-4 items-center px-6 py-4 border-b border-border last:border-0 hover:bg-muted/30 transition-colors",
+                      "flex flex-wrap items-center gap-x-3 gap-y-2 px-4 py-4 md:grid md:min-w-[990px] md:grid-cols-[40px_90px_minmax(150px,1.2fr)_45px_minmax(100px,1fr)_125px_150px_150px] md:gap-4 md:px-6 border-b border-border last:border-0 hover:bg-muted/30 transition-colors",
                       p.status === "in-progress" && "bg-primary/[0.04]",
                     )}
                   >
@@ -254,7 +254,7 @@ export default function WaitingListPage() {
                     <span className="text-sm font-mono font-semibold px-2.5 py-1 rounded bg-primary/10 text-primary border border-primary/20 text-center">
                       {p.code ?? "—"}
                     </span>
-                    <div className="flex items-center gap-3 min-w-0">
+                    <div className="flex items-center gap-3 min-w-0 max-md:flex-1">
                       <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
                         <span className="text-xs font-bold text-primary">
                           {p.name.charAt(0)}
@@ -281,6 +281,7 @@ export default function WaitingListPage() {
                     </div>
                     <Button
                       size="sm"
+                      className="max-md:w-full"
                       onClick={() => handleOpen(p.id, p.status)}
                       disabled={patchPatient.isPending || !isDoctor}
                       data-testid={`open-patient-${p.id}`}

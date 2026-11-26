@@ -17,6 +17,34 @@ const screens = [
   { id: "dashboard", en: "Dashboard", ar: "لوحة التحكم" },
   { id: "queue", en: "Waiting list", ar: "قائمة الانتظار" },
   { id: "patient", en: "Patient file", ar: "ملف المريض" },
+  { id: "demo", en: "Short demo", ar: "عرض سريع" },
+] as const;
+
+const faqs = [
+  {
+    q: { en: "How does the free trial work?", ar: "إزاي بتشتغل التجربة المجانية؟" },
+    a: { en: "You get 15 days free and no credit card is needed. After you register, our team reviews your request and activates your account.", ar: "بتاخد 15 يوم مجاناً من غير كارت بنكي. بعد التسجيل فريقنا بيراجع طلبك وبيفعّل حسابك." },
+  },
+  {
+    q: { en: "Is my patients' data safe?", ar: "بيانات مرضاي في أمان؟" },
+    a: { en: "Passwords are stored hashed, access is controlled by role, and the nightly backups are encrypted. No system is perfectly secure, so please read our Privacy Policy for the details.", ar: "كلمات المرور بتتخزن مشفّرة، والصلاحيات حسب الدور، والنسخ الاحتياطية الليلية مشفّرة. مفيش نظام آمن 100%، فاقرأ سياسة الخصوصية للتفاصيل." },
+  },
+  {
+    q: { en: "How much does it cost?", ar: "السعر كام؟" },
+    a: { en: "There are two plans, Basic and Premium, priced per month in EGP. See the pricing section above. The 15-day trial comes first.", ar: "فيه باقتين، الأساسية والمميزة، بسعر شهري بالجنيه. شوف قسم الأسعار فوق. وأول 15 يوم تجربة مجانية." },
+  },
+  {
+    q: { en: "Is it OK for a small clinic?", ar: "مناسب لعيادة صغيرة؟" },
+    a: { en: "Yes. The Basic plan covers up to 500 patients and 2 staff accounts, with patient records, ePrescription, a waiting list, appointments and basic finances.", ar: "أيوه. الباقة الأساسية بتشمل لحد 500 مريض وحسابين للموظفين، مع سجلات المرضى والوصفة الإلكترونية وقائمة الانتظار والمواعيد والمالية الأساسية." },
+  },
+  {
+    q: { en: "Does it work in Arabic?", ar: "بيشتغل بالعربي؟" },
+    a: { en: "Yes. The whole app works in Arabic (right to left) and English, and you can switch at any time.", ar: "أيوه. التطبيق كله بيشتغل بالعربي (من اليمين لليسار) والإنجليزي، وتقدر تبدّل في أي وقت." },
+  },
+  {
+    q: { en: "Can I leave and delete my data?", ar: "أقدر أوقف وأمسح بياناتي؟" },
+    a: { en: "Yes. You can stop at any time and ask us to close your account and delete your clinic's data. Message us on WhatsApp.", ar: "أيوه. تقدر توقف في أي وقت وتطلب قفل حسابك ومسح بيانات عيادتك. كلمنا على واتساب." },
+  },
 ] as const;
 
 const planFeatures = {
@@ -150,7 +178,7 @@ export default function LandingPage() {
         <div className="mt-16 grid grid-cols-3 gap-8 max-w-lg mx-auto">
           {[
             { value: "15 " + (lang === "ar" ? "يوم" : "Days"), key: "hero.stat.trial" },
-            { value: "2", key: "hero.stat.plans" },
+            { value: "500", key: "hero.stat.patients" },
             { value: "AR/عربي", key: "hero.stat.langs" },
           ].map(({ value, key }) => (
             <div key={key} className="text-center">
@@ -184,15 +212,30 @@ export default function LandingPage() {
           ))}
         </div>
         <div className="rounded-xl border border-border overflow-hidden shadow-lg bg-card">
-          <img
-            src={`/screens/${screen}-${lang}.webp`}
-            alt={screens.find((s) => s.id === screen)![lang]}
-            width={1360}
-            height={820}
-            loading="lazy"
-            className="w-full h-auto block"
-            data-testid="screen-image"
-          />
+          {screen === "demo" ? (
+            <video
+              key={lang}
+              src={`/screens/demo-${lang}.mp4`}
+              autoPlay
+              muted
+              loop
+              playsInline
+              controls
+              preload="metadata"
+              className="w-full h-auto block"
+              data-testid="screen-video"
+            />
+          ) : (
+            <img
+              src={`/screens/${screen}-${lang}.webp`}
+              alt={screens.find((s) => s.id === screen)![lang]}
+              width={1360}
+              height={820}
+              loading="lazy"
+              className="w-full h-auto block"
+              data-testid="screen-image"
+            />
+          )}
         </div>
       </div>
       </section>
@@ -291,6 +334,22 @@ export default function LandingPage() {
         </div>
       </section>
 
+      {/* FAQ */}
+      <section id="faq" className="py-20 max-w-3xl mx-auto px-6">
+        <h2 className="text-3xl md:text-4xl font-serif font-bold mb-8 text-center">{lang === "ar" ? "أسئلة شائعة" : "Frequently asked questions"}</h2>
+        <div className="space-y-3">
+          {faqs.map((f, i) => (
+            <details key={i} className="group rounded-xl border border-border bg-card px-5 py-4" data-testid={`faq-${i}`}>
+              <summary className="cursor-pointer list-none font-semibold flex items-center justify-between gap-4">
+                {f.q[lang]}
+                <span className="text-primary text-xl leading-none transition-transform group-open:rotate-45" aria-hidden>+</span>
+              </summary>
+              <p className="mt-3 text-muted-foreground leading-relaxed">{f.a[lang]}</p>
+            </details>
+          ))}
+        </div>
+      </section>
+
       {/* CTA */}
       <section className="bg-primary/10 border-t border-primary/20">
       <div className="py-24 max-w-6xl mx-auto px-6 text-center">
@@ -328,6 +387,7 @@ export default function LandingPage() {
           </div>
           <p>2026 ClinicSquad. {lang === "ar" ? "مصمم للرعاية الصحية المصرية." : "Built for Egyptian healthcare."}</p>
           <div className="flex items-center gap-4">
+            <a href="https://wa.me/201009360198" target="_blank" rel="noopener noreferrer" className="hover:text-foreground hover:underline" data-testid="footer-whatsapp">{lang === "ar" ? "واتساب" : "WhatsApp"}</a>
             <Link href="/terms" className="hover:text-foreground hover:underline">{lang === "ar" ? "شروط الخدمة" : "Terms"}</Link>
             <Link href="/privacy" className="hover:text-foreground hover:underline">{lang === "ar" ? "الخصوصية" : "Privacy"}</Link>
           </div>

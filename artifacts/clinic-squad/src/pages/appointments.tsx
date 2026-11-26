@@ -324,6 +324,37 @@ function DayCalendar({
     return mins >= 0 && mins < (DAY_END - DAY_START) * 60;
   });
 
+  // Side-by-side columns for appointments whose boxes overlap
+  const apptLayout = new Map<string, { col: number; cols: number }>();
+  {
+    const CARD_MINS = (52 / HOUR_HEIGHT) * 60 + 4;
+    const items = visibleAppts
+      .map((a) => ({ id: a.id, start: minutesFromDayStart(a.time) }))
+      .sort((x, y) => x.start - y.start);
+    let cluster: { id: string; start: number; col: number }[] = [];
+    let clusterEnd = -1;
+    const flush = () => {
+      const cols = cluster.reduce((m, c) => Math.max(m, c.col + 1), 1);
+      cluster.forEach((c) => apptLayout.set(c.id, { col: c.col, cols }));
+      cluster = [];
+    };
+    const colEnds: number[] = [];
+    for (const it of items) {
+      if (cluster.length && it.start >= clusterEnd) {
+        flush();
+        colEnds.length = 0;
+      }
+      let col = colEnds.findIndex((e) => e <= it.start);
+      if (col === -1) col = colEnds.length;
+      colEnds[col] = it.start + CARD_MINS;
+      cluster.push({ ...it, col });
+      clusterEnd = Math.max(cluster.length === 1 ? 0 : clusterEnd, it.start + CARD_MINS);
+    }
+    if (cluster.length) flush();
+  }
+
+  const maxCols = Math.max(1, ...Array.from(apptLayout.values()).map((v) => v.cols));
+
   const now = new Date();
   const nowMins = now.getHours() * 60 + now.getMinutes() - DAY_START * 60;
   const showNowLine =
@@ -337,7 +368,7 @@ function DayCalendar({
 
   return (
     <div className="rounded-xl border border-border bg-card overflow-hidden">
-      <div className="flex items-center justify-between px-5 py-3.5 border-b border-border bg-muted/20">
+      <div className="flex flex-wrap items-center justify-between gap-2 px-3 sm:px-5 py-3.5 border-b border-border bg-muted/20">
         <div className="flex items-center gap-2">
           <Button
             variant="ghost"
@@ -351,7 +382,7 @@ function DayCalendar({
               <ChevronLeft className="w-4 h-4" />
             )}
           </Button>
-          <div className="text-center min-w-[200px]">
+          <div className="text-center min-w-[150px] sm:min-w-[200px]">
             <p className="text-sm font-semibold">
               {formatDayLabel(date, lang)}
             </p>
@@ -395,12 +426,18 @@ function DayCalendar({
       </div>
 
       <div
-        className="overflow-y-auto"
+        className="overflow-auto"
         style={{ maxHeight: "calc(100vh - 280px)" }}
       >
-        <div className="flex" style={{ minHeight: totalHeight }}>
+        <div
+          className="flex"
+          style={{
+            minHeight: totalHeight,
+            minWidth: maxCols > 2 ? 64 + maxCols * 120 : undefined,
+          }}
+        >
           <div
-            className="w-16 shrink-0 relative select-none"
+            className="w-16 shrink-0 relative select-none sticky start-0 z-30 bg-card"
             style={{ height: totalHeight }}
           >
             {hours.map((hour) => (
@@ -466,6 +503,7 @@ function DayCalendar({
             )}
 
             {visibleAppts.map((appt) => {
+              const slot = apptLayout.get(appt.id) ?? { col: 0, cols: 1 };
               const topMins = minutesFromDayStart(appt.time);
               const top = (topMins / 60) * HOUR_HEIGHT;
               const minHeight = 52;
@@ -477,11 +515,16 @@ function DayCalendar({
                   key={appt.id}
                   data-testid={`cal-appt-${appt.id}`}
                   className={cn(
-                    "absolute left-2 right-2 rounded-lg border px-3 py-2 flex gap-2 overflow-hidden z-10 shadow-sm",
+                    "absolute rounded-lg border px-2 sm:px-3 py-2 flex gap-2 overflow-hidden z-10 shadow-sm",
                     s.bg,
                     lang === "ar" && "flex-row-reverse",
                   )}
-                  style={{ top: top + 2, minHeight }}
+                  style={{
+                    top: top + 2,
+                    minHeight,
+                    insetInlineStart: `calc(${(slot.col / slot.cols) * 100}% + 4px)`,
+                    width: `calc(${100 / slot.cols}% - 8px)`,
+                  }}
                 >
                   <div
                     className={cn(
@@ -673,8 +716,8 @@ export default function AppointmentsPage() {
   return (
     <ProtectedRoute>
       <DashboardLayout>
-        <div className="p-6 max-w-6xl mx-auto">
-          <div className="flex items-center justify-between mb-6">
+        <div className="p-4 sm:p-6 max-w-6xl mx-auto">
+          <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
             <div>
               <h1 className="text-2xl font-bold">{t("appt.title")}</h1>
               <p className="text-sm text-muted-foreground mt-0.5">
@@ -682,7 +725,7 @@ export default function AppointmentsPage() {
               </p>
             </div>
             <div className="flex items-center gap-2">
-              <div className="flex items-center border border-border rounded-lg p-1 bg-muted/20 mr-2">
+              <div className="flex items-center border border-border rounded-lg p-1 bg-muted/20">
                 <Button
                   variant={view === "day" ? "secondary" : "ghost"}
                   size="sm"
@@ -704,7 +747,7 @@ export default function AppointmentsPage() {
                 onClick={() => setAddOpen(true)}
                 data-testid="button-add-appt"
               >
-                <Plus className="w-4 h-4 mr-2" />
+                <Plus className="w-4 h-4 me-2" />
                 {t("appt.new")}
               </Button>
             </div>
@@ -916,4 +959,4 @@ export default function AppointmentsPage() {
       </DashboardLayout>
     </ProtectedRoute>
   );
-                                 }
+}

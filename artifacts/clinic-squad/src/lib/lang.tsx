@@ -24,6 +24,7 @@ const translations: Record<string, Record<Lang, string>> = {
   "hero.cta1": { en: "Start Your Free Trial", ar: "ابدأ تجربتك المجانية" },
   "hero.cta2": { en: "Sign In to Dashboard", ar: "تسجيل الدخول للوحة التحكم" },
   "hero.stat.plans": { en: "Plans", ar: "باقات" },
+  "hero.stat.patients": { en: "Patients included in Basic", ar: "مريض ضمن الباقة الأساسية" },
   "hero.stat.langs": { en: "Interface languages", ar: "لغات الواجهة" },
   "hero.stat.trial": { en: "Free Trial", ar: "تجربة مجانية" },
   // Features
@@ -1247,4 +1248,4 @@ export function useLang() {
   const context = useContext(LangContext);
   if (!context) throw new Error("useLang must be used within LangProvider");
   return context;
-}
+    }

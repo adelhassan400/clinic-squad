@@ -100,19 +100,21 @@ export function GlobalSearch() {
   const showDropdown = open && debounced.length >= 1;
 
   return (
-    <div ref={containerRef} className="relative w-full max-w-xs sm:max-w-sm md:max-w-md">
+    <div ref={containerRef} className="relative flex-1 min-w-0 max-w-md">
       <div className="relative">
         <Search className="absolute start-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
         <input
           ref={inputRef}
           type="text"
+          enterKeyHint="search"
+          autoComplete="off"
           value={query}
           onChange={(e) => { setQuery(e.target.value); setOpen(true); }}
           onFocus={() => { if (query) setOpen(true); }}
           onKeyDown={onInputKey}
           placeholder={t("gsearch.placeholder")}
           className={cn(
-            "w-full h-9 ps-9 pe-16 rounded-lg text-sm",
+            "w-full h-9 ps-9 pe-9 md:pe-16 rounded-lg text-base md:text-sm",
             "bg-muted/40 border border-border focus:bg-background",
             "focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary/40",
             "placeholder:text-muted-foreground/70 transition-colors"
@@ -154,7 +156,7 @@ export function GlobalSearch() {
                     onMouseEnter={() => setHighlight(i)}
                     onClick={() => go(p.id)}
                     className={cn(
-                      "w-full text-left px-3 py-2 flex items-center gap-3 transition-colors",
+                      "w-full text-start px-3 py-2 flex items-center gap-3 transition-colors",
                       i === highlight ? "bg-primary/10" : "hover:bg-muted/60"
                     )}
                     data-testid={`global-search-result-${p.code ?? p.id}`}
