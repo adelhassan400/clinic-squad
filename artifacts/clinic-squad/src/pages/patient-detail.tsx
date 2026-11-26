@@ -461,7 +461,7 @@ function PatientConsultation({ params }: Props) {
                       {t("pdetail.sessionHint")}
                     </p>
                   </div>
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 flex-wrap">
                     <span
                       role="status"
                       data-testid="consultation-save-status"
@@ -498,7 +498,7 @@ function PatientConsultation({ params }: Props) {
                           }
                           data-testid="button-finish-session"
                         >
-                          <CheckCircle2 className="w-4 h-4 mr-1.5" />
+                          <CheckCircle2 className="w-4 h-4 me-1.5" />
                           {t("pdetail.finish")}
                         </Button>
                         <Button
@@ -514,7 +514,7 @@ function PatientConsultation({ params }: Props) {
                               : t("pdetail.waitingEmpty")
                           }
                         >
-                          <SkipForward className="w-4 h-4 mr-1.5" />
+                          <SkipForward className="w-4 h-4 me-1.5" />
                           {nextWaiting
                             ? `${t("pdetail.finishNext")} (${nextWaiting.name})`
                             : t("pdetail.finishNext")}
@@ -749,4 +749,4 @@ function PatientConsultation({ params }: Props) {
       </DashboardLayout>
     </ProtectedRoute>
   );
-                      }
+}
