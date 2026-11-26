@@ -1,4 +1,5 @@
 import { Router } from "express";
+import type { Request, Response, NextFunction } from "express";
 import { eq, and } from "drizzle-orm";
 import { db, usersTable, clinicsTable, invitationsTable } from "@workspace/db";
 import { CreateInvitationBody } from "@workspace/api-zod";
@@ -20,6 +21,17 @@ function getParam(params: unknown, key: string): string {
 
 function isPending(status: string, expiresAt: Date): boolean {
   return status === "pending" && expiresAt.getTime() > Date.now();
+}
+
+// Team management (invite, revoke, remove) is limited to clinic admins, the clinic's founding owner
+// (clinics.owner_id) and superadmin. Other doctors keep clinical access only.
+async function requireTeamManager(req: Request, res: Response, next: NextFunction) {
+  const user = req.authUser!;
+  if (user.role === "superadmin" || user.role === "admin") return next();
+  const clinicId = getParam(req.params, "clinicId");
+  const clinic = (await db.select({ ownerId: clinicsTable.ownerId }).from(clinicsTable).where(eq(clinicsTable.id, clinicId)).limit(1))[0];
+  if (user.clinicId === clinicId && clinic && clinic.ownerId === user.id) return next();
+  res.status(403).json({ error: "Forbidden" });
 }
 
 router.use(requireAuth, requireActiveClinic);
@@ -78,7 +90,7 @@ router.get("/members", async (req, res) => {
   });
 });
 
-router.delete("/members/:userId", requireRole("admin", "doctor", "superadmin"), async (req, res) => {
+router.delete("/members/:userId", requireTeamManager, async (req, res) => {
   const clinicId = getParam(req.params, "clinicId");
   const userId = getParam(req.params, "userId");
   const clinic = (
@@ -119,7 +131,7 @@ router.get("/invitations", async (req, res) => {
   );
 });
 
-router.post("/invitations", requireRole("admin", "doctor", "superadmin"), async (req, res) => {
+router.post("/invitations", requireTeamManager, async (req, res) => {
   const clinicId = getParam(req.params, "clinicId");
   const parsed = CreateInvitationBody.safeParse(req.body);
   if (!parsed.success) {
@@ -201,7 +213,7 @@ router.post("/invitations", requireRole("admin", "doctor", "superadmin"), async 
 
 router.delete(
   "/invitations/:invitationId",
-  requireRole("admin", "doctor", "superadmin"),
+  requireTeamManager,
   async (req, res) => {
     const clinicId = getParam(req.params, "clinicId");
     const invitationId = getParam(req.params, "invitationId");
