@@ -274,6 +274,10 @@ export default function LandingPage() {
             <span className="font-semibold text-foreground">ClinicSquad</span>
           </div>
           <p>2026 ClinicSquad. {lang === "ar" ? "مصمم للرعاية الصحية المصرية." : "Built for Egyptian healthcare."}</p>
+          <div className="flex items-center gap-4">
+            <Link href="/terms" className="hover:text-foreground hover:underline">{lang === "ar" ? "شروط الخدمة" : "Terms"}</Link>
+            <Link href="/privacy" className="hover:text-foreground hover:underline">{lang === "ar" ? "الخصوصية" : "Privacy"}</Link>
+          </div>
         </div>
       </footer>
     </div>
