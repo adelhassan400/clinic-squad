@@ -8,9 +8,10 @@ export function isPreActivationClinicStatus(status: string | null | undefined): 
   return !!status && PRE_ACTIVATION_STATUSES.includes(status);
 }
 
-// Roles that may read or write clinic finance data. Matches the UI: the
-// Finances and Insights pages are shown to admin and doctor only.
-export const FINANCE_ROLES = ["admin", "doctor", "superadmin"];
+// Roles that may read or write clinic finance data. Doctors are not included as a role:
+// the clinic's founding owner (clinics.owner_id) is allowed separately by requireFinanceAccess,
+// and doctors added to the team keep clinical access only.
+export const FINANCE_ROLES = ["admin", "superadmin"];
 
 export function canAccessFinance(role: string | null | undefined): boolean {
   return !!role && FINANCE_ROLES.includes(role);
