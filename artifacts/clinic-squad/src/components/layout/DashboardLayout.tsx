@@ -56,6 +56,7 @@ export function DashboardLayout({ children }: Props) {
   const isSuperAdmin = user?.role === "superadmin";
   // `admin` is retained as a legacy alias for clinic owners created before RBAC.
   const isDoctor = user?.role === "admin" || user?.role === "doctor";
+  const canFinance = isSuperAdmin || user?.role === "admin" || (!!user && clinic?.ownerId === user.id);
   const isAssistant = user?.role === "assistant" || user?.role === "secretary" || user?.role === "nurse";
 
   // Super admin gets a platform-only nav. Clinic users get a focused menu for their role.
@@ -76,8 +77,10 @@ export function DashboardLayout({ children }: Props) {
           { href: "/waiting-list", labelKey: "sidebar.waitingList", icon: Stethoscope },
           { href: "/appointments", labelKey: "sidebar.appointments", icon: Calendar },
           { href: "/prescriptions", labelKey: "sidebar.prescriptions", icon: Pill },
-          { href: "/insights", labelKey: "sidebar.insights", icon: BarChart2 },
-          { href: "/finances", labelKey: "sidebar.finances", icon: TrendingUp },
+          ...(canFinance ? [
+            { href: "/insights", labelKey: "sidebar.insights", icon: BarChart2 },
+            { href: "/finances", labelKey: "sidebar.finances", icon: TrendingUp },
+          ] : []),
           { href: "/subscription", labelKey: "sidebar.subscription", icon: Crown },
           ...(user?.role === "admin" || (!!user && clinic?.ownerId === user.id) ? [{ href: "/team", labelKey: "sidebar.team", icon: Users }] : []),
           { href: "/settings", labelKey: "sidebar.settings", icon: Settings },
