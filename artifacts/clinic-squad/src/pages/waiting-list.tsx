@@ -202,7 +202,7 @@ export default function WaitingListPage() {
             </p>
           )}
           <div className="rounded-xl border border-border bg-card overflow-x-auto">
-            <div className="grid min-w-[940px] grid-cols-[40px_90px_minmax(150px,1.2fr)_45px_minmax(100px,1fr)_125px_150px_100px] gap-2 px-3 py-3 border-b border-border bg-muted/30 text-xs font-medium text-muted-foreground uppercase tracking-wider">
+            <div className="grid min-w-[990px] grid-cols-[40px_90px_minmax(150px,1.2fr)_45px_minmax(100px,1fr)_125px_150px_150px] gap-2 px-3 py-3 border-b border-border bg-muted/30 text-xs font-medium text-muted-foreground uppercase tracking-wider">
               <span className="text-center">#</span>
               <span>{t("patients.id")}</span>
               <span>{t("patients.name")}</span>
@@ -236,7 +236,7 @@ export default function WaitingListPage() {
                     key={p.id}
                     data-testid={`waiting-row-${p.id}`}
                     className={cn(
-                      "grid min-w-[940px] grid-cols-[40px_90px_minmax(150px,1.2fr)_45px_minmax(100px,1fr)_125px_150px_100px] gap-4 items-center px-6 py-4 border-b border-border last:border-0 hover:bg-muted/30 transition-colors",
+                      "grid min-w-[990px] grid-cols-[40px_90px_minmax(150px,1.2fr)_45px_minmax(100px,1fr)_125px_150px_150px] gap-4 items-center px-6 py-4 border-b border-border last:border-0 hover:bg-muted/30 transition-colors",
                       p.status === "in-progress" && "bg-primary/[0.04]",
                     )}
                   >
@@ -287,9 +287,9 @@ export default function WaitingListPage() {
                     >
                       {patchPatient.isPending &&
                       patchPatient.variables?.patientId === p.id ? (
-                        <Loader2 className="w-3.5 h-3.5 mr-1 animate-spin" />
+                        <Loader2 className="w-3.5 h-3.5 me-1 animate-spin" />
                       ) : (
-                        <ArrowRight className="w-3.5 h-3.5 mr-1" />
+                        <ArrowRight className="w-3.5 h-3.5 me-1" />
                       )}
                       {isDoctor ? t("waiting.open") : t("waiting.doctorOnly")}
                     </Button>
@@ -302,4 +302,4 @@ export default function WaitingListPage() {
       </DashboardLayout>
     </ProtectedRoute>
   );
-                    }
+}
