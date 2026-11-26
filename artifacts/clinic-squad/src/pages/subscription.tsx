@@ -67,18 +67,51 @@ export default function SubscriptionPage() {
       return;
     }
 
-    const reader = new FileReader();
-    reader.onload = () => {
-      const result = typeof reader.result === "string" ? reader.result : "";
-      if (!result.startsWith("data:image/")) {
+    // Shrink the receipt in the browser before upload. The image is stored inside the
+    // database, so a phone photo (several MB) is resized and re-encoded as JPEG first.
+    const MAX_STORED_CHARS = 1_000_000;
+    const finish = (dataUrl: string) => {
+      if (!dataUrl.startsWith("data:image/")) {
         toast({ title: t("sub.toastReadFail"), variant: "destructive" });
         return;
       }
-      setPaymentProof(result);
+      if (dataUrl.length > MAX_STORED_CHARS) {
+        toast({ title: t("sub.toastTooLarge"), description: t("sub.toastTooLargeDesc"), variant: "destructive" });
+        return;
+      }
+      setPaymentProof(dataUrl);
       setReceiptFileName(file.name);
     };
-    reader.onerror = () => toast({ title: t("sub.toastReadFail"), variant: "destructive" });
-    reader.readAsDataURL(file);
+    const objectUrl = URL.createObjectURL(file);
+    const img = new Image();
+    img.onload = () => {
+      URL.revokeObjectURL(objectUrl);
+      const maxSide = 1600;
+      const scale = Math.min(1, maxSide / Math.max(img.width, img.height));
+      const canvas = document.createElement("canvas");
+      canvas.width = Math.max(1, Math.round(img.width * scale));
+      canvas.height = Math.max(1, Math.round(img.height * scale));
+      const ctx = canvas.getContext("2d");
+      if (!ctx) {
+        toast({ title: t("sub.toastReadFail"), variant: "destructive" });
+        return;
+      }
+      ctx.fillStyle = "#ffffff";
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+      let quality = 0.8;
+      let dataUrl = canvas.toDataURL("image/jpeg", quality);
+      while (dataUrl.length > MAX_STORED_CHARS && quality > 0.4) {
+        quality -= 0.1;
+        dataUrl = canvas.toDataURL("image/jpeg", quality);
+      }
+      finish(dataUrl);
+    };
+    img.onerror = () => {
+      URL.revokeObjectURL(objectUrl);
+      toast({ title: t("sub.toastReadFail"), variant: "destructive" });
+    };
+    img.src = objectUrl;
   };
 
   const clearReceipt = () => {
