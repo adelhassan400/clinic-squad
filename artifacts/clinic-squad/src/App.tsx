@@ -41,6 +41,7 @@ const TeamPage = lazy(() => import("@/pages/team"));
 const PrescriptionsPage = lazy(() => import("@/pages/prescriptions"));
 const AcceptInvitePage = lazy(() => import("@/pages/accept-invite"));
 const NotFound = lazy(() => import("@/pages/not-found"));
+const LegalPage = lazy(() => import("@/pages/legal"));
 
 function PageLoading() {
   return (
@@ -66,6 +67,8 @@ function Router() {
       <Route path="/" component={LandingPage} />
       <Route path="/login" component={LoginPage} />
       <Route path="/register" component={RegisterPage} />
+      <Route path="/terms">{() => <LegalPage kind="terms" />}</Route>
+      <Route path="/privacy">{() => <LegalPage kind="privacy" />}</Route>
       <Route path="/forgot-password" component={ForgotPasswordPage} />
       <Route path="/reset-password" component={ResetPasswordPage} />
       <Route path="/verify-email" component={VerifyEmailPage} />
