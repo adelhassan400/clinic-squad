@@ -70,6 +70,17 @@ export function DashboardLayout({ children }: Props) {
         { href: "/platform-growth", labelKey: "sidebar.platformGrowth", icon: Megaphone },
         { href: "/platform-logs", labelKey: "sidebar.platformLogs", icon: History },
       ]
+    : user?.role === "manager"
+      ? [
+          { href: "/dashboard", labelKey: "sidebar.dashboard", icon: LayoutDashboard },
+          { href: "/patients", labelKey: "sidebar.patients", icon: Users },
+          { href: "/appointments", labelKey: "sidebar.appointments", icon: Calendar },
+          { href: "/insights", labelKey: "sidebar.insights", icon: BarChart2 },
+          { href: "/finances", labelKey: "sidebar.finances", icon: TrendingUp },
+          { href: "/subscription", labelKey: "sidebar.subscription", icon: Crown },
+          { href: "/team", labelKey: "sidebar.team", icon: Users },
+          { href: "/settings", labelKey: "sidebar.settings", icon: Settings },
+        ]
     : isDoctor
       ? [
           { href: "/dashboard", labelKey: "sidebar.dashboard", icon: LayoutDashboard },
