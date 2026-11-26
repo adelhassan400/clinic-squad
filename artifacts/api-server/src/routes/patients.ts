@@ -8,6 +8,21 @@ import { isMedicalRedactedRole, redactPatientForRole } from "../lib/access-polic
 const router = Router({ mergeParams: true });
 router.use(requireClinicAccess);
 
+// A non-physician manager handles booking data only: writing medical fields is refused.
+const MANAGER_BLOCKED_WRITE_FIELDS = ["diagnosis", "clinicalNotes", "chronicConditions", "allergies", "bloodType", "notes"];
+router.use((req: any, res, next) => {
+  if (
+    req.authUser?.role === "manager" &&
+    ["POST", "PUT", "PATCH"].includes(req.method) &&
+    req.body &&
+    typeof req.body === "object" &&
+    MANAGER_BLOCKED_WRITE_FIELDS.some((f) => (req.body as Record<string, unknown>)[f] !== undefined)
+  ) {
+    return res.status(403).json({ error: "Medical details can only be edited by a doctor" });
+  }
+  next();
+});
+
 router.get("/", async (req: any, res) => {
   try {
     const { clinicId } = req.params;
