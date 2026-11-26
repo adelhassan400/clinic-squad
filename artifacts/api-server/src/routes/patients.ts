@@ -20,7 +20,7 @@ router.use((req: any, res, next) => {
   ) {
     return res.status(403).json({ error: "Medical details can only be edited by a doctor" });
   }
-  next();
+  return next();
 });
 
 router.get("/", async (req: any, res) => {
