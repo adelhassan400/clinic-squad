@@ -5,6 +5,7 @@ import {
   canAccessFinance,
   dashboardForRole,
   FINANCE_ROLES,
+  redactPatientForRole,
 } from "../src/lib/access-policy.ts";
 
 test("pending and pending_approval clinics are pre-activation", () => {
@@ -32,4 +33,12 @@ test("dashboard keeps finance figures for finance roles and zeroes them otherwis
     assert.deepEqual(dashboardForRole(s, r), { totalPatients: 6, monthlyRevenue: 0, monthlyExpenses: 0 });
   }
   assert.equal(s.monthlyRevenue, 1200);
+});
+
+test("manager sees booking data only; medical fields are removed, others untouched", () => {
+  const p = { id: "p1", name: "N", phone: "1", age: 30, diagnosis: "d", clinicalNotes: "c", chronicConditions: "x", allergies: "a", bloodType: "O+", notes: "n", status: "waiting" };
+  assert.deepEqual(redactPatientForRole(p, "manager"), { ...p, diagnosis: null, clinicalNotes: null, chronicConditions: null, allergies: null, bloodType: null, notes: null });
+  assert.deepEqual(redactPatientForRole(p, "secretary"), { ...p, diagnosis: null, clinicalNotes: null, chronicConditions: null });
+  assert.deepEqual(redactPatientForRole(p, "doctor"), p);
+  assert.equal(p.diagnosis, "d");
 });
