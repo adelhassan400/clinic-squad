@@ -91,9 +91,9 @@ router.put("/settings", async (req, res) => {
   const values = {
     basicMonthlyPrice: cleanText(body.basicMonthlyPrice, current?.basicMonthlyPrice ?? "200"),
     premiumMonthlyPrice: cleanText(body.premiumMonthlyPrice, current?.premiumMonthlyPrice ?? "400"),
-    vodafoneCashNumber: cleanText(body.vodafoneCashNumber, current?.vodafoneCashNumber ?? "01000000000"),
-    instapayHandle: cleanText(body.instapayHandle, current?.instapayHandle ?? "clinicsquad@instapay"),
-    whatsappNumber: cleanText(body.whatsappNumber, current?.whatsappNumber ?? "201000000000"),
+    vodafoneCashNumber: cleanText(body.vodafoneCashNumber, current?.vodafoneCashNumber ?? "01009360198"),
+    instapayHandle: cleanText(body.instapayHandle, current?.instapayHandle ?? ""),
+    whatsappNumber: cleanText(body.whatsappNumber, current?.whatsappNumber ?? "201009360198"),
     updatedAt: new Date(),
   };
   const settings = current
