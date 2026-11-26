@@ -12,7 +12,7 @@ import {
   LayoutDashboard, Users, Calendar, TrendingUp,
   Settings, LogOut, Menu, X, Sun, Moon,
   AlertTriangle, Crown, ChevronRight, Shield, BarChart2, Pill,
-  Stethoscope, Receipt, Megaphone, Building2, History
+  Stethoscope, Receipt, Megaphone, Building2, History, FolderOpen, ChevronDown
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -22,6 +22,9 @@ interface Props {
   children: ReactNode;
 }
 
+type NavLeaf = { href: string; labelKey: string; icon: React.ComponentType<{ className?: string }> };
+type NavItem = NavLeaf | { group: string; labelKey: string; icon: React.ComponentType<{ className?: string }>; children: NavLeaf[] };
+
 type ImpersonatorReturnSession = { user: AuthUser; clinic: AuthClinic | null; token: string };
 
 export function DashboardLayout({ children }: Props) {
@@ -30,6 +33,7 @@ export function DashboardLayout({ children }: Props) {
   const { t, dir } = useLang();
   const [location] = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({});
   const [returnSession, setReturnSession] = useState<ImpersonatorReturnSession | null>(null);
 
   useEffect(() => {
@@ -60,7 +64,7 @@ export function DashboardLayout({ children }: Props) {
   const isAssistant = user?.role === "assistant" || user?.role === "secretary" || user?.role === "nurse";
 
   // Super admin gets a platform-only nav. Clinic users get a focused menu for their role.
-  const navItems = isSuperAdmin
+  const navItems: NavItem[] = isSuperAdmin
     ? [
         { href: "/admin", labelKey: "sidebar.admin", icon: Shield },
         { href: "/platform-clinics", labelKey: "sidebar.platformClinics", icon: Building2 },
@@ -87,7 +91,12 @@ export function DashboardLayout({ children }: Props) {
           { href: "/patients", labelKey: "sidebar.patients", icon: Users },
           { href: "/waiting-list", labelKey: "sidebar.waitingList", icon: Stethoscope },
           { href: "/appointments", labelKey: "sidebar.appointments", icon: Calendar },
-          { href: "/prescriptions", labelKey: "sidebar.prescriptions", icon: Pill },
+          {
+            group: "records",
+            labelKey: "sidebar.records",
+            icon: FolderOpen,
+            children: [{ href: "/prescriptions", labelKey: "sidebar.prescriptions", icon: Pill }],
+          },
           ...(canFinance ? [
             { href: "/insights", labelKey: "sidebar.insights", icon: BarChart2 },
             { href: "/finances", labelKey: "sidebar.finances", icon: TrendingUp },
@@ -181,7 +190,53 @@ export function DashboardLayout({ children }: Props) {
 
         {/* Nav */}
         <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
-          {navItems.map(({ href, labelKey, icon: Icon }) => {
+          {navItems.map((item) => {
+            if ("group" in item) {
+              const GIcon = item.icon;
+              const childActive = item.children.some((c) => location.startsWith(c.href));
+              const isOpen = openGroups[item.group] ?? childActive;
+              return (
+                <div key={item.group}>
+                  <button
+                    type="button"
+                    onClick={() => setOpenGroups((g) => ({ ...g, [item.group]: !isOpen }))}
+                    aria-expanded={isOpen}
+                    data-testid={`nav-group-${item.group}`}
+                    className={cn(
+                      "w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-150",
+                      childActive && !isOpen
+                        ? "bg-sidebar-primary text-sidebar-primary-foreground"
+                        : "text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-foreground"
+                    )}
+                  >
+                    <GIcon className="w-4 h-4 shrink-0" />
+                    <span className="flex-1 text-start">{t(item.labelKey)}</span>
+                    <ChevronDown className={cn("w-3.5 h-3.5 transition-transform", isOpen && "rotate-180")} />
+                  </button>
+                  {isOpen && (
+                    <div className="mt-1 ms-4 ps-2 border-s border-sidebar-border space-y-1">
+                      {item.children.map(({ href, labelKey, icon: CIcon }) => (
+                        <Link
+                          key={href}
+                          href={href}
+                          data-testid={`nav-${labelKey.split(".")[1]}`}
+                          className={cn(
+                            "flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-150",
+                            location.startsWith(href)
+                              ? "bg-sidebar-primary text-sidebar-primary-foreground"
+                              : "text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-foreground"
+                          )}
+                        >
+                          <CIcon className="w-4 h-4 shrink-0" />
+                          <span className="flex-1">{t(labelKey)}</span>
+                        </Link>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              );
+            }
+            const { href, labelKey, icon: Icon } = item;
             const isPremiumOnly = href === "/insights";
             const hasPremiumEntitlements = clinic?.subscriptionStatus === "premium" || clinic?.subscriptionStatus === "trial";
             const isLocked = isPremiumOnly && !hasPremiumEntitlements;
