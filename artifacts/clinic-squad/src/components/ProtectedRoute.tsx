@@ -4,7 +4,7 @@ import { useAuth } from "@/lib/auth";
 import { Loader2 } from "lucide-react";
 import { useLang } from "@/lib/lang";
 
-type Role = "admin" | "doctor" | "assistant" | "secretary" | "nurse" | "superadmin";
+type Role = "admin" | "doctor" | "manager" | "assistant" | "secretary" | "nurse" | "superadmin";
 
 interface Props {
   children: ReactNode;
