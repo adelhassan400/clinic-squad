@@ -1,6 +1,7 @@
 import { useQueue, queueKey } from "@/lib/queue";
 import { useConsultationSave } from "@/hooks/use-consultation-save";
 import { useEffect, useRef, useState } from "react";
+import { useTodayVisits, usePatientVisits, saveVisitNotes, formatVitals } from "@/lib/visit-records";
 import { useAuth } from "@/lib/auth";
 import { useLang } from "@/lib/lang";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
@@ -36,6 +37,7 @@ import {
   Stethoscope,
   History,
   CheckCircle2,
+  HeartPulse,
   Loader2,
   Save,
   Pencil,
@@ -203,6 +205,12 @@ function PatientConsultation({ params }: Props) {
   }, [diagnosis, clinicalNotes, save]);
 
   const { data: queue } = useQueue(clinicId);
+  const { data: visitsToday } = useTodayVisits(clinicId);
+  const todayVisit = visitsToday?.data.find((v) => v.patientId === patientId);
+  const { data: pastVisits } = usePatientVisits(clinicId, patientId);
+  const pastNotes = (pastVisits?.data ?? []).filter(
+    (v) => v.diagnosis || v.clinicalNotes || v.vitals,
+  );
   const nextWaiting = queue?.data.find(
     (p) => p.status === "waiting" && p.id !== patientId,
   );
@@ -215,6 +223,13 @@ function PatientConsultation({ params }: Props) {
       await save.flush();
     } catch {
       return;
+    }
+    if (diagnosis.trim() || clinicalNotes.trim()) {
+      try {
+        await saveVisitNotes(clinicId, { patientId, diagnosis, clinicalNotes });
+      } catch {
+        /* snapshot is best effort; the patient record itself is already saved */
+      }
     }
     patchPatient.mutate(
       {
@@ -471,6 +486,30 @@ function PatientConsultation({ params }: Props) {
                 )}
               </div>
 
+              {/* Today's vitals (entered by nurse or assistant) */}
+              <div
+                data-testid="vitals-card"
+                className="rounded-xl border border-border bg-card p-4 mb-4 flex items-center gap-3 flex-wrap"
+              >
+                <HeartPulse className="w-5 h-5 text-primary shrink-0" />
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-semibold">{t("vitals.todayCard")}</p>
+                  {formatVitals(todayVisit?.vitals).length ? (
+                    <p className="text-sm text-muted-foreground mt-0.5">
+                      {formatVitals(todayVisit?.vitals).join(" · ")}
+                      {todayVisit?.vitalsByName ? ` (${t("vitals.by")} ${todayVisit.vitalsByName})` : ""}
+                    </p>
+                  ) : (
+                    <p className="text-sm text-muted-foreground mt-0.5">{t("vitals.none")}</p>
+                  )}
+                </div>
+                {todayVisit?.ready && (
+                  <span className="inline-flex items-center gap-1 text-xs font-semibold px-2.5 py-1 rounded-full border border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300">
+                    <CheckCircle2 className="w-3.5 h-3.5" /> {t("vitals.ready")}
+                  </span>
+                )}
+              </div>
+
               {/* Doctor's session — Diagnosis + Clinical Notes (autosave) */}
               <div className="rounded-xl border border-border bg-card p-6">
                 <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
@@ -674,6 +713,27 @@ function PatientConsultation({ params }: Props) {
                 )}
                 <PrescriptionsContent initialPatientId={patient.id} embedded />
               </div>
+
+              {pastNotes.length > 0 && (
+                <div data-testid="past-visit-notes" className="rounded-xl border border-border bg-card p-4 mb-4">
+                  <p className="text-sm font-semibold mb-3">{t("pdetail.pastVisit")}</p>
+                  <ul className="space-y-2">
+                    {pastNotes.map((v) => (
+                      <li key={v.id} className="rounded-lg border border-border bg-background/40 p-3 text-sm">
+                        <p className="text-xs text-muted-foreground">
+                          {formatDate(v.visitDate)}
+                          {v.doctorName ? ` · ${v.doctorName}` : ""}
+                        </p>
+                        {formatVitals(v.vitals).length > 0 && (
+                          <p className="text-xs text-muted-foreground mt-1">{formatVitals(v.vitals).join(" · ")}</p>
+                        )}
+                        {v.diagnosis && <p className="mt-1 font-medium">{v.diagnosis}</p>}
+                        {v.clinicalNotes && <p className="mt-0.5 text-muted-foreground whitespace-pre-wrap">{v.clinicalNotes}</p>}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
 
               {/* Medical history timeline */}
               <div className="rounded-xl border border-border bg-card p-6">
