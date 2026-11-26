@@ -440,7 +440,7 @@ export default function TeamPage() {
                     </div>
                     <p className="text-sm text-muted-foreground truncate">{m.email}</p>
                   </div>
-                  {m.id !== user.id && m.role !== "admin" && (
+                  {m.id !== user.id && m.id !== clinic.ownerId && (m.role !== "admin" || clinic.ownerId === user.id || user.role === "superadmin") && (
                     <Button
                       variant="ghost"
                       size="sm"
