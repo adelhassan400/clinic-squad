@@ -17,7 +17,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
 import { useForm, Controller } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
+import { lzResolver } from "@/lib/error-i18n";
 import { z } from "zod";
 import { Plus, TrendingUp, TrendingDown, Loader2, Banknote } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from "recharts";
@@ -84,7 +84,7 @@ export default function FinancesPage() {
   const createMutation = useCreateFinanceRecord();
 
   const form = useForm<FinanceForm>({
-    resolver: zodResolver(financeSchema),
+    resolver: lzResolver(financeSchema),
     defaultValues: { type: "income", category: "", amount: 0, description: "", date: new Date().toISOString().split("T")[0] },
   });
 
@@ -113,7 +113,7 @@ export default function FinancesPage() {
   }) ?? [];
 
   return (
-    <ProtectedRoute requireRole={["admin", "doctor", "superadmin"]}>
+    <ProtectedRoute requireRole={["admin", "doctor", "manager", "superadmin"]}>
       <DashboardLayout>
         <div className="p-6 max-w-6xl mx-auto">
           <div className="flex items-center justify-between mb-6">
@@ -266,7 +266,7 @@ export default function FinancesPage() {
               </div>
               <div>
                 <Label>{t("finances.category")} *</Label>
-                <Input {...form.register("category")} placeholder="Consultation, Supplies, Rent..." className="mt-1" />
+                <Input {...form.register("category")} placeholder={t("x.finCategoryPh")} className="mt-1" />
                 {form.formState.errors.category && <p className="text-xs text-destructive mt-1">{form.formState.errors.category.message}</p>}
               </div>
               <div>
@@ -276,7 +276,7 @@ export default function FinancesPage() {
               </div>
               <div>
                 <Label>{t("finances.description")} *</Label>
-                <Input {...form.register("description")} placeholder="Brief description..." className="mt-1" />
+                <Input {...form.register("description")} placeholder={t("x.finDescPh")} className="mt-1" />
                 {form.formState.errors.description && <p className="text-xs text-destructive mt-1">{form.formState.errors.description.message}</p>}
               </div>
               <div>

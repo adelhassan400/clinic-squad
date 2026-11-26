@@ -2,8 +2,9 @@ import { ReactNode, useEffect } from "react";
 import { useLocation } from "wouter";
 import { useAuth } from "@/lib/auth";
 import { Loader2 } from "lucide-react";
+import { useLang } from "@/lib/lang";
 
-type Role = "admin" | "doctor" | "assistant" | "secretary" | "nurse" | "superadmin";
+type Role = "admin" | "doctor" | "manager" | "assistant" | "secretary" | "nurse" | "superadmin";
 
 interface Props {
   children: ReactNode;
@@ -17,6 +18,7 @@ const CLINIC_ONLY_PREFIXES = [
 
 export function ProtectedRoute({ children, requireRole }: Props) {
   const { isAuthenticated, isLoading, user, clinic } = useAuth();
+  const { t } = useLang();
   const [location, setLocation] = useLocation();
 
   const isSuperAdmin = user?.role === "superadmin";
@@ -78,12 +80,14 @@ export function ProtectedRoute({ children, requireRole }: Props) {
       : [requireRole]
     : null;
 
-  if (allowedRoles && (!user?.role || !allowedRoles.includes(user.role as Role))) {
+  const financeOnlyPage = location.startsWith("/finances") || location.startsWith("/insights");
+  const canFinance = isSuperAdmin || user?.role === "admin" || (!!user && clinic?.ownerId === user.id);
+  if ((allowedRoles && (!user?.role || !allowedRoles.includes(user.role as Role))) || (financeOnlyPage && !canFinance)) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="text-center">
-          <h1 className="text-2xl font-bold text-foreground">Access Denied</h1>
-          <p className="text-muted-foreground mt-2">You don't have permission to view this page.</p>
+          <h1 className="text-2xl font-bold text-foreground">{t("x.accessDenied")}</h1>
+          <p className="text-muted-foreground mt-2">{t("x.noPermission")}</p>
         </div>
       </div>
     );

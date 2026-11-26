@@ -119,7 +119,7 @@ export default function PendingActivationPage() {
                 <div className="rounded-xl border border-primary/25 bg-primary/5 p-4 sm:col-span-2">
                   <p className="text-xs text-muted-foreground uppercase tracking-wide">{t("pending.reqNum")}</p>
                   <p className="font-mono font-bold text-primary mt-1 tracking-wide" data-testid="text-request-number">
-                    {clinic.requestNumber ?? "Assigned during activation"}
+                    {clinic.requestNumber ?? t("x.assignedOnActivation")}
                   </p>
                   <p className="text-xs text-muted-foreground mt-1">
                     {t("pending.reqNumNote")}

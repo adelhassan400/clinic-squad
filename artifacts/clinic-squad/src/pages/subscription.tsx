@@ -8,11 +8,13 @@ import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { CheckCircle, Crown, Shield, PhoneCall, Loader2, Upload, Image as ImageIcon, X } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useLang } from "@/lib/lang";
 
 
 export default function SubscriptionPage() {
   const { clinic, updateClinic } = useAuth();
   const { toast } = useToast();
+  const { t } = useLang();
   const qc = useQueryClient();
   const [selected, setSelected] = useState<"basic" | "premium" | null>(null);
   const [billingPeriod, setBillingPeriod] = useState<"monthly" | "annual">("monthly");
@@ -31,10 +33,10 @@ export default function SubscriptionPage() {
     const basic = Number(settingsQ.data?.basicMonthlyPrice ?? 200);
     const premium = Number(settingsQ.data?.premiumMonthlyPrice ?? 400);
     return [
-      { id: "basic" as const, name: "Basic Plan", monthlyPrice: basic, annualPrice: basic * 10, desc: "Essential tools for daily clinic operations", features: ["Up to 500 patients", "Patient records & ePrescription", "Waiting list, check-in & checkout", "Standard appointment scheduling", "Basic financial tracking", "Staff accounts (2)", "Standard support"] },
-      { id: "premium" as const, name: "Premium Plan", monthlyPrice: premium, annualPrice: premium * 10, desc: "Advanced visibility and capacity for growing clinics", features: ["Everything in Basic", "Insights & analytics", "Advanced reports", "Up to 10 staff accounts", "Priority support", "AI-ready modules (soon)"], highlighted: true },
+      { id: "basic" as const, name: t("pricing.basic.name"), monthlyPrice: basic, annualPrice: basic * 10, desc: t("sub.basicDesc"), features: [t("planfeat.max500"), t("planfeat.records"), t("planfeat.queue"), t("planfeat.scheduling"), t("planfeat.finances"), t("planfeat.staff2"), t("planfeat.stdSupport")] },
+      { id: "premium" as const, name: t("pricing.premium.name"), monthlyPrice: premium, annualPrice: premium * 10, desc: t("sub.premiumDesc"), features: [t("planfeat.allBasic"), t("planfeat.insights"), t("planfeat.reports"), t("planfeat.staff10"), t("planfeat.prioritySupport"), t("planfeat.aiSoon")], highlighted: true },
     ];
-  }, [settingsQ.data]);
+  }, [settingsQ.data, t]);
   const currentPlanObj = plans.find(p => p.id === selected);
   // Annual billing is a fixed one-year commitment; never allow a stale or tampered
   // duration state to change its price or submitted subscription period.
@@ -54,12 +56,12 @@ export default function SubscriptionPage() {
     const allowedTypes = ["image/jpeg", "image/png", "image/webp"];
     const maxBytes = 5 * 1024 * 1024;
     if (!allowedTypes.includes(file.type)) {
-      toast({ title: "Unsupported receipt format", description: "Please upload a JPG, PNG, or WebP image.", variant: "destructive" });
+      toast({ title: t("sub.toastFormat"), description: t("sub.toastFormatDesc"), variant: "destructive" });
       event.target.value = "";
       return;
     }
     if (file.size > maxBytes) {
-      toast({ title: "Receipt image is too large", description: "Please choose an image smaller than 5 MB.", variant: "destructive" });
+      toast({ title: t("sub.toastTooLarge"), description: t("sub.toastTooLargeDesc"), variant: "destructive" });
       event.target.value = "";
       return;
     }
@@ -68,13 +70,13 @@ export default function SubscriptionPage() {
     reader.onload = () => {
       const result = typeof reader.result === "string" ? reader.result : "";
       if (!result.startsWith("data:image/")) {
-        toast({ title: "Could not read receipt", variant: "destructive" });
+        toast({ title: t("sub.toastReadFail"), variant: "destructive" });
         return;
       }
       setPaymentProof(result);
       setReceiptFileName(file.name);
     };
-    reader.onerror = () => toast({ title: "Could not read receipt", variant: "destructive" });
+    reader.onerror = () => toast({ title: t("sub.toastReadFail"), variant: "destructive" });
     reader.readAsDataURL(file);
   };
 
@@ -85,7 +87,7 @@ export default function SubscriptionPage() {
 
   const handleChoose = (plan: "basic" | "premium") => {
     if (!paymentProof) {
-      toast({ title: "Receipt screenshot required", description: "Please upload your payment receipt before submitting.", variant: "destructive" });
+      toast({ title: t("sub.toastReceiptRequired"), description: t("sub.toastReceiptRequiredDesc"), variant: "destructive" });
       return;
     }
     setSelected(plan);
@@ -107,9 +109,9 @@ export default function SubscriptionPage() {
         if (clinic) {
           updateClinic({ ...clinic, subscriptionPlan: plan });
         }
-        toast({ title: "Subscription request submitted!", description: "Our team will verify your payment shortly." });
+        toast({ title: t("sub.toastSubmitted"), description: t("sub.toastSubmittedDesc") });
       },
-      onError: () => toast({ title: "Failed to submit", variant: "destructive" }),
+      onError: () => toast({ title: t("sub.toastFail"), variant: "destructive" }),
     });
   };
 
@@ -120,10 +122,10 @@ export default function SubscriptionPage() {
           <div className="w-20 h-20 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-6">
             <CheckCircle className="w-10 h-10 text-primary" />
           </div>
-          <h1 className="text-2xl font-bold mb-3">Request Submitted!</h1>
+          <h1 className="text-2xl font-bold mb-3">{t("sub.submittedTitle")}</h1>
           <p className="text-muted-foreground mb-6">
-            Your <strong>{selected === "premium" ? "Premium" : "Basic"} Plan</strong> subscription request has been received.
-            Our team will review your receipt and activate your account within 24 hours after verification.
+            {t("sub.submittedPre")} <strong>{selected === "premium" ? t("pricing.premium.name") : t("pricing.basic.name")}</strong>
+            {t("sub.submittedPost")}
           </p>
           <a
             href={`https://wa.me/201000000000?text=${encodeURIComponent(`Hi! I submitted a payment receipt for the ${selected === "premium" ? "Premium" : "Basic"} Plan (${effectiveDurationMonths} months) for clinic: ${clinic?.name ?? ""}. Transaction reference: ${transactionRef || "N/A"}. I will attach the receipt screenshot here.`)}`}
@@ -132,7 +134,7 @@ export default function SubscriptionPage() {
           >
             <Button size="lg" className="bg-green-600 hover:bg-green-700">
               <PhoneCall className="w-4 h-4 mr-2" />
-              Send Payment via WhatsApp
+              {t("sub.sendPayment")}
             </Button>
           </a>
         </div>
@@ -144,9 +146,9 @@ export default function SubscriptionPage() {
     <DashboardLayout>
       <div className="p-6 max-w-4xl mx-auto">
         <div className="text-center mb-10">
-          <Badge className="mb-4 bg-primary/10 text-primary border-primary/20">Choose Your Plan</Badge>
-          <h1 className="text-3xl font-bold mb-3">Upgrade Your Clinic</h1>
-          <p className="text-muted-foreground">Select a plan to continue using ClinicSquad. Payment is confirmed manually via WhatsApp.</p>
+          <Badge className="mb-4 bg-primary/10 text-primary border-primary/20">{t("sub.badge")}</Badge>
+          <h1 className="text-3xl font-bold mb-3">{t("sub.title")}</h1>
+          <p className="text-muted-foreground">{t("sub.subtitle")}</p>
         </div>
 
         <div className="grid md:grid-cols-2 gap-6 max-w-3xl mx-auto mb-8">
@@ -161,7 +163,7 @@ export default function SubscriptionPage() {
               onClick={() => setSelected(plan.id)}
               data-testid={`plan-${plan.id}`}
             >
-              {plan.highlighted && <Badge className="self-start mb-4 bg-primary text-primary-foreground">Most Popular</Badge>}
+              {plan.highlighted && <Badge className="self-start mb-4 bg-primary text-primary-foreground">{t("pricing.popular")}</Badge>}
               <div className="flex items-start justify-between mb-4">
                 <div>
                   <h3 className="text-xl font-bold mb-1">{plan.name}</h3>
@@ -171,7 +173,7 @@ export default function SubscriptionPage() {
               </div>
               <div className="flex items-baseline gap-1 mb-6">
                     <span className="text-4xl font-bold">{plan.monthlyPrice}</span>
-                <span className="text-sm text-muted-foreground">EGP / month</span>
+                <span className="text-sm text-muted-foreground">{t("sub.egpMonth")}</span>
               </div>
               <ul className="space-y-2.5 flex-1">
                 {plan.features.map(f => (
@@ -189,10 +191,10 @@ export default function SubscriptionPage() {
           <div className="max-w-3xl mx-auto space-y-6">
             {/* Billing period & duration */}
             <div className="bg-card border border-border rounded-xl p-6">
-              <h3 className="font-semibold mb-4">Billing Period & Duration</h3>
+              <h3 className="font-semibold mb-4">{t("sub.billingTitle")}</h3>
               <div className="grid sm:grid-cols-2 gap-4 mb-4">
                 <div>
-                  <label className="text-xs text-muted-foreground mb-1 block">Billing Frequency</label>
+                  <label className="text-xs text-muted-foreground mb-1 block">{t("sub.billingFreq")}</label>
                   <div className="flex gap-2">
                     <Button
                       type="button"
@@ -200,7 +202,7 @@ export default function SubscriptionPage() {
                       className="flex-1"
                       onClick={() => { setBillingPeriod("monthly"); setDurationMonths(1); }}
                     >
-                      Monthly
+                      {t("sub.monthly")}
                     </Button>
                     <Button
                       type="button"
@@ -208,12 +210,12 @@ export default function SubscriptionPage() {
                       className="flex-1"
                       onClick={() => { setBillingPeriod("annual"); setDurationMonths(12); }}
                     >
-                      Annual (Save 15%)
+                      {t("sub.annual")}
                     </Button>
                   </div>
                 </div>
                 <div>
-                  <label className="text-xs text-muted-foreground mb-1 block">Duration (Months)</label>
+                  <label className="text-xs text-muted-foreground mb-1 block">{t("sub.duration")}</label>
                   <select
                     className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                     value={effectiveDurationMonths}
@@ -221,49 +223,49 @@ export default function SubscriptionPage() {
                     aria-describedby={billingPeriod === "annual" ? "annual-duration-help" : undefined}
                     onChange={(e) => setDurationMonths(Number(e.target.value))}
                   >
-                    <option value={1}>1 Month</option>
-                    <option value={3}>3 Months</option>
-                    <option value={6}>6 Months</option>
-                    <option value={12}>1 Year (12 Months)</option>
-                    <option value={24}>2 Years (24 Months)</option>
+                    <option value={1}>{t("sub.opt1m")}</option>
+                    <option value={3}>{t("sub.opt3m")}</option>
+                    <option value={6}>{t("sub.opt6m")}</option>
+                    <option value={12}>{t("sub.opt12m")}</option>
+                    <option value={24}>{t("sub.opt24m")}</option>
                   </select>
                   {billingPeriod === "annual" && (
                     <p id="annual-duration-help" className="mt-1.5 text-xs text-muted-foreground">
-                      Annual billing is fixed at 12 months.
+                      {t("sub.annualFixed")}
                     </p>
                   )}
                 </div>
               </div>
               <div className="flex items-center justify-between p-4 bg-muted/40 rounded-lg">
-                <span className="text-sm font-medium">Total Amount Due:</span>
-                <div className="text-end"><span className="text-2xl font-bold text-primary">{finalAmount} EGP</span>{selectedPromo && <p className="text-xs text-green-600">{selectedPromo.discountPercent}% promo discount applied</p>}</div>
+                <span className="text-sm font-medium">{t("sub.totalDue")}</span>
+                <div className="text-end"><span className="text-2xl font-bold text-primary">{finalAmount} EGP</span>{selectedPromo && <p className="text-xs text-green-600">{selectedPromo.discountPercent}% {t("sub.promoApplied")}</p>}</div>
               </div>
             </div>
 
             {/* Payment & Receipt upload */}
             <div className="bg-card border border-border rounded-xl p-6">
-              <h3 className="font-semibold mb-2">Payment Instructions & Proof</h3>
+              <h3 className="font-semibold mb-2">{t("sub.payTitle")}</h3>
               <p className="text-sm text-muted-foreground mb-4">
-                Transfer the exact amount to Vodafone Cash: <strong>{settingsQ.data?.vodafoneCashNumber ?? "01000000000"}</strong> or InstaPay handle: <strong>{settingsQ.data?.instapayHandle ?? "clinicsquad@instapay"}</strong>. Then enter your transaction reference and attach your payment receipt screenshot below.
+                {t("sub.payPre")} <strong>{settingsQ.data?.vodafoneCashNumber ?? "01000000000"}</strong> {t("sub.payMid")} <strong>{settingsQ.data?.instapayHandle ?? "clinicsquad@instapay"}</strong>. {t("sub.payPost")}
               </p>
               <div className="space-y-4">
                 <div>
-                  <label className="text-xs font-medium mb-1.5 block">Promo Code (optional)</label>
-                  <input type="text" className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm uppercase" placeholder="e.g. SAVE20" value={promoCode} onChange={(e) => setPromoCode(e.target.value.toUpperCase())} />
-                  {promoCode && !selectedPromo && <p className="mt-1 text-xs text-muted-foreground">Promo code not found or expired.</p>}
+                  <label className="text-xs font-medium mb-1.5 block">{t("sub.promoLabel")}</label>
+                  <input type="text" className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm uppercase" placeholder={t("x.egPromo")} value={promoCode} onChange={(e) => setPromoCode(e.target.value.toUpperCase())} />
+                  {promoCode && !selectedPromo && <p className="mt-1 text-xs text-muted-foreground">{t("sub.promoNotFound")}</p>}
                 </div>
                 <div>
-                  <label className="text-xs font-medium mb-1.5 block">Transaction Reference / Receipt Notes</label>
+                  <label className="text-xs font-medium mb-1.5 block">{t("sub.txRef")}</label>
                   <input
                     type="text"
                     className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-                    placeholder="e.g. Transfer ID #987654321"
+                    placeholder={t("x.egTransfer")}
                     value={transactionRef}
                     onChange={(e) => setTransactionRef(e.target.value)}
                   />
                 </div>
                 <div>
-                  <label htmlFor="receipt-upload" className="text-xs font-medium mb-1.5 block">Payment Receipt Screenshot</label>
+                  <label htmlFor="receipt-upload" className="text-xs font-medium mb-1.5 block">{t("sub.receiptLabel")}</label>
                   <div className="rounded-lg border border-dashed border-primary/40 bg-primary/5 p-4">
                     <input
                       id="receipt-upload"
@@ -275,24 +277,24 @@ export default function SubscriptionPage() {
                     {!paymentProof ? (
                       <label htmlFor="receipt-upload" className="flex cursor-pointer flex-col items-center justify-center gap-2 py-5 text-center">
                         <Upload className="h-8 w-8 text-primary" />
-                        <span className="text-sm font-medium">Choose receipt screenshot</span>
-                        <span className="text-xs text-muted-foreground">JPG, PNG, or WebP · maximum 5 MB</span>
+                        <span className="text-sm font-medium">{t("sub.chooseReceipt")}</span>
+                        <span className="text-xs text-muted-foreground">{t("sub.receiptTypes")}</span>
                       </label>
                     ) : (
                       <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-                        <a href={paymentProof} target="_blank" rel="noopener noreferrer" className="shrink-0" aria-label="Open receipt preview">
-                          <img src={paymentProof} alt="Uploaded payment receipt preview" className="h-24 w-24 rounded-md border border-border object-cover" />
+                        <a href={paymentProof} target="_blank" rel="noopener noreferrer" className="shrink-0" aria-label={t("x.openReceipt")}>
+                          <img src={paymentProof} alt={t("x.receiptAlt")} className="h-24 w-24 rounded-md border border-border object-cover" />
                         </a>
                         <div className="min-w-0 flex-1">
                           <div className="flex items-center gap-2 text-sm font-medium">
                             <ImageIcon className="h-4 w-4 text-primary" />
-                            <span className="truncate">{receiptFileName || "Receipt screenshot selected"}</span>
+                            <span className="truncate">{receiptFileName || t("sub.receiptSelected")}</span>
                           </div>
-                          <p className="mt-1 text-xs text-muted-foreground">Your receipt image will be securely attached to this payment request.</p>
+                          <p className="mt-1 text-xs text-muted-foreground">{t("sub.receiptAttachedNote")}</p>
                         </div>
                         <div className="flex gap-2">
-                          <label htmlFor="receipt-upload" className="inline-flex h-9 cursor-pointer items-center justify-center rounded-md border border-input bg-background px-3 text-xs font-medium hover:bg-accent hover:text-accent-foreground">Replace</label>
-                          <Button type="button" size="icon" variant="ghost" onClick={clearReceipt} aria-label="Remove receipt">
+                          <label htmlFor="receipt-upload" className="inline-flex h-9 cursor-pointer items-center justify-center rounded-md border border-input bg-background px-3 text-xs font-medium hover:bg-accent hover:text-accent-foreground">{t("sub.replace")}</label>
+                          <Button type="button" size="icon" variant="ghost" onClick={clearReceipt} aria-label={t("x.removeReceipt")}>
                             <X className="h-4 w-4" />
                           </Button>
                         </div>
@@ -312,7 +314,7 @@ export default function SubscriptionPage() {
                 data-testid="button-subscribe"
               >
                 {createMutation.isPending ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Crown className="w-4 h-4 mr-2" />}
-                Submit Payment for {selected === "premium" ? "Premium" : "Basic"}
+                {t("sub.submitFor")} {selected === "premium" ? t("plan.premium") : t("plan.basic")}
               </Button>
               <a
                 href={`https://wa.me/${settingsQ.data?.whatsappNumber ?? "201000000000"}?text=Hi!%20I%20have%20paid%20${finalAmount}%20EGP%20for%20the%20${selected === "premium" ? "Premium" : "Basic"}%20Plan%20(${durationMonths}%20months)%20for%20clinic:%20${encodeURIComponent(clinic?.name ?? "")}.%20Ref:%20${encodeURIComponent(transactionRef || "N/A")}`}
@@ -321,7 +323,7 @@ export default function SubscriptionPage() {
               >
                 <Button size="lg" variant="outline" className="px-10 w-full sm:w-auto bg-green-600 text-white hover:bg-green-700">
                   <PhoneCall className="w-4 h-4 mr-2" />
-                  Send Proof via WhatsApp
+                  {t("sub.sendProof")}
                 </Button>
               </a>
             </div>
@@ -330,4 +332,4 @@ export default function SubscriptionPage() {
       </div>
     </DashboardLayout>
   );
-}
+      }

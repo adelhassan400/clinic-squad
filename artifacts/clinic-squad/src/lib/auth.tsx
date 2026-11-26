@@ -4,7 +4,7 @@ import { setAuthTokenGetter } from "@workspace/api-client-react";
 export interface AuthUser {
   id: string;
   email: string;
-  role: "admin" | "doctor" | "assistant" | "secretary" | "nurse" | "superadmin";
+  role: "admin" | "doctor" | "manager" | "assistant" | "secretary" | "nurse" | "superadmin";
   clinicId?: string | null;
   name: string;
   specialty?: string | null;

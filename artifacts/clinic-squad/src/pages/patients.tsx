@@ -38,7 +38,7 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
 import { useForm, Controller } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
+import { lzResolver } from "@/lib/error-i18n";
 import { z } from "zod";
 import {
   Plus,
@@ -92,7 +92,7 @@ type PatientForm = z.infer<typeof patientSchema>;
 
 const checkInSchema = z.object({
   visitType: z.enum(PATIENT_VISIT_TYPE_VALUES, {
-    message: "Visit type is required",
+    message: "x.visitTypeRequired",
   }),
 });
 type CheckInForm = z.infer<typeof checkInSchema>;
@@ -223,7 +223,7 @@ export default function PatientsPage() {
   ).length;
 
   const form = useForm<PatientForm>({
-    resolver: zodResolver(patientSchema),
+    resolver: lzResolver(patientSchema),
     defaultValues: {
       name: "",
       phone: "",
@@ -236,7 +236,7 @@ export default function PatientsPage() {
   });
 
   const checkInForm = useForm<CheckInForm>({
-    resolver: zodResolver(checkInSchema),
+    resolver: lzResolver(checkInSchema),
     defaultValues: { visitType: "New Consultation" },
   });
 
@@ -709,7 +709,7 @@ export default function PatientsPage() {
                                 }),
                               )
                             }
-                            title="Send WhatsApp message"
+                            title={t("x.sendWhatsapp")}
                             data-testid={`whatsapp-patient-${patient.id}`}
                           >
                             <MessageCircle className="w-3.5 h-3.5" />
@@ -737,7 +737,7 @@ export default function PatientsPage() {
 
         {/* Add Patient Dialog — master record only */}
         <Dialog open={addOpen} onOpenChange={setAddOpen}>
-          <DialogContent className="max-w-lg">
+          <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>{t("patients.addDialog.title")}</DialogTitle>
               <DialogDescription>
@@ -894,7 +894,7 @@ export default function PatientsPage() {
                   )}
                   {form.formState.errors.visitType && (
                     <p className="text-xs text-destructive mt-1">
-                      {form.formState.errors.visitType.message}
+                      {t(form.formState.errors.visitType.message ?? "")}
                     </p>
                   )}
                 </div>
@@ -902,7 +902,7 @@ export default function PatientsPage() {
                   <Label>{t("patients.bloodType")}</Label>
                   <Input
                     {...form.register("bloodType")}
-                    placeholder="e.g. O+"
+                    placeholder={t("x.egBlood")}
                     className="mt-1"
                   />
                 </div>
@@ -972,7 +972,7 @@ export default function PatientsPage() {
                   <Label>{t("patients.allergies")}</Label>
                   <Input
                     {...form.register("allergies")}
-                    placeholder="e.g. Penicillin"
+                    placeholder={t("x.egAllergy")}
                     className="mt-1"
                   />
                 </div>
@@ -980,7 +980,7 @@ export default function PatientsPage() {
                   <Label>{t("patients.clinicalNotes")}</Label>
                   <Input
                     {...form.register("notes")}
-                    placeholder="Chronic conditions, history..."
+                    placeholder={t("x.chronicPh")}
                     className="mt-1"
                   />
                 </div>
@@ -1063,7 +1063,7 @@ export default function PatientsPage() {
                 />
                 {checkInForm.formState.errors.visitType && (
                   <p className="text-xs text-destructive mt-1">
-                    {checkInForm.formState.errors.visitType.message}
+                    {t(checkInForm.formState.errors.visitType.message ?? "")}
                   </p>
                 )}
               </div>
@@ -1158,3 +1158,5 @@ export default function PatientsPage() {
     </ProtectedRoute>
   );
                               }
+
+// preview rebuild trigger

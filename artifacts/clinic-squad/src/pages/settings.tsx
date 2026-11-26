@@ -5,6 +5,7 @@ import { useCurrency } from "@/lib/currency";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { useLang } from "@/lib/lang";
+import { apiErrorText } from "@/lib/error-i18n";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -27,22 +28,22 @@ import { formatDate, getTrialDaysLeft } from "@/lib/utils";
 import { useUpdateProfile, useChangePassword, useListAuthEvents, getListAuthEventsQueryKey, useUpdateClinic } from "@workspace/api-client-react";
 import { useToast } from "@/hooks/use-toast";
 import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
+import { lzResolver } from "@/lib/error-i18n";
 import { z } from "zod";
 
 const passwordSchema = z
   .object({
-    currentPassword: z.string().min(1, "Current password is required"),
-    newPassword: z.string().min(6, "At least 6 characters"),
-    confirmPassword: z.string().min(6, "At least 6 characters"),
+    currentPassword: z.string().min(1, "x.pwCurrentReq"),
+    newPassword: z.string().min(6, "x.pwAtLeast6"),
+    confirmPassword: z.string().min(6, "x.pwAtLeast6"),
   })
   .refine((d) => d.newPassword === d.confirmPassword, {
     path: ["confirmPassword"],
-    message: "Passwords do not match",
+    message: "x.pwMismatch",
   })
   .refine((d) => d.currentPassword !== d.newPassword, {
     path: ["newPassword"],
-    message: "New password must be different from current",
+    message: "x.pwSame",
   });
 type PasswordFormData = z.infer<typeof passwordSchema>;
 
@@ -54,29 +55,31 @@ function eventMeta(type: string): {
 } {
   switch (type) {
     case "login_success":
-      return { label: "Successful sign-in", Icon: CheckCircle2, fg: "text-primary", bg: "bg-primary/10" };
+      return { label: "x.evt.login_success", Icon: CheckCircle2, fg: "text-primary", bg: "bg-primary/10" };
     case "login_failed":
-      return { label: "Failed sign-in attempt", Icon: XCircle, fg: "text-destructive", bg: "bg-destructive/10" };
+      return { label: "x.evt.login_failed", Icon: XCircle, fg: "text-destructive", bg: "bg-destructive/10" };
     case "password_changed":
-      return { label: "Password changed", Icon: KeyRound, fg: "text-accent", bg: "bg-accent/10" };
+      return { label: "x.evt.password_changed", Icon: KeyRound, fg: "text-accent", bg: "bg-accent/10" };
     case "password_reset":
-      return { label: "Password reset via link", Icon: KeyRound, fg: "text-accent", bg: "bg-accent/10" };
+      return { label: "x.evt.password_reset", Icon: KeyRound, fg: "text-accent", bg: "bg-accent/10" };
     default:
       return { label: type, Icon: Activity, fg: "text-muted-foreground", bg: "bg-muted" };
   }
 }
 
-function formatEventTime(iso: string): string {
+function formatEventTime(iso: string, lang: string): string {
+  const loc = lang === "ar" ? "ar-EG" : "en-US";
+  const rtf = new Intl.RelativeTimeFormat(loc, { numeric: "auto" });
   const d = new Date(iso);
   const diffMs = Date.now() - d.getTime();
   const mins = Math.floor(diffMs / 60_000);
-  if (mins < 1) return "just now";
-  if (mins < 60) return `${mins}m ago`;
+  if (mins < 1) return rtf.format(0, "second");
+  if (mins < 60) return rtf.format(-mins, "minute");
   const hrs = Math.floor(mins / 60);
-  if (hrs < 24) return `${hrs}h ago`;
+  if (hrs < 24) return rtf.format(-hrs, "hour");
   const days = Math.floor(hrs / 24);
-  if (days < 7) return `${days}d ago`;
-  return d.toLocaleString();
+  if (days < 7) return rtf.format(-days, "day");
+  return d.toLocaleString(loc);
 }
 
 function shortUA(ua: string): string {
@@ -89,7 +92,7 @@ function shortUA(ua: string): string {
 
 export default function SettingsPage() {
   const { user, clinic, updateUser, updateClinic } = useAuth();
-  const { t } = useLang();
+  const { t, lang } = useLang();
   const { toast } = useToast();
   const [specialty, setSpecialty] = useState(user?.specialty ?? "");
   useEffect(() => { setSpecialty(user?.specialty ?? ""); }, [user?.specialty]);
@@ -100,7 +103,7 @@ export default function SettingsPage() {
   const changePassword = useChangePassword();
   const authEvents = useListAuthEvents({ query: { queryKey: getListAuthEventsQueryKey(), staleTime: 30_000 } });
   const passwordForm = useForm<PasswordFormData>({
-    resolver: zodResolver(passwordSchema),
+    resolver: lzResolver(passwordSchema),
     defaultValues: { currentPassword: "", newPassword: "", confirmPassword: "" },
   });
 
@@ -110,7 +113,7 @@ export default function SettingsPage() {
       updateUser({ ...(user as any), specialty: updated.specialty ?? null });
       toast({ title: t("settings.profile.updated") });
     } catch (err: any) {
-      toast({ title: "Failed to update", description: err?.message, variant: "destructive" });
+      toast({ title: t("x.updateFailed"), description: apiErrorText(err, t("x.updateFailed")), variant: "destructive" });
     }
   }
 
@@ -121,15 +124,15 @@ export default function SettingsPage() {
       });
       passwordForm.reset();
       authEvents.refetch();
-      toast({ title: t("settings.pw.changed"), description: "Use your new password next time you sign in." });
+      toast({ title: t("settings.pw.changed"), description: t("x.useNewPw") });
     } catch (err: any) {
       const status = err?.status;
       toast({
-        title: "Couldn't change password",
+        title: t("x.pwChangeFailed"),
         description:
           status === 401
-            ? "Your current password is incorrect."
-            : "Please double-check your input and try again.",
+            ? t("x.pwCurrentWrong")
+            : t("x.checkInput"),
         variant: "destructive",
       });
     }
@@ -141,7 +144,7 @@ export default function SettingsPage() {
 
   // Clinic identity (name, phone, address) — editable by admin/superadmin only
   const updateClinicMutation = useUpdateClinic();
-  const isAdminOrOwner = user?.role === "admin" || user?.role === "doctor";
+  const isAdminOrOwner = user?.role === "admin" || (!!user && clinic?.ownerId === user.id);
   const [clinicName, setClinicName] = useState(clinic?.name ?? "");
   const [clinicPhone, setClinicPhone] = useState(clinic?.phone ?? "");
   const [clinicAddress, setClinicAddress] = useState(clinic?.address ?? "");
@@ -159,7 +162,7 @@ export default function SettingsPage() {
   async function saveClinicIdentity() {
     if (!clinic?.id) return;
     if (!clinicName.trim()) {
-      toast({ title: "Clinic name is required", variant: "destructive" });
+      toast({ title: t("x.clinicNameReq"), variant: "destructive" });
       return;
     }
     try {
@@ -180,8 +183,8 @@ export default function SettingsPage() {
       toast({ title: t("settings.clinic.updated") });
     } catch (err: any) {
       toast({
-        title: "Failed to update clinic",
-        description: err?.data?.error ?? err?.message ?? "Try again",
+        title: t("x.clinicUpdateFailed"),
+        description: apiErrorText(err, t("x.tryAgain")),
         variant: "destructive",
       });
     }
@@ -207,7 +210,7 @@ export default function SettingsPage() {
                 <div>
                   <p className="font-semibold">{user?.name}</p>
                   <p className="text-sm text-muted-foreground">{user?.email}</p>
-                  <Badge className="mt-1 text-xs capitalize">{user?.role}</Badge>
+                  <Badge className="mt-1 text-xs capitalize">{user?.role ? t("team.role." + user.role) : ""}</Badge>
                 </div>
               </div>
               {isDoctor && (
@@ -320,7 +323,7 @@ export default function SettingsPage() {
                       type="button"
                       className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
                       onClick={() => setShowPw((v) => !v)}
-                      aria-label="Toggle password visibility"
+                      aria-label={t("x.togglePw")}
                     >
                       {showPw ? (
                         <EyeOff className="w-4 h-4" />
@@ -331,7 +334,7 @@ export default function SettingsPage() {
                   </div>
                   {passwordForm.formState.errors.currentPassword && (
                     <p className="text-xs text-destructive mt-1">
-                      {passwordForm.formState.errors.currentPassword.message}
+                      {t(passwordForm.formState.errors.currentPassword.message ?? "")}
                     </p>
                   )}
                 </div>
@@ -342,7 +345,7 @@ export default function SettingsPage() {
                     <Input
                       id="newPassword"
                       type={showPw ? "text" : "password"}
-                      placeholder="At least 6 characters"
+                      placeholder={t("x.pwAtLeast6")}
                       autoComplete="new-password"
                       {...passwordForm.register("newPassword")}
                       data-testid="input-new-password"
@@ -350,7 +353,7 @@ export default function SettingsPage() {
                     />
                     {passwordForm.formState.errors.newPassword && (
                       <p className="text-xs text-destructive mt-1">
-                        {passwordForm.formState.errors.newPassword.message}
+                        {t(passwordForm.formState.errors.newPassword.message ?? "")}
                       </p>
                     )}
                   </div>
@@ -359,7 +362,7 @@ export default function SettingsPage() {
                     <Input
                       id="confirmPassword"
                       type={showPw ? "text" : "password"}
-                      placeholder="Repeat new password"
+                      placeholder={t("x.repeatPw")}
                       autoComplete="new-password"
                       {...passwordForm.register("confirmPassword")}
                       data-testid="input-confirm-password"
@@ -367,7 +370,7 @@ export default function SettingsPage() {
                     />
                     {passwordForm.formState.errors.confirmPassword && (
                       <p className="text-xs text-destructive mt-1">
-                        {passwordForm.formState.errors.confirmPassword.message}
+                        {t(passwordForm.formState.errors.confirmPassword.message ?? "")}
                       </p>
                     )}
                   </div>
@@ -417,7 +420,7 @@ export default function SettingsPage() {
                   <Loader2 className="w-4 h-4 animate-spin" /> {t("presc.saving")}
                 </div>
               ) : authEvents.isError ? (
-                <p className="text-sm text-destructive">Couldn't load activity. Try again.</p>
+                <p className="text-sm text-destructive">{t("x.activityLoadFailed")}</p>
               ) : (authEvents.data?.length ?? 0) === 0 ? (
                 <p className="text-sm text-muted-foreground py-2">{t("settings.security.empty")}</p>
               ) : (
@@ -437,9 +440,9 @@ export default function SettingsPage() {
                         </div>
                         <div className="min-w-0 flex-1">
                           <div className="flex items-baseline gap-2 flex-wrap">
-                            <p className="text-sm font-medium">{meta.label}</p>
+                            <p className="text-sm font-medium">{t(meta.label)}</p>
                             <p className="text-xs text-muted-foreground">
-                              {formatEventTime(evt.createdAt as unknown as string)}
+                              {formatEventTime(evt.createdAt as unknown as string, lang)}
                             </p>
                           </div>
                           <p className="text-xs text-muted-foreground truncate">
@@ -459,7 +462,7 @@ export default function SettingsPage() {
               <h2 className="font-semibold mb-4">{t("sidebar.secure.title")}</h2>
               <div className="flex items-center gap-3 text-sm text-muted-foreground">
                 <Shield className="w-4 h-4 shrink-0" />
-                <span>Your data is secured with role-based access control. Only authorized staff can access patient information.</span>
+                <span>{t("x.secureNote")}</span>
               </div>
             </div>
           </div>

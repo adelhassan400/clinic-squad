@@ -48,7 +48,7 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
 import { useForm, Controller } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
+import { lzResolver } from "@/lib/error-i18n";
 import { z } from "zod";
 import {
   Plus,
@@ -76,6 +76,7 @@ import { openWhatsApp, whatsappAppointmentReminder } from "@/lib/whatsapp";
 import {
   PATIENT_VISIT_TYPES,
   VisitTypeBadge,
+  getVisitTypeLabel,
   getVisitTypeStyle,
 } from "@/lib/visit-types";
 
@@ -591,7 +592,7 @@ export default function AppointmentsPage() {
   const patchPatient = useCheckIn(clinicId);
 
   const form = useForm<ApptForm>({
-    resolver: zodResolver(apptSchema),
+    resolver: lzResolver(apptSchema),
     defaultValues: {
       patientId: "",
       date: currentDate,
@@ -872,9 +873,9 @@ export default function AppointmentsPage() {
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        {PATIENT_VISIT_TYPES.map((t) => (
-                          <SelectItem key={t} value={t}>
-                            {t}
+                        {PATIENT_VISIT_TYPES.map((vt) => (
+                          <SelectItem key={vt} value={vt}>
+                            {getVisitTypeLabel(t, vt)}
                           </SelectItem>
                         ))}
                       </SelectContent>
@@ -886,7 +887,7 @@ export default function AppointmentsPage() {
                 <Label>{t("appt.notes")}</Label>
                 <Input
                   {...form.register("notes")}
-                  placeholder="Optional..."
+                  placeholder={t("x.optional")}
                   className="mt-1"
                 />
               </div>

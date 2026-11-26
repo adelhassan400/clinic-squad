@@ -81,8 +81,8 @@ export default function LandingPage() {
     <div className="min-h-screen bg-background text-foreground">
       {/* Nav */}
       <nav className="sticky top-0 z-50 border-b border-border bg-background/90 backdrop-blur-md">
-        <div className="max-w-6xl mx-auto px-6 h-16 flex items-center gap-6">
-          <div className="flex items-center gap-2">
+        <div className="max-w-6xl mx-auto px-3 sm:px-6 h-16 flex items-center gap-2 sm:gap-6">
+          <div className="flex items-center gap-2 shrink-0">
             <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center">
               <Shield className="w-4 h-4 text-primary-foreground" />
             </div>
@@ -94,13 +94,13 @@ export default function LandingPage() {
             <a href="#pricing" className="hover:text-foreground transition-colors">{t("nav.pricing")}</a>
             <a href="#testimonials" className="hover:text-foreground transition-colors">{t("nav.testimonials")}</a>
           </div>
-          <div className="ms-auto flex items-center gap-2">
+          <div className="ms-auto flex items-center gap-1 sm:gap-2 min-w-0">
             <LanguageSwitcher />
             <Button variant="ghost" size="icon" onClick={toggleTheme} data-testid="toggle-theme-nav">
               {theme === "dark" ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
             </Button>
             <Link href="/login">
-              <Button variant="ghost" size="sm" data-testid="link-login">{t("nav.signIn")}</Button>
+              <Button variant="ghost" size="sm" className="px-2 sm:px-3" data-testid="link-login">{t("nav.signIn")}</Button>
             </Link>
             <Link href="/register">
               <Button size="sm" data-testid="link-register" className="hidden sm:flex">

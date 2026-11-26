@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
+import { lzResolver } from "@/lib/error-i18n";
 import { z } from "zod";
 import { useQueryClient } from "@tanstack/react-query";
 import { Redirect } from "wouter";
@@ -46,7 +46,7 @@ import {
 const inviteSchema = z.object({
   email: z.string().email("Enter a valid email"),
   name: z.string().min(1, "Name is required"),
-  role: z.enum(["doctor", "assistant"]),
+  role: z.enum(["doctor", "nurse", "secretary", "assistant"]),
 });
 type InviteForm = z.infer<typeof inviteSchema>;
 
@@ -71,12 +71,12 @@ export default function TeamPage() {
 
   const { register, handleSubmit, reset, setValue, watch, formState: { errors } } =
     useForm<InviteForm>({
-      resolver: zodResolver(inviteSchema),
+      resolver: lzResolver(inviteSchema),
       defaultValues: { email: "", name: "", role: "assistant" },
     });
 
   if (!user || !clinic) return <Redirect to="/login" />;
-  if (user.role !== "admin" && user.role !== "doctor") {
+  if (user.role !== "admin" && clinic.ownerId !== user.id) {
     return <Redirect to="/admin" />;
   }
 
@@ -159,10 +159,10 @@ export default function TeamPage() {
   };
 
   return (
-    <ProtectedRoute requireRole={["admin", "doctor"]}>
+    <ProtectedRoute requireRole={["admin", "doctor", "manager"]}>
       <DashboardLayout>
       <div className="p-6 max-w-5xl mx-auto space-y-6">
-        <p role="status" className="rounded-lg border border-amber-500/40 bg-amber-500/10 p-4 text-sm">{lang === "ar" ? "قبول دعوات الموظفين متوقف مؤقتًا لحين تجهيز التحقق بالإيميل. يمكن إنشاء الدعوات، لكن لا يمكن قبولها الآن. لم يتم إرسال أي إيميل." : "Staff invitation acceptance is temporarily paused until email verification is ready. Invitations can be created, but cannot be accepted yet. No email has been sent."}</p>
+        <p role="status" className="rounded-lg border border-amber-500/40 bg-amber-500/10 p-4 text-sm">{lang === "ar" ? "لا يتم إرسال أي إيميل. انسخ رابط الدعوة وأرسله بنفسك للشخص المطلوب فقط. الرابط يعمل مرة واحدة لمدة 7 أيام، ومن يملك الرابط يمكنه استخدامه. الإيميل المكتوب لا يتم التحقق منه." : "No email is sent. Copy the invitation link and send it yourself, only to the intended person. The link works once and expires after 7 days. Anyone who has the link can use it, and the typed email address is not verified."}</p>
         {/* Page header */}
         <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3">
           <div>
@@ -278,7 +278,7 @@ export default function TeamPage() {
               <Label>{t("team.invite.role")}</Label>
               <Select
                 value={watch("role")}
-                onValueChange={(v) => setValue("role", v as "doctor" | "assistant")}
+                onValueChange={(v) => setValue("role", v as "doctor" | "nurse" | "secretary" | "assistant")}
                 disabled={limitReached}
               >
                 <SelectTrigger className="mt-1.5" data-testid="select-invite-role">
@@ -295,6 +295,18 @@ export default function TeamPage() {
                     <div className="flex items-center gap-2">
                       <Stethoscope className="w-4 h-4" />
                       {t("team.role.doctor")}
+                    </div>
+                  </SelectItem>
+                  <SelectItem value="nurse">
+                    <div className="flex items-center gap-2">
+                      <ClipboardList className="w-4 h-4" />
+                      {t("team.role.nurse")}
+                    </div>
+                  </SelectItem>
+                  <SelectItem value="secretary">
+                    <div className="flex items-center gap-2">
+                      <ClipboardList className="w-4 h-4" />
+                      {t("team.role.secretary")}
                     </div>
                   </SelectItem>
                 </SelectContent>
@@ -428,7 +440,7 @@ export default function TeamPage() {
                     </div>
                     <p className="text-sm text-muted-foreground truncate">{m.email}</p>
                   </div>
-                  {m.id !== user.id && m.role !== "admin" && (
+                  {m.id !== user.id && m.id !== clinic.ownerId && (m.role !== "admin" || clinic.ownerId === user.id || user.role === "superadmin") && (
                     <Button
                       variant="ghost"
                       size="sm"

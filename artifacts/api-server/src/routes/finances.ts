@@ -3,7 +3,7 @@ import { eq } from "drizzle-orm";
 import { db, financesTable } from "@workspace/db";
 import { CreateFinanceRecordBody } from "@workspace/api-zod";
 import { randomUUID } from "crypto";
-import { requireClinicAccess } from "../middlewares/auth.js";
+import { requireClinicAccess, requireFinanceAccess } from "../middlewares/auth.js";
 
 const router = Router({ mergeParams: true });
 
@@ -13,6 +13,8 @@ function getParam(params: unknown, key: string): string {
 }
 
 router.use(requireClinicAccess);
+// Finance data: admin, superadmin and the clinic's founding owner only.
+router.use(requireFinanceAccess);
 
 router.get("/", async (req, res) => {
   const clinicId = getParam(req.params, "clinicId");

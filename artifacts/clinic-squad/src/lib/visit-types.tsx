@@ -1,4 +1,14 @@
 import { cn } from "@/lib/utils";
+import { useLang } from "@/lib/lang";
+
+const VISIT_TYPE_KEYS: Record<string, string> = {
+  "New Consultation": "patients.visitType.newConsultation",
+  "Follow-up": "patients.visitType.followUp",
+  "Re-exam": "patients.visitType.reExam",
+  Emergency: "patients.visitType.emergency",
+  Procedure: "patients.visitType.procedure",
+  Session: "patients.visitType.session",
+};
 
 export type VisitType =
   | "New Consultation"
@@ -114,12 +124,23 @@ interface VisitTypeBadgeProps {
   withDot?: boolean;
 }
 
+export function getVisitTypeLabel(
+  t: (key: string) => string,
+  type: string | null | undefined,
+): string {
+  const raw = type && type.trim() ? type : "";
+  const key = VISIT_TYPE_KEYS[raw];
+  return key ? t(key) : raw || t("patients.visitType.unspecified");
+}
+
 export function VisitTypeBadge({ type, className, withDot = true }: VisitTypeBadgeProps) {
+  const { t } = useLang();
   const style = getVisitTypeStyle(type);
-  const label = type && type.trim() ? type : "Unspecified";
+  const raw = type && type.trim() ? type : "";
+  const label = getVisitTypeLabel(t, type);
   return (
     <span
-      data-testid={`visit-type-badge-${label}`}
+      data-testid={`visit-type-badge-${raw || "Unspecified"}`}
       className={cn(
         "inline-flex items-center gap-1.5 rounded-full border px-2 py-0.5 text-xs font-medium whitespace-nowrap",
         style.badge,

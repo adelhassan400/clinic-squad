@@ -11,6 +11,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
+import { useLang } from "@/lib/lang";
+import { apiErrorText } from "@/lib/error-i18n";
 import { FlaskConical, Plus, Paperclip, Download, Trash2, X, Loader2 } from "lucide-react";
 import { formatDate } from "@/lib/utils";
 
@@ -33,6 +35,7 @@ function readFileAsDataUrl(file: File): Promise<string> {
 export function LabResultsSection({ clinicId, patientId }: Props) {
   const qc = useQueryClient();
   const { toast } = useToast();
+  const { t } = useLang();
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const [showForm, setShowForm] = useState(false);
@@ -64,11 +67,11 @@ export function LabResultsSection({ clinicId, patientId }: Props) {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!testName.trim()) {
-      toast({ title: "Test name is required", variant: "destructive" });
+      toast({ title: t("lab.nameRequired"), variant: "destructive" });
       return;
     }
     if (file && file.size > MAX_FILE_BYTES) {
-      toast({ title: "Attachment too large", description: "Max size is 5 MB", variant: "destructive" });
+      toast({ title: t("lab.tooLarge"), description: t("lab.tooLargeDesc"), variant: "destructive" });
       return;
     }
 
@@ -81,7 +84,7 @@ export function LabResultsSection({ clinicId, patientId }: Props) {
         attachmentName = file.name;
         attachmentMime = file.type || "application/octet-stream";
       } catch {
-        toast({ title: "Failed to read file", variant: "destructive" });
+        toast({ title: t("lab.readFail"), variant: "destructive" });
         return;
       }
     }
@@ -100,28 +103,28 @@ export function LabResultsSection({ clinicId, patientId }: Props) {
         },
       });
       await qc.invalidateQueries({ queryKey: getListLabResultsQueryKey(clinicId, patientId) });
-      toast({ title: "Lab result added" });
+      toast({ title: t("lab.added") });
       resetForm();
       setShowForm(false);
     } catch (err: any) {
       toast({
-        title: "Failed to add lab result",
-        description: err?.data?.error ?? err?.message ?? "Try again",
+        title: t("lab.failAdd"),
+        description: apiErrorText(err, t("editp.tryAgain")),
         variant: "destructive",
       });
     }
   }
 
   async function handleDelete(id: string) {
-    if (!confirm("Delete this lab result?")) return;
+    if (!confirm(t("lab.confirmDelete"))) return;
     try {
       await deleteMut.mutateAsync({ clinicId, patientId, labResultId: id });
       await qc.invalidateQueries({ queryKey: getListLabResultsQueryKey(clinicId, patientId) });
-      toast({ title: "Deleted" });
+      toast({ title: t("lab.deleted") });
     } catch (err: any) {
       toast({
-        title: "Failed to delete",
-        description: err?.message,
+        title: t("lab.failDelete"),
+        description: apiErrorText(err, t("lab.failDelete")),
         variant: "destructive",
       });
     }
@@ -143,11 +146,11 @@ export function LabResultsSection({ clinicId, patientId }: Props) {
         <div>
           <h2 className="font-semibold flex items-center gap-2">
             <FlaskConical className="w-4 h-4 text-primary" />
-            Lab Results
+            {t("lab.title")}
             <span className="text-xs font-normal text-muted-foreground">({list.length})</span>
           </h2>
           <p className="text-xs text-muted-foreground mt-0.5">
-            Track tests, results, and uploaded reports for this patient.
+            {t("lab.subtitle")}
           </p>
         </div>
         <Button
@@ -156,7 +159,7 @@ export function LabResultsSection({ clinicId, patientId }: Props) {
           data-testid="button-toggle-lab-result"
         >
           {showForm ? <X className="w-4 h-4 mr-1.5" /> : <Plus className="w-4 h-4 mr-1.5" />}
-          {showForm ? "Cancel" : "Add Lab Result"}
+          {showForm ? t("common.cancel") : t("lab.add")}
         </Button>
       </div>
 
@@ -167,19 +170,19 @@ export function LabResultsSection({ clinicId, patientId }: Props) {
         >
           <div className="grid sm:grid-cols-2 gap-3">
             <div>
-              <Label htmlFor="lab-test-name">Test name *</Label>
+              <Label htmlFor="lab-test-name">{t("lab.testName")} *</Label>
               <Input
                 id="lab-test-name"
                 data-testid="input-lab-test-name"
                 value={testName}
                 onChange={(e) => setTestName(e.target.value)}
-                placeholder="e.g. Complete Blood Count (CBC)"
+                placeholder={t("lab.testNamePh")}
                 className="mt-1"
                 required
               />
             </div>
             <div>
-              <Label htmlFor="lab-test-date">Date *</Label>
+              <Label htmlFor="lab-test-date">{t("lab.date")} *</Label>
               <Input
                 id="lab-test-date"
                 data-testid="input-lab-test-date"
@@ -192,20 +195,20 @@ export function LabResultsSection({ clinicId, patientId }: Props) {
             </div>
           </div>
           <div>
-            <Label htmlFor="lab-result-value">Result value</Label>
+            <Label htmlFor="lab-result-value">{t("lab.resultValue")}</Label>
             <Input
               id="lab-result-value"
               data-testid="input-lab-result-value"
               value={resultValue}
               onChange={(e) => setResultValue(e.target.value)}
-              placeholder="e.g. Hb 13.2 g/dL — within normal range"
+              placeholder={t("lab.resultPh")}
               className="mt-1"
             />
           </div>
           <div>
             <Label htmlFor="lab-attachment" className="flex items-center gap-1.5">
               <Paperclip className="w-3.5 h-3.5 text-muted-foreground" />
-              Attachment (PDF / image, max 5 MB)
+              {t("lab.attachment")}
             </Label>
             <Input
               id="lab-attachment"
@@ -232,7 +235,7 @@ export function LabResultsSection({ clinicId, patientId }: Props) {
                 setShowForm(false);
               }}
             >
-              Cancel
+              {t("common.cancel")}
             </Button>
             <Button
               type="submit"
@@ -242,10 +245,10 @@ export function LabResultsSection({ clinicId, patientId }: Props) {
             >
               {createMut.isPending ? (
                 <>
-                  <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" /> Saving…
+                  <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" /> {t("editp.saving")}
                 </>
               ) : (
-                "Save lab result"
+                t("lab.save")
               )}
             </Button>
           </div>
@@ -253,21 +256,21 @@ export function LabResultsSection({ clinicId, patientId }: Props) {
       )}
 
       {isLoading ? (
-        <div className="text-sm text-muted-foreground py-6 text-center">Loading…</div>
+        <div className="text-sm text-muted-foreground py-6 text-center">{t("lab.loading")}</div>
       ) : list.length === 0 ? (
         <div className="text-center py-10 border border-dashed border-border rounded-lg">
           <FlaskConical className="w-10 h-10 text-muted-foreground/30 mx-auto mb-3" />
-          <p className="text-sm text-muted-foreground">No lab results recorded yet.</p>
+          <p className="text-sm text-muted-foreground">{t("lab.empty")}</p>
         </div>
       ) : (
         <div className="overflow-x-auto rounded-lg border border-border">
           <table className="w-full text-sm">
             <thead className="bg-muted/40 text-xs font-medium text-muted-foreground uppercase tracking-wider">
               <tr>
-                <th className="text-left px-3 py-2.5">Date</th>
-                <th className="text-left px-3 py-2.5">Test</th>
-                <th className="text-left px-3 py-2.5">Result</th>
-                <th className="text-left px-3 py-2.5">Attachment</th>
+                <th className="text-left px-3 py-2.5">{t("lab.colDate")}</th>
+                <th className="text-left px-3 py-2.5">{t("lab.colTest")}</th>
+                <th className="text-left px-3 py-2.5">{t("lab.colResult")}</th>
+                <th className="text-left px-3 py-2.5">{t("lab.colAttachment")}</th>
                 <th className="text-right px-3 py-2.5"></th>
               </tr>
             </thead>
@@ -292,7 +295,7 @@ export function LabResultsSection({ clinicId, patientId }: Props) {
                         data-testid={`download-lab-${r.id}`}
                       >
                         <Download className="w-3.5 h-3.5" />
-                        {r.attachmentName ?? "Download"}
+                        {r.attachmentName ?? t("lab.download")}
                       </button>
                     ) : (
                       <span className="text-xs text-muted-foreground/60">—</span>
@@ -304,7 +307,7 @@ export function LabResultsSection({ clinicId, patientId }: Props) {
                       size="icon"
                       className="h-7 w-7 text-destructive"
                       onClick={() => handleDelete(r.id)}
-                      title="Delete"
+                      title={t("lab.deleteTitle")}
                       data-testid={`delete-lab-${r.id}`}
                     >
                       <Trash2 className="w-3.5 h-3.5" />

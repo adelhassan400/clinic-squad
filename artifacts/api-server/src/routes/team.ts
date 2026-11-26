@@ -1,9 +1,10 @@
 import { Router } from "express";
+import type { Request, Response, NextFunction } from "express";
 import { eq, and } from "drizzle-orm";
 import { db, usersTable, clinicsTable, invitationsTable } from "@workspace/db";
 import { CreateInvitationBody } from "@workspace/api-zod";
 import { randomUUID, randomBytes } from "crypto";
-import { requireAuth, requireRole, getMemberLimit } from "../middlewares/auth.js";
+import { requireAuth, requireRole, requireActiveClinic, getMemberLimit } from "../middlewares/auth.js";
 
 const router = Router({ mergeParams: true });
 
@@ -22,7 +23,18 @@ function isPending(status: string, expiresAt: Date): boolean {
   return status === "pending" && expiresAt.getTime() > Date.now();
 }
 
-router.use(requireAuth);
+// Team management (invite, revoke, remove) is limited to clinic admins, the clinic's founding owner
+// (clinics.owner_id) and superadmin. Other doctors keep clinical access only.
+async function requireTeamManager(req: Request, res: Response, next: NextFunction) {
+  const user = req.authUser!;
+  if (user.role === "superadmin" || user.role === "admin") return next();
+  const clinicId = getParam(req.params, "clinicId");
+  const clinic = (await db.select({ ownerId: clinicsTable.ownerId }).from(clinicsTable).where(eq(clinicsTable.id, clinicId)).limit(1))[0];
+  if (user.clinicId === clinicId && clinic && clinic.ownerId === user.id) return next();
+  res.status(403).json({ error: "Forbidden" });
+}
+
+router.use(requireAuth, requireActiveClinic);
 
 // Ensure the authed user belongs to the clinic in the URL.
 router.use((req, res, next): void => {
@@ -53,7 +65,7 @@ router.get("/members", async (req, res) => {
     .where(eq(invitationsTable.clinicId, clinicId));
 
   const members = users
-    .filter((u) => u.role !== "superadmin")
+    .filter((u) => u.role !== "superadmin" && !u.isBlocked)
     .map((u) => ({
       id: u.id,
       email: u.email,
@@ -78,7 +90,7 @@ router.get("/members", async (req, res) => {
   });
 });
 
-router.delete("/members/:userId", requireRole("admin", "doctor", "superadmin"), async (req, res) => {
+router.delete("/members/:userId", requireTeamManager, async (req, res) => {
   const clinicId = getParam(req.params, "clinicId");
   const userId = getParam(req.params, "userId");
   const clinic = (
@@ -88,14 +100,36 @@ router.delete("/members/:userId", requireRole("admin", "doctor", "superadmin"), 
   if (clinic.ownerId === userId) {
     return res.status(403).json({ error: "Cannot remove the clinic owner" });
   }
+  if (req.authUser!.id === userId) {
+    return res.status(403).json({ error: "You cannot remove yourself" });
+  }
 
+  const target = (
+    await db
+      .select()
+      .from(usersTable)
+      .where(and(eq(usersTable.id, userId), eq(usersTable.clinicId, clinicId)))
+      .limit(1)
+  )[0];
+  if (!target || target.role === "superadmin") {
+    return res.status(404).json({ error: "Member not found" });
+  }
+  // Only the founding owner or a superadmin may remove an admin member.
+  const actor = req.authUser!;
+  if (target.role === "admin" && actor.role !== "superadmin" && clinic.ownerId !== actor.id) {
+    return res.status(403).json({ error: "Only the clinic owner can remove an admin" });
+  }
+
+  // Deactivate instead of deleting: access and existing sessions end immediately (every request re-checks is_blocked),
+  // while prescriptions, patient assignments and cash records that point at this user keep their history.
   await db
-    .delete(usersTable)
+    .update(usersTable)
+    .set({ isBlocked: true })
     .where(and(eq(usersTable.id, userId), eq(usersTable.clinicId, clinicId)));
   return res.status(204).send();
 });
 
-router.get("/invitations", async (req, res) => {
+router.get("/invitations", requireTeamManager, async (req, res) => {
   const clinicId = getParam(req.params, "clinicId");
   const all = await db
     .select()
@@ -119,7 +153,7 @@ router.get("/invitations", async (req, res) => {
   );
 });
 
-router.post("/invitations", requireRole("admin", "doctor", "superadmin"), async (req, res) => {
+router.post("/invitations", requireTeamManager, async (req, res) => {
   const clinicId = getParam(req.params, "clinicId");
   const parsed = CreateInvitationBody.safeParse(req.body);
   if (!parsed.success) {
@@ -139,7 +173,7 @@ router.post("/invitations", requireRole("admin", "doctor", "superadmin"), async 
     .select()
     .from(invitationsTable)
     .where(eq(invitationsTable.clinicId, String(clinicId)));
-  const nonAdmin = users.filter((u) => u.role !== "admin" && u.role !== "superadmin").length;
+  const nonAdmin = users.filter((u) => u.role !== "admin" && u.role !== "superadmin" && !u.isBlocked).length;
   const pending = invites.filter((i) => isPending(i.status, i.expiresAt)).length;
   const limit = getMemberLimit(clinic.subscriptionStatus);
 
@@ -201,7 +235,7 @@ router.post("/invitations", requireRole("admin", "doctor", "superadmin"), async 
 
 router.delete(
   "/invitations/:invitationId",
-  requireRole("admin", "doctor", "superadmin"),
+  requireTeamManager,
   async (req, res) => {
     const clinicId = getParam(req.params, "clinicId");
     const invitationId = getParam(req.params, "invitationId");

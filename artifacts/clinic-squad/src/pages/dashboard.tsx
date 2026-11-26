@@ -93,14 +93,18 @@ function AppointmentStatusBadge({ status }: { status: string }) {
         map[status] ?? "bg-muted text-muted-foreground",
       )}
     >
-      {status.replace("_", " ")}
+      {(() => {
+        const k = "status." + status.replace(/[_-]([a-z])/g, (_m, c) => c.toUpperCase());
+        return t(k) === k ? status.replace("_", " ") : t(k);
+      })()}
     </span>
   );
 }
 
 export default function DashboardPage() {
   const { format: formatCurrency } = useCurrency();
-  const { clinic } = useAuth();
+  const { clinic, user } = useAuth();
+  const canSeeFinance = user?.role === "admin" || user?.role === "superadmin" || (!!user && clinic?.ownerId === user.id);
   const { t, lang } = useLang();
   const clinicId = clinic?.id ?? "";
   const { toast } = useToast();
@@ -151,7 +155,7 @@ export default function DashboardPage() {
 
   const handleSendReminder = (a: TomorrowAppt) => {
     if (!a.patientPhone) {
-      toast({ title: "No phone number on file", variant: "destructive" });
+      toast({ title: t("x.noPhone"), variant: "destructive" });
       return;
     }
     const message = whatsappAppointmentReminder({
@@ -187,7 +191,7 @@ export default function DashboardPage() {
           });
         },
         onError: () =>
-          toast({ title: "Check-in failed", variant: "destructive" }),
+          toast({ title: t("x.checkinFailed"), variant: "destructive" }),
       },
     );
   };
@@ -228,10 +232,7 @@ export default function DashboardPage() {
                 />
                 <div>
                   <p className="font-semibold text-sm">
-                    {t("dash.trial.days").replace(
-                      "d",
-                      trialDaysLeft.toString(),
-                    )}
+                    {`${trialDaysLeft} ${t("dash.trial.days")}`}
                   </p>
                   <p className="text-xs text-muted-foreground">
                     {t("dash.trial.note")}
@@ -283,12 +284,14 @@ export default function DashboardPage() {
                   icon={Calendar}
                   sub={`${summary?.upcomingAppointments ?? 0} ${t("dash.stats.upcoming")}`}
                 />
-                <StatCard
-                  label={t("dash.stats.revenue")}
-                  value={formatCurrency(summary?.monthlyRevenue ?? 0)}
-                  icon={TrendingUp}
-                  sub={`${t("dash.stats.expenses")}: ${formatCurrency(summary?.monthlyExpenses ?? 0)}`}
-                />
+                {canSeeFinance && (
+                  <StatCard
+                    label={t("dash.stats.revenue")}
+                    value={formatCurrency(summary?.monthlyRevenue ?? 0)}
+                    icon={TrendingUp}
+                    sub={`${t("dash.stats.expenses")}: ${formatCurrency(summary?.monthlyExpenses ?? 0)}`}
+                  />
+                )}
                 <StatCard
                   label={t("dash.stats.completed")}
                   value={summary?.completedAppointments ?? 0}

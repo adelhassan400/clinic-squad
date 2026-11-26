@@ -3,6 +3,7 @@ import react from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
 import path from "path";
 import runtimeErrorOverlay from "@replit/vite-plugin-runtime-error-modal";
+import { previewBuildEnv } from "./src/lib/api-routing";
 
 const rawPort = process.env.PORT;
 
@@ -26,8 +27,24 @@ if (!basePath) {
   );
 }
 
+// On Vercel preview builds, bake the isolated preview API configuration into
+// the bundle. previewBuildEnv throws (failing the build) when the branch
+// cannot produce deterministic aliases: a non-isolated preview must never
+// deploy. Production builds bake nothing and keep the vercel.json rewrite.
+const previewDefines: Record<string, string> = {};
+if (process.env.VERCEL_ENV === "preview") {
+  const { expectedPreviewHost, previewApiBase } = previewBuildEnv(
+    process.env.VERCEL_GIT_COMMIT_REF,
+  );
+  previewDefines["import.meta.env.VITE_EXPECTED_PREVIEW_HOST"] =
+    JSON.stringify(expectedPreviewHost);
+  previewDefines["import.meta.env.VITE_PREVIEW_API_BASE"] =
+    JSON.stringify(previewApiBase);
+}
+
 export default defineConfig({
   base: basePath,
+  define: previewDefines,
   plugins: [
     react(),
     tailwindcss(),
@@ -57,6 +74,16 @@ export default defineConfig({
   build: {
     outDir: path.resolve(import.meta.dirname, "dist/public"),
     emptyOutDir: true,
+    chunkSizeWarningLimit: 700,
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          "react-vendor": ["react", "react-dom", "wouter"],
+          "data-vendor": ["@tanstack/react-query"],
+          charts: ["recharts"],
+        },
+      },
+    },
   },
   server: {
     port,

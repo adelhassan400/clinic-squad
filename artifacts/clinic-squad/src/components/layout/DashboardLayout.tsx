@@ -56,6 +56,7 @@ export function DashboardLayout({ children }: Props) {
   const isSuperAdmin = user?.role === "superadmin";
   // `admin` is retained as a legacy alias for clinic owners created before RBAC.
   const isDoctor = user?.role === "admin" || user?.role === "doctor";
+  const canFinance = isSuperAdmin || user?.role === "admin" || (!!user && clinic?.ownerId === user.id);
   const isAssistant = user?.role === "assistant" || user?.role === "secretary" || user?.role === "nurse";
 
   // Super admin gets a platform-only nav. Clinic users get a focused menu for their role.
@@ -69,6 +70,17 @@ export function DashboardLayout({ children }: Props) {
         { href: "/platform-growth", labelKey: "sidebar.platformGrowth", icon: Megaphone },
         { href: "/platform-logs", labelKey: "sidebar.platformLogs", icon: History },
       ]
+    : user?.role === "manager"
+      ? [
+          { href: "/dashboard", labelKey: "sidebar.dashboard", icon: LayoutDashboard },
+          { href: "/patients", labelKey: "sidebar.patients", icon: Users },
+          { href: "/appointments", labelKey: "sidebar.appointments", icon: Calendar },
+          { href: "/insights", labelKey: "sidebar.insights", icon: BarChart2 },
+          { href: "/finances", labelKey: "sidebar.finances", icon: TrendingUp },
+          { href: "/subscription", labelKey: "sidebar.subscription", icon: Crown },
+          { href: "/team", labelKey: "sidebar.team", icon: Users },
+          { href: "/settings", labelKey: "sidebar.settings", icon: Settings },
+        ]
     : isDoctor
       ? [
           { href: "/dashboard", labelKey: "sidebar.dashboard", icon: LayoutDashboard },
@@ -76,10 +88,12 @@ export function DashboardLayout({ children }: Props) {
           { href: "/waiting-list", labelKey: "sidebar.waitingList", icon: Stethoscope },
           { href: "/appointments", labelKey: "sidebar.appointments", icon: Calendar },
           { href: "/prescriptions", labelKey: "sidebar.prescriptions", icon: Pill },
-          { href: "/insights", labelKey: "sidebar.insights", icon: BarChart2 },
-          { href: "/finances", labelKey: "sidebar.finances", icon: TrendingUp },
+          ...(canFinance ? [
+            { href: "/insights", labelKey: "sidebar.insights", icon: BarChart2 },
+            { href: "/finances", labelKey: "sidebar.finances", icon: TrendingUp },
+          ] : []),
           { href: "/subscription", labelKey: "sidebar.subscription", icon: Crown },
-          { href: "/team", labelKey: "sidebar.team", icon: Users },
+          ...(user?.role === "admin" || (!!user && clinic?.ownerId === user.id) ? [{ href: "/team", labelKey: "sidebar.team", icon: Users }] : []),
           { href: "/settings", labelKey: "sidebar.settings", icon: Settings },
         ]
       : [
@@ -151,11 +165,11 @@ export function DashboardLayout({ children }: Props) {
               </Badge>
             )}
             {clinic?.subscriptionStatus === "basic" && (
-              <Badge className="bg-secondary text-secondary-foreground text-xs">Basic</Badge>
+              <Badge className="bg-secondary text-secondary-foreground text-xs">{t("plan.basic")}</Badge>
             )}
             {clinic?.subscriptionStatus === "premium" && (
               <Badge className="bg-accent text-accent-foreground text-xs">
-                <Crown className="w-3 h-3 me-1" />Premium
+                <Crown className="w-3 h-3 me-1" />{t("plan.premium")}
               </Badge>
             )}
             {clinic?.subscriptionStatus === "expired" && (
@@ -219,7 +233,7 @@ export function DashboardLayout({ children }: Props) {
             </div>
             <div className="flex-1 min-w-0">
               <p className="text-xs font-semibold text-sidebar-foreground truncate">{user?.name}</p>
-              <p className="text-xs text-sidebar-foreground/50 capitalize">{user?.role}</p>
+              <p className="text-xs text-sidebar-foreground/50 capitalize">{user?.role && t("team.role." + user.role) !== "team.role." + user.role ? t("team.role." + user.role) : user?.role}</p>
             </div>
           </div>
           <div className="flex gap-2 mt-2 px-1">
@@ -315,4 +329,4 @@ export function DashboardLayout({ children }: Props) {
       </div>
     </div>
   );
-}
+      }

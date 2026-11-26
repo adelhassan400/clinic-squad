@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Link, useLocation } from "wouter";
 import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
+import { lzResolver } from "@/lib/error-i18n";
 import { z } from "zod";
 import { ApiError, useRegisterUser } from "@workspace/api-client-react";
 import { useAuth, type AuthClinic, type AuthUser } from "@/lib/auth";
@@ -16,7 +16,7 @@ import { useLang } from "@/lib/lang";
 const schema = z.object({
   clinicName: z.string().min(2, "Clinic name must be at least 2 characters"),
   ownerName: z.string().min(2, "Name must be at least 2 characters"),
-  specialty: z.string().min(2, "Please enter your medical specialty"),
+  specialty: z.string(),
   whatsappNumber: z
     .string()
     .min(6, "Enter a valid WhatsApp number")
@@ -32,23 +32,29 @@ export default function RegisterPage() {
   const [, setLocation] = useLocation();
   const { t } = useLang();
   const [showPw, setShowPw] = useState(false);
+  const [practices, setPractices] = useState(true);
 
-  const { register, handleSubmit, formState: { errors } } = useForm<FormData>({
-    resolver: zodResolver(schema),
+  const { register, handleSubmit, setError, formState: { errors } } = useForm<FormData>({
+    resolver: lzResolver(schema),
     defaultValues: { clinicName: "", ownerName: "", specialty: "", whatsappNumber: "", email: "", password: "" },
   });
 
   const registerMutation = useRegisterUser();
 
   const onSubmit = (data: FormData) => {
-    registerMutation.mutate({ data }, {
+    if (practices && data.specialty.trim().length < 2) {
+      setError("specialty", { message: "Please enter your medical specialty" });
+      return;
+    }
+    const payload = { ...data, specialty: practices ? data.specialty : undefined, practicesAsDoctor: practices };
+    registerMutation.mutate({ data: payload as never }, {
       onSuccess: (response) => {
         if (response.user && response.clinic && response.token) {
           login(response.user as AuthUser, response.clinic as AuthClinic, response.token);
         }
         toast({
-          title: "Request received",
-          description: "Contact our support team via WhatsApp to activate your trial.",
+          title: t("x.reqReceived"),
+          description: t("x.reqReceivedDesc"),
         });
         setLocation("/pending-activation");
       },
@@ -127,7 +133,7 @@ export default function RegisterPage() {
               <Label htmlFor="clinicName">{t("auth.register.name")}</Label>
               <Input
                 id="clinicName"
-                placeholder="Cairo Medical Center"
+                placeholder={t("x.clinicNamePh")}
                 {...register("clinicName")}
                 data-testid="input-clinic-name"
                 className="mt-1.5"
@@ -139,7 +145,7 @@ export default function RegisterPage() {
               <Label htmlFor="ownerName">{t("auth.register.owner")}</Label>
               <Input
                 id="ownerName"
-                placeholder="Dr. Ahmed Hassan"
+                placeholder={t("x.doctorNamePh")}
                 {...register("ownerName")}
                 data-testid="input-owner-name"
                 className="mt-1.5"
@@ -148,16 +154,32 @@ export default function RegisterPage() {
             </div>
 
             <div>
+              <Label>{t("x.regPracticeLabel")}</Label>
+              <div className="mt-1.5 space-y-2 text-sm">
+                <label className="flex items-center gap-2">
+                  <input type="radio" name="practices" checked={practices} onChange={() => setPractices(true)} data-testid="radio-practices-yes" />
+                  {t("x.regPracticeYes")}
+                </label>
+                <label className="flex items-center gap-2">
+                  <input type="radio" name="practices" checked={!practices} onChange={() => setPractices(false)} data-testid="radio-practices-no" />
+                  {t("x.regPracticeNo")}
+                </label>
+              </div>
+            </div>
+
+            {practices && (
+            <div>
               <Label htmlFor="specialty">{t("auth.register.specialty") || "Medical Specialty"}</Label>
               <Input
                 id="specialty"
-                placeholder="Cardiology, Dermatology, etc."
+                placeholder={t("x.specialtyPh")}
                 {...register("specialty")}
                 data-testid="input-specialty"
                 className="mt-1.5"
               />
               {errors.specialty && <p className="text-xs text-destructive mt-1">{errors.specialty.message}</p>}
             </div>
+            )}
 
             <div>
               <Label htmlFor="whatsappNumber">{t("auth.register.whatsapp") || "WhatsApp Number"}</Label>
@@ -191,7 +213,7 @@ export default function RegisterPage() {
                 <Input
                   id="password"
                   type={showPw ? "text" : "password"}
-                  placeholder="Min. 6 characters"
+                  placeholder={t("x.min6")}
                   {...register("password")}
                   data-testid="input-password"
                   className="pr-10"

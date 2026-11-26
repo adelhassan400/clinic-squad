@@ -175,14 +175,14 @@ export default function WaitingListPage() {
 
           {user?.role !== "doctor" && (
             <label className="flex items-center gap-2 mb-4 text-sm">
-              Doctor
+              {t("x.doctor")}
               <select
-                aria-label="Queue doctor"
+                aria-label={t("x.queueDoctor")}
                 className="border rounded p-2 bg-background"
                 value={doctorId}
                 onChange={(e) => setDoctorId(e.target.value)}
               >
-                <option value="">All doctors</option>
+                <option value="">{t("waiting.allDoctors")}</option>
                 {(team?.members ?? [])
                   .filter((m) => ["admin", "doctor"].includes(m.role))
                   .map((m) => (
@@ -195,9 +195,9 @@ export default function WaitingListPage() {
           )}
           {isError && (
             <p role="alert">
-              Queue refresh failed.{" "}
+              {t("x.queueRefreshFailed")}{" "}
               <Button variant="outline" onClick={() => refetch()}>
-                Retry
+                {t("x.retry")}
               </Button>
             </p>
           )}
@@ -302,4 +302,4 @@ export default function WaitingListPage() {
       </DashboardLayout>
     </ProtectedRoute>
   );
-    }
+                    }

@@ -8,37 +8,47 @@ import { ThemeProvider } from "@/lib/theme";
 import { LangProvider } from "@/lib/lang";
 import { CurrencyProvider } from "@/lib/currency";
 
+import { lazy, Suspense } from "react";
 import LandingPage from "@/pages/landing";
-import LoginPage from "@/pages/login";
-import RegisterPage from "@/pages/register";
-import ForgotPasswordPage from "@/pages/forgot-password";
-import ResetPasswordPage from "@/pages/reset-password";
-import VerifyEmailPage from "@/pages/verify-email";
-import ResendVerificationPage from "@/pages/resend-verification";
-import PendingActivationPage from "@/pages/pending-activation";
-import DashboardPage from "@/pages/dashboard";
-import PatientsPage from "@/pages/patients";
-import PatientDetailPage from "@/pages/patient-detail";
-import WaitingListPage from "@/pages/waiting-list";
-import CheckoutPage from "@/pages/checkout";
-import AppointmentsPage from "@/pages/appointments";
-import FinancesPage from "@/pages/finances";
-import SubscriptionPage from "@/pages/subscription";
-import SubscriptionExpiredPage from "@/pages/subscription-expired";
-import SettingsPage from "@/pages/settings";
-import AdminPage from "@/pages/admin";
-import PlatformFinancesPage from "@/pages/platform-finances";
-import PlatformClinicsPage from "@/pages/platform-clinics";
-import PlatformClinicDetailPage from "@/pages/platform-clinic-detail";
-import PlatformPaymentsPage from "@/pages/platform-payments";
-import PlatformSettingsPage from "@/pages/platform-settings";
-import PlatformGrowthPage from "@/pages/platform-growth";
-import PlatformLogsPage from "@/pages/platform-logs";
-import InsightsPage from "@/pages/insights";
-import TeamPage from "@/pages/team";
-import PrescriptionsPage from "@/pages/prescriptions";
-import AcceptInvitePage from "@/pages/accept-invite";
-import NotFound from "@/pages/not-found";
+
+const LoginPage = lazy(() => import("@/pages/login"));
+const RegisterPage = lazy(() => import("@/pages/register"));
+const ForgotPasswordPage = lazy(() => import("@/pages/forgot-password"));
+const ResetPasswordPage = lazy(() => import("@/pages/reset-password"));
+const VerifyEmailPage = lazy(() => import("@/pages/verify-email"));
+const ResendVerificationPage = lazy(() => import("@/pages/resend-verification"));
+const PendingActivationPage = lazy(() => import("@/pages/pending-activation"));
+const DashboardPage = lazy(() => import("@/pages/dashboard"));
+const PatientsPage = lazy(() => import("@/pages/patients"));
+const PatientDetailPage = lazy(() => import("@/pages/patient-detail"));
+const WaitingListPage = lazy(() => import("@/pages/waiting-list"));
+const CheckoutPage = lazy(() => import("@/pages/checkout"));
+const AppointmentsPage = lazy(() => import("@/pages/appointments"));
+const FinancesPage = lazy(() => import("@/pages/finances"));
+const SubscriptionPage = lazy(() => import("@/pages/subscription"));
+const SubscriptionExpiredPage = lazy(() => import("@/pages/subscription-expired"));
+const SettingsPage = lazy(() => import("@/pages/settings"));
+const AdminPage = lazy(() => import("@/pages/admin"));
+const PlatformFinancesPage = lazy(() => import("@/pages/platform-finances"));
+const PlatformClinicsPage = lazy(() => import("@/pages/platform-clinics"));
+const PlatformClinicDetailPage = lazy(() => import("@/pages/platform-clinic-detail"));
+const PlatformPaymentsPage = lazy(() => import("@/pages/platform-payments"));
+const PlatformSettingsPage = lazy(() => import("@/pages/platform-settings"));
+const PlatformGrowthPage = lazy(() => import("@/pages/platform-growth"));
+const PlatformLogsPage = lazy(() => import("@/pages/platform-logs"));
+const InsightsPage = lazy(() => import("@/pages/insights"));
+const TeamPage = lazy(() => import("@/pages/team"));
+const PrescriptionsPage = lazy(() => import("@/pages/prescriptions"));
+const AcceptInvitePage = lazy(() => import("@/pages/accept-invite"));
+const NotFound = lazy(() => import("@/pages/not-found"));
+
+function PageLoading() {
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-background">
+      <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+    </div>
+  );
+}
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -51,7 +61,8 @@ const queryClient = new QueryClient({
 
 function Router() {
   return (
-    <Switch>
+    <Suspense fallback={<PageLoading />}>
+      <Switch>
       <Route path="/" component={LandingPage} />
       <Route path="/login" component={LoginPage} />
       <Route path="/register" component={RegisterPage} />
@@ -85,8 +96,9 @@ function Router() {
       <Route path="/platform-settings" component={PlatformSettingsPage} />
       <Route path="/platform-growth" component={PlatformGrowthPage} />
       <Route path="/platform-logs" component={PlatformLogsPage} />
-      <Route component={NotFound} />
-    </Switch>
+        <Route component={NotFound} />
+      </Switch>
+    </Suspense>
   );
 }
 

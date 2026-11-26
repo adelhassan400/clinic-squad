@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import { useLocation, useSearch } from "wouter";
 import { useAuth } from "@/lib/auth";
 import { useLang } from "@/lib/lang";
+import { apiErrorText } from "@/lib/error-i18n";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import {
@@ -53,6 +54,7 @@ import {
   Loader2,
 } from "lucide-react";
 import { printPrescription, sendPrescriptionWhatsApp, type ClinicBranding } from "@/lib/prescription";
+import { canCreatePrescription, presetLabel, presetValue, FREQUENCY_PRESETS, DURATION_PRESETS } from "@/lib/prescription-ui";
 
 interface ItemForm {
   drug: string;
@@ -64,8 +66,6 @@ interface ItemForm {
 
 const blankItem = (): ItemForm => ({ drug: "", dosage: "", frequency: "", duration: "", notes: "" });
 
-const FREQUENCY_PRESETS = ["Once daily", "Twice daily", "3× daily", "Every 8h", "Before meals", "After meals"];
-const DURATION_PRESETS = ["3 days", "5 days", "7 days", "10 days", "14 days", "1 month"];
 
 interface PrescriptionsContentProps {
   initialPatientId?: string;
@@ -82,6 +82,7 @@ export function PrescriptionsContent({ initialPatientId, embedded }: Prescriptio
     address: clinic?.address ?? null,
   };
   const isAdmin = user?.role === "admin" || user?.role === "superadmin";
+  const canPrescribe = canCreatePrescription(user?.role);
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
@@ -105,7 +106,7 @@ export function PrescriptionsContent({ initialPatientId, embedded }: Prescriptio
 
   const { data: patientsResp } = useListPatients(clinicId, { limit: 1000 }, {
     query: {
-      enabled: !!clinicId && isAdmin,
+      enabled: !!clinicId && canPrescribe,
       queryKey: getListPatientsQueryKey(clinicId, { limit: 1000 }),
     },
   });
@@ -178,7 +179,7 @@ export function PrescriptionsContent({ initialPatientId, embedded }: Prescriptio
     } catch (err: any) {
       toast({
         title: t("presc.failed"),
-        description: err?.data?.error ?? err?.message ?? t("auth.login.submit"),
+        description: apiErrorText(err, t("presc.saveFailed")),
         variant: "destructive",
       });
     }
@@ -191,7 +192,7 @@ export function PrescriptionsContent({ initialPatientId, embedded }: Prescriptio
       await queryClient.invalidateQueries({ queryKey: getListPrescriptionsQueryKey(clinicId) });
       toast({ title: t("presc.deleted") });
     } catch (err: any) {
-      toast({ title: t("presc.failedDelete"), description: err?.message, variant: "destructive" });
+      toast({ title: t("presc.failedDelete"), description: apiErrorText(err, t("presc.failedDelete")), variant: "destructive" });
     }
   }
 
@@ -220,7 +221,7 @@ export function PrescriptionsContent({ initialPatientId, embedded }: Prescriptio
             </p>
           )}
         </div>
-        {isAdmin && (
+        {canPrescribe && (
           <Button onClick={() => setShowForm((s) => !s)} data-testid="button-new-prescription">
             {showForm ? <X className="w-4 h-4 mr-2" /> : <Plus className="w-4 h-4 mr-2" />}
             {showForm ? t("presc.cancel") : t("presc.new")}
@@ -229,8 +230,8 @@ export function PrescriptionsContent({ initialPatientId, embedded }: Prescriptio
       </div>
 
       {/* Create form + live preview */}
-      {showForm && isAdmin && (
-        <div className="grid lg:grid-cols-[1fr_minmax(0,420px)] gap-5 mb-6">
+      {showForm && canPrescribe && (
+        <div className="grid grid-cols-[minmax(0,1fr)] lg:grid-cols-[minmax(0,1fr)_minmax(0,420px)] gap-5 mb-6">
         <form
           onSubmit={handleSubmit}
           className="rounded-xl border border-border bg-card p-6 space-y-4"
@@ -282,7 +283,7 @@ export function PrescriptionsContent({ initialPatientId, embedded }: Prescriptio
 
           {/* Items */}
           <div className="space-y-3">
-            <div className="flex items-center justify-between">
+            <div className="flex flex-wrap items-center justify-between gap-2">
               <Label className="flex items-center gap-2">
                 <Pill className="w-4 h-4 text-primary" />
                 {t("presc.medications")} <span className="text-destructive">*</span>
@@ -292,6 +293,7 @@ export function PrescriptionsContent({ initialPatientId, embedded }: Prescriptio
                 type="button"
                 size="sm"
                 variant="outline"
+                className="shrink-0"
                 onClick={() => setItems((prev) => [...prev, blankItem()])}
                 data-testid="button-add-medication"
               >
@@ -371,12 +373,12 @@ export function PrescriptionsContent({ initialPatientId, embedded }: Prescriptio
                       <div className="flex flex-wrap gap-1 mt-1.5">
                         {FREQUENCY_PRESETS.map((preset) => (
                           <button
-                            key={preset}
+                            key={preset.en}
                             type="button"
-                            onClick={() => updateItem(idx, { frequency: preset })}
+                            onClick={() => updateItem(idx, { frequency: presetValue(preset) })}
                             className="text-[10px] px-1.5 py-0.5 rounded border border-border bg-background hover:bg-primary/10 hover:border-primary/40 hover:text-primary text-muted-foreground transition-colors"
                           >
-                            {preset}
+                            {presetLabel(preset, lang)}
                           </button>
                         ))}
                       </div>
@@ -395,12 +397,12 @@ export function PrescriptionsContent({ initialPatientId, embedded }: Prescriptio
                       <div className="flex flex-wrap gap-1 mt-1.5">
                         {DURATION_PRESETS.map((preset) => (
                           <button
-                            key={preset}
+                            key={preset.en}
                             type="button"
-                            onClick={() => updateItem(idx, { duration: preset })}
+                            onClick={() => updateItem(idx, { duration: presetValue(preset) })}
                             className="text-[10px] px-1.5 py-0.5 rounded border border-border bg-background hover:bg-primary/10 hover:border-primary/40 hover:text-primary text-muted-foreground transition-colors"
                           >
-                            {preset}
+                            {presetLabel(preset, lang)}
                           </button>
                         ))}
                       </div>
@@ -475,28 +477,28 @@ export function PrescriptionsContent({ initialPatientId, embedded }: Prescriptio
           <p className="text-sm text-muted-foreground">{t("presc.empty")}</p>
         </div>
       ) : (
-        <div className="grid gap-3">
+        <div className="grid grid-cols-[minmax(0,1fr)] gap-3">
           {filtered.map((p) => (
             <div
               key={p.id}
               data-testid={`prescription-row-${p.id}`}
-              className="flex items-center justify-between p-4 rounded-xl border border-border bg-card hover:bg-muted/30 transition-colors"
+              className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between p-4 rounded-xl border border-border bg-card hover:bg-muted/30 transition-colors"
             >
-              <div className="min-w-0 flex-1 pr-4">
-                <div className="flex items-center gap-2 mb-1">
-                  <p className="font-semibold truncate">{p.patientName}</p>
+              <div className="min-w-0 w-full sm:flex-1 sm:pr-4">
+                <div className="flex flex-wrap items-center gap-2 mb-1">
+                  <p className="font-semibold break-words sm:truncate min-w-0">{p.patientName}</p>
                   <span className="text-[10px] text-muted-foreground px-1.5 py-0.5 rounded-full bg-muted border border-border">
                     {new Date(p.date).toLocaleDateString(lang === "ar" ? "ar-EG" : "en-US")}
                   </span>
                 </div>
                 {p.diagnosis && (
-                  <p className="text-xs text-muted-foreground mt-0.5 truncate">{t("presc.diagnosis")}: {p.diagnosis}</p>
+                  <p className="text-xs text-muted-foreground mt-0.5 break-words sm:truncate">{t("presc.diagnosis")}: {p.diagnosis}</p>
                 )}
-                <p className="text-xs text-muted-foreground/80 mt-1 truncate">
+                <p className="text-xs text-muted-foreground/80 mt-1 break-words sm:truncate">
                   {p.items.map((i) => i.drug).join(", ")}
                 </p>
               </div>
-              <div className="flex items-center gap-1">
+              <div className="flex items-center gap-1 shrink-0 self-end sm:self-auto">
                 <Button
                   variant="ghost"
                   size="icon"
@@ -852,7 +854,7 @@ function LivePreview({ clinicName, clinicPhone, clinicAddress, doctorName, docto
               </div>
               <div className="shrink-0 text-right">
                 <div className="inline-block w-24 h-12 border border-slate-200 rounded bg-white/50 mb-1" />
-                <p className="text-[9px] text-slate-400 uppercase tracking-tighter">Doctor Signature</p>
+                <p className="text-[9px] text-slate-400 uppercase tracking-tighter">{t("presc.doctorSignature")}</p>
               </div>
             </div>
 
@@ -883,4 +885,4 @@ export default function PrescriptionsPage() {
       </DashboardLayout>
     </ProtectedRoute>
   );
-}
+              }

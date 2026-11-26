@@ -28,7 +28,7 @@ const defaultSettings: PlatformSettings = {
 };
 
 export default function PlatformSettingsPage() {
-  const { t } = useLang();
+  const { t, lang } = useLang();
   const { toast } = useToast();
   const qc = useQueryClient();
   const [settingsForm, setSettingsForm] = useState<PlatformSettings>(defaultSettings);
@@ -86,7 +86,7 @@ export default function PlatformSettingsPage() {
             </div>
             {settingsQ.data?.updatedAt && (
               <span className="text-xs text-muted-foreground">
-                {t("platformSettings.lastUpdated")}: {new Date(settingsQ.data.updatedAt).toLocaleString()}
+                {t("platformSettings.lastUpdated")}: {new Date(settingsQ.data.updatedAt).toLocaleString(lang === "ar" ? "ar-EG" : "en-US")}
               </span>
             )}
           </header>
