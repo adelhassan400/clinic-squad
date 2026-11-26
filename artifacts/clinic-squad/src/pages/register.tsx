@@ -30,7 +30,7 @@ export default function RegisterPage() {
   const { toast } = useToast();
   const { login } = useAuth();
   const [, setLocation] = useLocation();
-  const { t } = useLang();
+  const { t, lang } = useLang();
   const [showPw, setShowPw] = useState(false);
   const [practices, setPractices] = useState(true);
 
@@ -241,7 +241,11 @@ export default function RegisterPage() {
           </p>
 
           <p className="mt-4 text-center text-xs text-muted-foreground">
-            {t("auth.register.terms") || "By requesting a trial, you agree to our Terms of Service and Privacy Policy."}
+            {lang === "ar" ? "بطلبك للتجربة، فإنك توافق على " : "By requesting a trial, you agree to our "}
+            <Link href="/terms" className="underline hover:text-foreground">{lang === "ar" ? "شروط الخدمة" : "Terms of Service"}</Link>
+            {lang === "ar" ? " و" : " and "}
+            <Link href="/privacy" className="underline hover:text-foreground">{lang === "ar" ? "سياسة الخصوصية" : "Privacy Policy"}</Link>
+            {lang === "ar" ? "." : "."}
           </p>
         </div>
       </div>
