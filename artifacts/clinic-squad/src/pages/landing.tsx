@@ -7,7 +7,7 @@ import { useQuery } from "@tanstack/react-query";
 import { customFetch } from "@workspace/api-client-react";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import {
-  Shield, Users, Calendar, TrendingUp, CheckCircle, Star,
+  Shield, Users, Calendar, TrendingUp, CheckCircle,
   ArrowRight, Sun, Moon, Zap, Lock, Globe, PhoneCall,
   UserPlus, Settings as SettingsIcon, ClipboardList, BarChart3
 } from "lucide-react";
@@ -33,12 +33,6 @@ function formatPlanPrice(value: string | undefined, fallback: string) {
   const price = value?.trim() || fallback;
   return /(?:EGP|جنيه|£|\$|€)/i.test(price) ? price : `${price} EGP`;
 }
-
-const testimonials = [
-  { name: "د. هاني السيد", nameEn: "Dr. Hany El-Sayed", clinic: "عيادة السيد للأسرة، القاهرة", clinicEn: "El-Sayed Family Clinic, Cairo", text: { en: "ClinicSquad transformed how we manage our daily workflow. The appointment system alone saves us 2 hours a day.", ar: "كلينيك سكواد غيّر طريقة إدارتنا للعمل اليومي. نظام المواعيد وحده يوفر لنا ساعتين يومياً." } },
-  { name: "د. منى إبراهيم", nameEn: "Dr. Mona Ibrahim", clinic: "عيادة إبراهيم لصحة المرأة، الإسكندرية", clinicEn: "Ibrahim Women's Health, Alexandria", text: { en: "The financial tracking is exactly what I needed. I finally have clear visibility into my clinic's performance.", ar: "تتبع المالية هو بالضبط ما كنت أحتاجه. أصبح لدي أخيراً رؤية واضحة لأداء عيادتي." } },
-  { name: "د. طارق حسن", nameEn: "Dr. Tarek Hassan", clinic: "عيادة حسن لطب الأطفال، الجيزة", clinicEn: "Hassan Pediatric Clinic, Giza", text: { en: "Simple, fast, and reliable. My staff learned it in a day. Highly recommended for any Egyptian clinic.", ar: "بسيط وسريع وموثوق. تعلّم فريقي استخدامه في يوم واحد. أنصح به بشدة لأي عيادة مصرية." } },
-];
 
 export default function LandingPage() {
   const { theme, toggleTheme } = useTheme();
@@ -92,7 +86,6 @@ export default function LandingPage() {
             <a href="#features" className="hover:text-foreground transition-colors">{t("nav.features")}</a>
             <a href="#how-it-works" className="hover:text-foreground transition-colors">{t("nav.howItWorks")}</a>
             <a href="#pricing" className="hover:text-foreground transition-colors">{t("nav.pricing")}</a>
-            <a href="#testimonials" className="hover:text-foreground transition-colors">{t("nav.testimonials")}</a>
           </div>
           <div className="ms-auto flex items-center gap-1 sm:gap-2 min-w-0">
             <LanguageSwitcher />
@@ -141,9 +134,9 @@ export default function LandingPage() {
         {/* Stats */}
         <div className="mt-16 grid grid-cols-3 gap-8 max-w-lg mx-auto">
           {[
-            { value: "500+", key: "hero.stat.clinics" },
-            { value: "50K+", key: "hero.stat.patients" },
             { value: "15 " + (lang === "ar" ? "يوم" : "Days"), key: "hero.stat.trial" },
+            { value: "2", key: "hero.stat.plans" },
+            { value: "AR/عربي", key: "hero.stat.langs" },
           ].map(({ value, key }) => (
             <div key={key} className="text-center">
               <div className="text-3xl font-bold text-primary mb-1">{value}</div>
@@ -247,31 +240,6 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* Testimonials */}
-      <section id="testimonials" className="bg-card border-y border-border py-20">
-        <div className="max-w-6xl mx-auto px-6">
-          <div className="text-center mb-14">
-            <h2 className="text-3xl md:text-4xl font-serif font-bold mb-4">{t("test.title")}</h2>
-          </div>
-          <div className="grid md:grid-cols-3 gap-6">
-            {testimonials.map((item) => (
-              <div key={item.nameEn} className="p-6 rounded-xl border border-border bg-background">
-                <div className="flex gap-1 mb-4">
-                  {[1,2,3,4,5].map(i => (
-                    <Star key={i} className="w-4 h-4 fill-accent text-accent" />
-                  ))}
-                </div>
-                <p className="text-sm text-muted-foreground leading-relaxed mb-4">"{item.text[lang]}"</p>
-                <div>
-                  <p className="font-semibold text-sm">{lang === "ar" ? item.name : item.nameEn}</p>
-                  <p className="text-xs text-muted-foreground">{lang === "ar" ? item.clinic : item.clinicEn}</p>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
       {/* CTA */}
       <section className="py-24 max-w-6xl mx-auto px-6 text-center">
         <h2 className="text-4xl md:text-5xl font-serif font-bold mb-6">
@@ -287,7 +255,7 @@ export default function LandingPage() {
               <ArrowRight className="w-4 h-4 ms-2" />
             </Button>
           </Link>
-          <a href="https://wa.me/201000000000" target="_blank" rel="noopener noreferrer">
+          <a href="https://wa.me/201009360198" target="_blank" rel="noopener noreferrer">
             <Button size="lg" variant="outline" className="text-base px-10">
               <PhoneCall className="w-4 h-4 me-2" />
               {t("cta.btn2")}
