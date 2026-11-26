@@ -235,6 +235,21 @@ export default function PatientsPage() {
     },
   });
 
+  const phoneDigits = (form_phone: string) => form_phone.replace(/\D/g, "");
+  const typedPhone = phoneDigits(form.watch("phone") ?? "");
+  const dupParams = { search: typedPhone || undefined };
+  const { data: dupData } = useListPatients(clinicId, dupParams, {
+    query: {
+      enabled: !!clinicId && typedPhone.length >= 8,
+      queryKey: getListPatientsQueryKey(clinicId, dupParams),
+      staleTime: 5_000,
+    },
+  });
+  const duplicates = typedPhone.length >= 8
+    ? (dupData?.data ?? []).filter((p) => phoneDigits(p.phone).endsWith(typedPhone.slice(-10)) || typedPhone.endsWith(phoneDigits(p.phone).slice(-10)))
+    : [];
+
+
   const checkInForm = useForm<CheckInForm>({
     resolver: lzResolver(checkInSchema),
     defaultValues: { visitType: "New Consultation" },
@@ -801,6 +816,25 @@ export default function PatientsPage() {
                     <p className="text-xs text-destructive mt-1">
                       {form.formState.errors.phone.message}
                     </p>
+                  )}
+                  {duplicates.length > 0 && (
+                    <div
+                      className="mt-2 rounded-lg border border-amber-300 bg-amber-50 text-amber-900 px-3 py-2 text-xs"
+                      data-testid="duplicate-warning"
+                    >
+                      <p className="font-semibold">{t("patients.dupTitle")}</p>
+                      <ul className="mt-1 space-y-1">
+                        {duplicates.slice(0, 3).map((d) => (
+                          <li key={d.id} className="flex items-center justify-between gap-2">
+                            <span className="truncate">{d.name} · {d.code ?? ""}</span>
+                            <Link href={`/patients/${d.id}`} className="font-semibold underline shrink-0">
+                              {t("patients.dupOpen")}
+                            </Link>
+                          </li>
+                        ))}
+                      </ul>
+                      <p className="mt-1 opacity-80">{t("patients.dupHint")}</p>
+                    </div>
                   )}
                 </div>
                 <div>
