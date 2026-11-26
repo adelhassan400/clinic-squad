@@ -162,7 +162,8 @@ export default function LandingPage() {
       </section>
 
       {/* Product screens */}
-      <section id="screens" className="max-w-5xl mx-auto px-6 pb-20">
+      <section id="screens" className="bg-primary/5 border-t border-border py-20">
+      <div className="max-w-5xl mx-auto px-6">
         <div className="text-center mb-8">
           <h2 className="text-3xl md:text-4xl font-serif font-bold mb-3">{lang === "ar" ? "شوف النظام من جوّه" : "See it in action"}</h2>
           <p className="text-muted-foreground">
@@ -193,6 +194,7 @@ export default function LandingPage() {
             data-testid="screen-image"
           />
         </div>
+      </div>
       </section>
 
       {/* Features */}
@@ -290,7 +292,8 @@ export default function LandingPage() {
       </section>
 
       {/* CTA */}
-      <section className="py-24 max-w-6xl mx-auto px-6 text-center">
+      <section className="bg-primary/10 border-t border-primary/20">
+      <div className="py-24 max-w-6xl mx-auto px-6 text-center">
         <h2 className="text-4xl md:text-5xl font-serif font-bold mb-6">
           {t("cta.title")}
         </h2>
@@ -311,6 +314,7 @@ export default function LandingPage() {
             </Button>
           </a>
         </div>
+      </div>
       </section>
 
       {/* Footer */}
