@@ -63,7 +63,7 @@ const translations: Record<string, Record<Lang, string>> = {
   "how.step4.desc": { en: "Monitor clinic performance, revenue trends, and patient statistics from a beautiful analytics dashboard.", ar: "تابع أداء عيادتك واتجاهات الإيرادات وإحصائيات المرضى من لوحة تحليلات أنيقة." },
   // CTA Section
   "cta.title": { en: "Ready to Transform Your Clinic?", ar: "مستعد لتحويل عيادتك؟" },
-  "cta.subtitle": { en: "Join hundreds of Egyptian clinics already using ClinicSquad to streamline their operations.", ar: "انضم لمئات العيادات المصرية التي تستخدم كلينيك سكواد لتبسيط عملياتها." },
+  "cta.subtitle": { en: "Start your free trial today and run your clinic from one organized workspace.", ar: "ابدأ تجربتك المجانية اليوم وأدِر عيادتك من مساحة عمل واحدة منظمة." },
   "cta.btn1": { en: "Start Free Trial — 15 Days", ar: "ابدأ التجربة المجانية — 15 يوماً" },
   "cta.btn2": { en: "Contact via WhatsApp", ar: "تواصل عبر واتساب" },
   
@@ -1242,4 +1242,4 @@ export function useLang() {
   const context = useContext(LangContext);
   if (!context) throw new Error("useLang must be used within LangProvider");
   return context;
-                                   }
+    }
