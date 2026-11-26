@@ -13,6 +13,25 @@ export function isPreActivationClinicStatus(status: string | null | undefined): 
 // and doctors added to the team keep clinical access only.
 export const FINANCE_ROLES = ["admin", "superadmin"];
 
+// Roles that must not see medical details of a patient. "manager" is a non-physician clinic
+// owner: booking and demographic data only, no diagnosis, notes, allergies or prescriptions.
+export const MEDICAL_REDACTED_ROLES = ["assistant", "secretary", "nurse", "manager"];
+
+export function isMedicalRedactedRole(role: string | null | undefined): boolean {
+  return !!role && MEDICAL_REDACTED_ROLES.includes(role);
+}
+
+export function redactPatientForRole<T extends object>(patient: T, role: string | null | undefined): T {
+  if (!isMedicalRedactedRole(role)) return patient;
+  const out: Record<string, unknown> = { ...patient, diagnosis: null, clinicalNotes: null, chronicConditions: null };
+  if (role === "manager") {
+    out.allergies = null;
+    out.bloodType = null;
+    out.notes = null;
+  }
+  return out as T;
+}
+
 export function canAccessFinance(role: string | null | undefined): boolean {
   return !!role && FINANCE_ROLES.includes(role);
 }
