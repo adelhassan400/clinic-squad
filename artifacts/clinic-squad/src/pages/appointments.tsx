@@ -337,7 +337,7 @@ function DayCalendar({
 
   return (
     <div className="rounded-xl border border-border bg-card overflow-hidden">
-      <div className="flex items-center justify-between px-5 py-3.5 border-b border-border bg-muted/20">
+      <div className="flex flex-wrap items-center justify-between gap-2 px-3 sm:px-5 py-3.5 border-b border-border bg-muted/20">
         <div className="flex items-center gap-2">
           <Button
             variant="ghost"
@@ -351,7 +351,7 @@ function DayCalendar({
               <ChevronLeft className="w-4 h-4" />
             )}
           </Button>
-          <div className="text-center min-w-[200px]">
+          <div className="text-center min-w-[150px] sm:min-w-[200px]">
             <p className="text-sm font-semibold">
               {formatDayLabel(date, lang)}
             </p>
@@ -673,8 +673,8 @@ export default function AppointmentsPage() {
   return (
     <ProtectedRoute>
       <DashboardLayout>
-        <div className="p-6 max-w-6xl mx-auto">
-          <div className="flex items-center justify-between mb-6">
+        <div className="p-4 sm:p-6 max-w-6xl mx-auto">
+          <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
             <div>
               <h1 className="text-2xl font-bold">{t("appt.title")}</h1>
               <p className="text-sm text-muted-foreground mt-0.5">
@@ -682,7 +682,7 @@ export default function AppointmentsPage() {
               </p>
             </div>
             <div className="flex items-center gap-2">
-              <div className="flex items-center border border-border rounded-lg p-1 bg-muted/20 mr-2">
+              <div className="flex items-center border border-border rounded-lg p-1 bg-muted/20">
                 <Button
                   variant={view === "day" ? "secondary" : "ghost"}
                   size="sm"
@@ -704,7 +704,7 @@ export default function AppointmentsPage() {
                 onClick={() => setAddOpen(true)}
                 data-testid="button-add-appt"
               >
-                <Plus className="w-4 h-4 mr-2" />
+                <Plus className="w-4 h-4 me-2" />
                 {t("appt.new")}
               </Button>
             </div>
@@ -916,4 +916,4 @@ export default function AppointmentsPage() {
       </DashboardLayout>
     </ProtectedRoute>
   );
-                                 }
+}
