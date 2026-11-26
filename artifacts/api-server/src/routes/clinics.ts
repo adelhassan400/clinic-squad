@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { eq } from "drizzle-orm";
-import { db, clinicsTable, usersTable, subscriptionsTable, patientsTable, appointmentsTable, financesTable } from "@workspace/db";
+import { db, clinicsTable, usersTable, subscriptionsTable, patientsTable, appointmentsTable, financesTable, systemSettingsTable } from "@workspace/db";
 import { UpdateClinicBody } from "@workspace/api-zod";
 import { randomUUID } from "crypto";
 import { requireAuth, requireRole, requireActiveClinic, requireFinanceAccess } from "../middlewares/auth.js";
@@ -128,7 +128,15 @@ router.post("/:clinicId/subscription", async (req, res) => {
   const billingPeriod = body.billingPeriod === "annual" ? "annual" : "monthly";
   // Annual billing is always a 12-month commitment, regardless of client input.
   const durationMonths = billingPeriod === "annual" ? 12 : parseInt(body.durationMonths) || 1;
-  const amount = body.amount !== undefined ? parseFloat(body.amount) : (planType === "basic" ? 200 : 400) * durationMonths;
+  // When the client sends no amount, price it from Platform Settings (same source as the landing page).
+  let amount: number;
+  if (body.amount !== undefined) {
+    amount = parseFloat(body.amount);
+  } else {
+    const priceRow = (await db.select().from(systemSettingsTable).where(eq(systemSettingsTable.id, "global")).limit(1))[0];
+    const monthly = Number.parseFloat(planType === "basic" ? (priceRow?.basicMonthlyPrice ?? "400") : (priceRow?.premiumMonthlyPrice ?? "700"));
+    amount = (Number.isFinite(monthly) ? monthly : planType === "basic" ? 400 : 700) * durationMonths;
+  }
   const paymentProof = typeof body.paymentProof === "string" ? body.paymentProof : null;
   const transactionReference = typeof body.transactionReference === "string" ? body.transactionReference.trim() : null;
 

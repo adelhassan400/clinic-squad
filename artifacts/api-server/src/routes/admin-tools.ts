@@ -60,8 +60,8 @@ router.get("/public-pricing", async (_req, res) => {
     .limit(1))[0];
 
   return res.json({
-    basicMonthlyPrice: settings?.basicMonthlyPrice ?? "200",
-    premiumMonthlyPrice: settings?.premiumMonthlyPrice ?? "400",
+    basicMonthlyPrice: settings?.basicMonthlyPrice ?? "400",
+    premiumMonthlyPrice: settings?.premiumMonthlyPrice ?? "700",
     updatedAt: settings?.updatedAt?.toISOString() ?? null,
   });
 });

@@ -31,8 +31,8 @@ export default function SubscriptionPage() {
   const settingsQ = useQuery<{ basicMonthlyPrice: string; premiumMonthlyPrice: string; vodafoneCashNumber: string; instapayHandle: string; whatsappNumber: string }>({ queryKey: ["/api/platform/settings"], queryFn: () => customFetch("/api/platform/settings") });
   const promoQ = useQuery<Array<{ code: string; discountPercent: number; active: boolean; expiresAt: string | null }>>({ queryKey: ["/api/platform/promo-codes"], queryFn: () => customFetch("/api/platform/promo-codes") });
   const plans = useMemo(() => {
-    const basic = Number(settingsQ.data?.basicMonthlyPrice ?? 200);
-    const premium = Number(settingsQ.data?.premiumMonthlyPrice ?? 400);
+    const basic = Number(settingsQ.data?.basicMonthlyPrice ?? 400);
+    const premium = Number(settingsQ.data?.premiumMonthlyPrice ?? 700);
     return [
       { id: "basic" as const, name: t("pricing.basic.name"), monthlyPrice: basic, annualPrice: basic * 10, desc: t("sub.basicDesc"), features: [t("planfeat.max500"), t("planfeat.records"), t("planfeat.queue"), t("planfeat.scheduling"), t("planfeat.finances"), t("planfeat.staff2"), t("planfeat.stdSupport")] },
       { id: "premium" as const, name: t("pricing.premium.name"), monthlyPrice: premium, annualPrice: premium * 10, desc: t("sub.premiumDesc"), features: [t("planfeat.allBasic"), t("planfeat.insights"), t("planfeat.reports"), t("planfeat.staff10"), t("planfeat.prioritySupport"), t("planfeat.aiSoon")], highlighted: true },

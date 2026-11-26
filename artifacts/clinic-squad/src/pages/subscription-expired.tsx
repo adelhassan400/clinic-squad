@@ -1,3 +1,5 @@
+import { useQuery } from "@tanstack/react-query";
+import { customFetch } from "@workspace/api-client-react";
 import { useAuth } from "@/lib/auth";
 import { useTheme } from "@/lib/theme";
 import { Button } from "@/components/ui/button";
@@ -9,20 +11,32 @@ import { useLang } from "@/lib/lang";
 export default function SubscriptionExpiredPage() {
   const { clinic, logout } = useAuth();
   const { theme, toggleTheme } = useTheme();
-  const { t } = useLang();
+  const { t, lang } = useLang();
   const isDeactivated = clinic?.status === "deactivated";
+  // Plan prices come from Platform Settings, not from fixed translation text.
+  const pricingQ = useQuery<{ basicMonthlyPrice: string; premiumMonthlyPrice: string }>({
+    queryKey: ["/api/platform/public-pricing"],
+    queryFn: () => customFetch("/api/platform/public-pricing"),
+    staleTime: 60_000,
+  });
+  const showPrice = (value?: string) => {
+    if (pricingQ.isError) return lang === "ar" ? "تواصل معنا" : "Contact us";
+    const v = value?.trim();
+    if (!v) return "...";
+    return /(?:EGP|جنيه)/i.test(v) ? v : `${v} EGP`;
+  };
 
   const plans = [
     {
       id: "basic",
       name: t("pricing.basic.name"),
-      price: t("subx.priceBasic"),
+      price: showPrice(pricingQ.data?.basicMonthlyPrice),
       features: [t("planfeat.records"), t("planfeat.queue"), t("planfeat.scheduling"), t("planfeat.finances"), t("planfeat.staff2")],
     },
     {
       id: "premium",
       name: t("pricing.premium.name"),
-      price: t("subx.pricePremium"),
+      price: showPrice(pricingQ.data?.premiumMonthlyPrice),
       features: [t("planfeat.allBasic"), t("planfeat.insights"), t("planfeat.reports"), t("planfeat.staff10"), t("planfeat.prioritySupport")],
       highlighted: true,
     },
@@ -116,4 +130,4 @@ export default function SubscriptionExpiredPage() {
       </div>
     </div>
   );
-  }
+}
