@@ -129,6 +129,25 @@ export async function requireActiveClinic(
   next();
 }
 
+// Finance data: admin and superadmin, or the clinic's founding owner (authoritative owner_id).
+export async function requireFinanceAccess(req: Request, res: Response, next: NextFunction): Promise<void> {
+  const user = req.authUser;
+  if (!user) {
+    res.status(401).json({ error: "Unauthorized" });
+    return;
+  }
+  if (user.role === "superadmin" || user.role === "admin") {
+    next();
+    return;
+  }
+  const clinic = (await db.select({ ownerId: clinicsTable.ownerId }).from(clinicsTable).where(eq(clinicsTable.id, user.clinicId)).limit(1))[0];
+  if (clinic && clinic.ownerId === user.id) {
+    next();
+    return;
+  }
+  res.status(403).json({ error: "Forbidden" });
+}
+
 export function requireRole(...roles: string[]) {
   return (req: Request, res: Response, next: NextFunction): void => {
     if (!req.authUser) {
