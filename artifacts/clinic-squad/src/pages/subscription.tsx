@@ -128,7 +128,7 @@ export default function SubscriptionPage() {
             {t("sub.submittedPost")}
           </p>
           <a
-            href={`https://wa.me/201000000000?text=${encodeURIComponent(`Hi! I submitted a payment receipt for the ${selected === "premium" ? "Premium" : "Basic"} Plan (${effectiveDurationMonths} months) for clinic: ${clinic?.name ?? ""}. Transaction reference: ${transactionRef || "N/A"}. I will attach the receipt screenshot here.`)}`}
+            href={`https://wa.me/201009360198?text=${encodeURIComponent(`Hi! I submitted a payment receipt for the ${selected === "premium" ? "Premium" : "Basic"} Plan (${effectiveDurationMonths} months) for clinic: ${clinic?.name ?? ""}. Transaction reference: ${transactionRef || "N/A"}. I will attach the receipt screenshot here.`)}`}
             target="_blank"
             rel="noopener noreferrer"
           >
@@ -246,7 +246,7 @@ export default function SubscriptionPage() {
             <div className="bg-card border border-border rounded-xl p-6">
               <h3 className="font-semibold mb-2">{t("sub.payTitle")}</h3>
               <p className="text-sm text-muted-foreground mb-4">
-                {t("sub.payPre")} <strong>{settingsQ.data?.vodafoneCashNumber ?? "01000000000"}</strong> {t("sub.payMid")} <strong>{settingsQ.data?.instapayHandle ?? "clinicsquad@instapay"}</strong>. {t("sub.payPost")}
+                {t("sub.payPre")} <strong>{settingsQ.data?.vodafoneCashNumber ?? "01009360198"}</strong>. {t("sub.payPost")}
               </p>
               <div className="space-y-4">
                 <div>
@@ -317,7 +317,7 @@ export default function SubscriptionPage() {
                 {t("sub.submitFor")} {selected === "premium" ? t("plan.premium") : t("plan.basic")}
               </Button>
               <a
-                href={`https://wa.me/${settingsQ.data?.whatsappNumber ?? "201000000000"}?text=Hi!%20I%20have%20paid%20${finalAmount}%20EGP%20for%20the%20${selected === "premium" ? "Premium" : "Basic"}%20Plan%20(${durationMonths}%20months)%20for%20clinic:%20${encodeURIComponent(clinic?.name ?? "")}.%20Ref:%20${encodeURIComponent(transactionRef || "N/A")}`}
+                href={`https://wa.me/${settingsQ.data?.whatsappNumber ?? "201009360198"}?text=Hi!%20I%20have%20paid%20${finalAmount}%20EGP%20for%20the%20${selected === "premium" ? "Premium" : "Basic"}%20Plan%20(${durationMonths}%20months)%20for%20clinic:%20${encodeURIComponent(clinic?.name ?? "")}.%20Ref:%20${encodeURIComponent(transactionRef || "N/A")}`}
                 target="_blank"
                 rel="noopener noreferrer"
               >
@@ -332,4 +332,4 @@ export default function SubscriptionPage() {
       </div>
     </DashboardLayout>
   );
-      }
+}
