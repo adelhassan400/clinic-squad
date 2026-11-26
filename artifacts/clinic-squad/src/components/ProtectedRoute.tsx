@@ -80,7 +80,9 @@ export function ProtectedRoute({ children, requireRole }: Props) {
       : [requireRole]
     : null;
 
-  if (allowedRoles && (!user?.role || !allowedRoles.includes(user.role as Role))) {
+  const financeOnlyPage = location.startsWith("/finances") || location.startsWith("/insights");
+  const canFinance = isSuperAdmin || user?.role === "admin" || (!!user && clinic?.ownerId === user.id);
+  if ((allowedRoles && (!user?.role || !allowedRoles.includes(user.role as Role))) || (financeOnlyPage && !canFinance)) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="text-center">
