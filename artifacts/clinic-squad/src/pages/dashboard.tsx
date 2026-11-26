@@ -104,7 +104,7 @@ function AppointmentStatusBadge({ status }: { status: string }) {
 export default function DashboardPage() {
   const { format: formatCurrency } = useCurrency();
   const { clinic, user } = useAuth();
-  const canSeeFinance = user?.role === "admin" || user?.role === "doctor" || user?.role === "superadmin";
+  const canSeeFinance = user?.role === "admin" || user?.role === "superadmin" || (!!user && clinic?.ownerId === user.id);
   const { t, lang } = useLang();
   const clinicId = clinic?.id ?? "";
   const { toast } = useToast();
