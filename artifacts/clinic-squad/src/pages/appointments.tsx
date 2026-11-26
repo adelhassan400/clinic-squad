@@ -289,6 +289,7 @@ interface DayCalendarProps {
   onPrevDay: () => void;
   onNextDay: () => void;
   onToday: () => void;
+  onPickDate: (d: string) => void;
   onClickSlot: (time: string) => void;
   onComplete: (id: string) => void;
   onCancel: (id: string) => void;
@@ -304,6 +305,7 @@ function DayCalendar({
   onPrevDay,
   onNextDay,
   onToday,
+  onPickDate,
   onClickSlot,
   onComplete,
   onCancel,
@@ -391,6 +393,14 @@ function DayCalendar({
                 {t("appt.today")}
               </p>
             )}
+            <input
+              type="date"
+              value={date}
+              onChange={(e) => e.target.value && onPickDate(e.target.value)}
+              aria-label={t("appt.pickDate")}
+              data-testid="input-pick-date"
+              className="mt-1 h-7 rounded-md border border-border bg-background px-2 text-xs text-muted-foreground"
+            />
           </div>
           <Button
             variant="ghost"
@@ -603,14 +613,15 @@ export default function AppointmentsPage() {
   );
   const [addOpen, setAddOpen] = useState(false);
   const [checkingInId, setCheckingInId] = useState<string | null>(null);
+  const [listSearch, setListSearch] = useState("");
 
   const { data: appointments, isLoading } = useListAppointments(
     clinicId,
-    {},
+    { limit: 1000 } as Parameters<typeof useListAppointments>[1],
     {
       query: {
         enabled: !!clinicId,
-        queryKey: getListAppointmentsQueryKey(clinicId, {}),
+        queryKey: getListAppointmentsQueryKey(clinicId, { limit: 1000 } as Parameters<typeof useListAppointments>[1]),
         refetchInterval: 15000,
       },
     },
@@ -709,6 +720,16 @@ export default function AppointmentsPage() {
     );
   };
 
+  const listedAppts = (appointments?.data ?? []).filter((a) => {
+    const q = listSearch.trim().toLowerCase();
+    if (!q) return true;
+    return (
+      a.patientName.toLowerCase().includes(q) ||
+      a.date.includes(q) ||
+      (patientPhones.get(a.patientId) ?? "").includes(q)
+    );
+  });
+
   const dayAppts =
     appointments?.data.filter((a) => a.date.split("T")[0] === currentDate) ??
     [];
@@ -759,6 +780,7 @@ export default function AppointmentsPage() {
               date={currentDate}
               onPrevDay={() => setCurrentDate((d) => addDays(d, -1))}
               onNextDay={() => setCurrentDate((d) => addDays(d, 1))}
+              onPickDate={(d) => setCurrentDate(d)}
               onToday={() =>
                 setCurrentDate(new Date().toISOString().split("T")[0])
               }
@@ -776,6 +798,16 @@ export default function AppointmentsPage() {
             />
           ) : (
             <div className="rounded-xl border border-border bg-card overflow-hidden">
+              <div className="p-3 border-b border-border bg-muted/20">
+                <input
+                  type="search"
+                  value={listSearch}
+                  onChange={(e) => setListSearch(e.target.value)}
+                  placeholder={t("appt.searchListPh")}
+                  data-testid="input-appt-search"
+                  className="w-full sm:max-w-sm h-9 rounded-lg border border-border bg-background px-3 text-base md:text-sm"
+                />
+              </div>
               <div className="overflow-x-auto">
                 <div className="min-w-[900px]">
                   <div className="grid grid-cols-[120px_80px_minmax(220px,1fr)_140px_auto_140px] gap-4 px-6 py-3 border-b border-border bg-muted/30 text-xs font-medium text-muted-foreground uppercase tracking-wider">
@@ -792,12 +824,12 @@ export default function AppointmentsPage() {
                         <Skeleton className="h-5 w-full" />
                       </div>
                     ))
-                  ) : !appointments?.data.length ? (
+                  ) : !listedAppts.length ? (
                     <div className="text-center py-14 text-muted-foreground">
                       <p className="font-medium text-sm">{t("appt.noAppts")}</p>
                     </div>
                   ) : (
-                    appointments.data.map((appt) => (
+                    listedAppts.map((appt) => (
                       <div
                         key={appt.id}
                         data-testid={`appt-row-${appt.id}`}
