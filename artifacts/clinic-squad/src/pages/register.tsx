@@ -108,7 +108,7 @@ export default function RegisterPage() {
             ))}
           </div>
         </div>
-        <p className="text-xs text-sidebar-foreground/40">{t("auth.register.hero.trusted") || "Trusted by 500+ Egyptian clinics"}</p>
+        <p className="text-xs text-sidebar-foreground/40">{t("auth.register.hero.trusted") || "Made for Egyptian clinics"}</p>
       </div>
 
       <div className="flex-1 flex items-center justify-center p-8">

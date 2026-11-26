@@ -102,7 +102,7 @@ export default function SubscriptionExpiredPage() {
           <div className="p-5 rounded-xl border border-border bg-card text-center">
             <p className="text-sm text-muted-foreground mb-3">{t("subx.helpChoose")}</p>
             <a
-              href="https://wa.me/201000000000?text=I%20need%20help%20with%20my%20ClinicSquad%20subscription"
+              href="https://wa.me/201009360198?text=I%20need%20help%20with%20my%20ClinicSquad%20subscription"
               target="_blank"
               rel="noopener noreferrer"
             >
@@ -116,4 +116,4 @@ export default function SubscriptionExpiredPage() {
       </div>
     </div>
   );
-                                                                                                                 }
+  }

@@ -14,7 +14,6 @@ const translations: Record<string, Record<Lang, string>> = {
   "nav.features": { en: "Features", ar: "المميزات" },
   "nav.howItWorks": { en: "How It Works", ar: "كيف تعمل" },
   "nav.pricing": { en: "Pricing", ar: "الأسعار" },
-  "nav.testimonials": { en: "Testimonials", ar: "آراء العملاء" },
   "nav.signIn": { en: "Sign In", ar: "تسجيل الدخول" },
   "nav.startTrial": { en: "Start Free Trial", ar: "ابدأ التجربة المجانية" },
   // Hero
@@ -24,8 +23,8 @@ const translations: Record<string, Record<Lang, string>> = {
   "hero.subtitle": { en: "ClinicSquad gives Egyptian doctors and clinic owners a complete management platform — patients, appointments, finances, and staff — in one powerful workspace.", ar: "كلينيك سكواد يمنح الأطباء المصريين وأصحاب العيادات منصة إدارة متكاملة — المرضى والمواعيد والمالية والموظفين — في مكان عمل واحد قوي." },
   "hero.cta1": { en: "Start Your Free Trial", ar: "ابدأ تجربتك المجانية" },
   "hero.cta2": { en: "Sign In to Dashboard", ar: "تسجيل الدخول للوحة التحكم" },
-  "hero.stat.clinics": { en: "Clinics", ar: "عيادة" },
-  "hero.stat.patients": { en: "Patients", ar: "مريض" },
+  "hero.stat.plans": { en: "Plans", ar: "باقات" },
+  "hero.stat.langs": { en: "Interface languages", ar: "لغات الواجهة" },
   "hero.stat.trial": { en: "Free Trial", ar: "تجربة مجانية" },
   // Features
   "feat.title": { en: "Everything Your Clinic Needs", ar: "كل ما تحتاجه عيادتك" },
@@ -62,10 +61,9 @@ const translations: Record<string, Record<Lang, string>> = {
   "how.step3.desc": { en: "Start adding patient records and booking appointments. The system handles the waitlist, visit history, and billing automatically.", ar: "ابدأ بإضافة سجلات المرضى وحجز المواعيد. النظام يتولى قائمة الانتظار وسجل الزيارات والفواتير تلقائياً." },
   "how.step4.title": { en: "Track & Grow", ar: "تابع وانمُ" },
   "how.step4.desc": { en: "Monitor clinic performance, revenue trends, and patient statistics from a beautiful analytics dashboard.", ar: "تابع أداء عيادتك واتجاهات الإيرادات وإحصائيات المرضى من لوحة تحليلات أنيقة." },
-  "test.title": { en: "Trusted by Egyptian Doctors", ar: "موثوق به من الأطباء المصريين" },
   // CTA Section
   "cta.title": { en: "Ready to Transform Your Clinic?", ar: "مستعد لتحويل عيادتك؟" },
-  "cta.subtitle": { en: "Join hundreds of Egyptian clinics already using ClinicSquad to streamline their operations.", ar: "انضم لمئات العيادات المصرية التي تستخدم كلينيك سكواد لتبسيط عملياتها." },
+  "cta.subtitle": { en: "Start your free trial today and run your clinic from one organized workspace.", ar: "ابدأ تجربتك المجانية اليوم وأدِر عيادتك من مساحة عمل واحدة منظمة." },
   "cta.btn1": { en: "Start Free Trial — 15 Days", ar: "ابدأ التجربة المجانية — 15 يوماً" },
   "cta.btn2": { en: "Contact via WhatsApp", ar: "تواصل عبر واتساب" },
   
@@ -85,7 +83,7 @@ const translations: Record<string, Record<Lang, string>> = {
   "auth.login.hero.feat3": { en: "Financial tracking", ar: "تتبع المالية" },
 
   "auth.register.title": { en: "Start your free trial", ar: "ابدأ تجربتك المجانية" },
-  "auth.register.subtitle": { en: "Join 500+ clinics using ClinicSquad to grow.", ar: "انضم لأكثر من 500 عيادة تستخدم كلينيك سكواد للنمو." },
+  "auth.register.subtitle": { en: "Start your free trial and manage your clinic from one place.", ar: "ابدأ تجربتك المجانية وأدِر عيادتك من مكان واحد." },
   "auth.register.name": { en: "Clinic Name", ar: "اسم العيادة" },
   "auth.register.owner": { en: "Doctor Name", ar: "اسم الطبيب" },
   "auth.register.email": { en: "Work Email", ar: "بريد العمل" },
@@ -98,7 +96,7 @@ const translations: Record<string, Record<Lang, string>> = {
   "auth.register.hero.feat1": { en: "Full access during trial", ar: "وصول كامل خلال فترة التجربة" },
   "auth.register.hero.feat2": { en: "Both Basic and Premium features", ar: "كل المميزات الأساسية والمتقدمة" },
   "auth.register.hero.feat3": { en: "Cancel anytime — no credit card", ar: "إلغاء في أي وقت — بدون بطاقة ائتمانية" },
-  "auth.register.hero.trusted": { en: "Trusted by 500+ Egyptian clinics", ar: "موثوق به من أكثر من 500 عيادة مصرية" },
+  "auth.register.hero.trusted": { en: "Made for Egyptian clinics", ar: "مصمم للعيادات المصرية" },
   "auth.register.specialty": { en: "Medical Specialty", ar: "التخصص الطبي" },
   "auth.register.whatsapp": { en: "WhatsApp Number", ar: "رقم الواتساب" },
   "auth.register.terms": { en: "By requesting a trial, you agree to our Terms of Service and Privacy Policy.", ar: "بطلبك للتجربة، فإنك توافق على شروط الخدمة وسياسة الخصوصية الخاصة بنا." },
@@ -1066,7 +1064,6 @@ const translations: Record<string, Record<Lang, string>> = {
   "sub.promoApplied": { en: "promo discount applied", ar: "خصم برومو مطبق" },
   "sub.payTitle": { en: "Payment Instructions & Proof", ar: "تعليمات الدفع والإثبات" },
   "sub.payPre": { en: "Transfer the exact amount to Vodafone Cash:", ar: "حوّل المبلغ بالضبط إلى فودافون كاش:" },
-  "sub.payMid": { en: "or InstaPay handle:", ar: "أو عنوان إنستاباي:" },
   "sub.payPost": { en: "Then enter your transaction reference and attach your payment receipt screenshot below.", ar: "ثم أدخل مرجع التحويل وأرفق لقطة إيصال الدفع بالأسفل." },
   "sub.promoLabel": { en: "Promo Code (optional)", ar: "كود الخصم (اختياري)" },
   "sub.promoNotFound": { en: "Promo code not found or expired.", ar: "كود الخصم غير موجود أو منتهي." },
@@ -1245,4 +1242,4 @@ export function useLang() {
   const context = useContext(LangContext);
   if (!context) throw new Error("useLang must be used within LangProvider");
   return context;
-  }
+    }
