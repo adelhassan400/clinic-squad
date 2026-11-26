@@ -54,9 +54,24 @@ router.get("/:clinicId", async (req, res) => {
   return res.json(serializeClinic(clinic));
 });
 
-// Clinic identity and subscription requests are admin-only (superadmin keeps platform access).
-router.patch("/:clinicId", requireRole("admin", "superadmin"));
-router.post("/:clinicId/subscription", requireRole("admin", "superadmin"));
+// Clinic identity and subscription requests: clinic admins, the clinic's founding owner
+// (clinics.owner_id, the authoritative ownership record), and superadmin. Other doctors
+// added to the team keep clinical access only.
+async function requireClinicManager(req: Request, res: Response, next: NextFunction) {
+  const user = req.authUser!;
+  if (user.role === "superadmin") return next();
+  const clinicId = String(req.params.clinicId ?? "");
+  if (user.clinicId !== clinicId) {
+    res.status(403).json({ error: "Forbidden" });
+    return;
+  }
+  if (user.role === "admin") return next();
+  const clinic = (await db.select({ ownerId: clinicsTable.ownerId }).from(clinicsTable).where(eq(clinicsTable.id, clinicId)).limit(1))[0];
+  if (clinic && clinic.ownerId === user.id) return next();
+  res.status(403).json({ error: "Forbidden" });
+}
+router.patch("/:clinicId", requireClinicManager);
+router.post("/:clinicId/subscription", requireClinicManager);
 
 router.patch("/:clinicId", async (req, res) => {
   const { clinicId } = req.params;
