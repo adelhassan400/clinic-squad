@@ -65,7 +65,7 @@ router.get("/members", async (req, res) => {
     .where(eq(invitationsTable.clinicId, clinicId));
 
   const members = users
-    .filter((u) => u.role !== "superadmin")
+    .filter((u) => u.role !== "superadmin" && !u.isBlocked)
     .map((u) => ({
       id: u.id,
       email: u.email,
@@ -100,9 +100,31 @@ router.delete("/members/:userId", requireTeamManager, async (req, res) => {
   if (clinic.ownerId === userId) {
     return res.status(403).json({ error: "Cannot remove the clinic owner" });
   }
+  if (req.authUser!.id === userId) {
+    return res.status(403).json({ error: "You cannot remove yourself" });
+  }
 
+  const target = (
+    await db
+      .select()
+      .from(usersTable)
+      .where(and(eq(usersTable.id, userId), eq(usersTable.clinicId, clinicId)))
+      .limit(1)
+  )[0];
+  if (!target || target.role === "superadmin") {
+    return res.status(404).json({ error: "Member not found" });
+  }
+  // Only the founding owner or a superadmin may remove an admin member.
+  const actor = req.authUser!;
+  if (target.role === "admin" && actor.role !== "superadmin" && clinic.ownerId !== actor.id) {
+    return res.status(403).json({ error: "Only the clinic owner can remove an admin" });
+  }
+
+  // Deactivate instead of deleting: access and existing sessions end immediately (every request re-checks is_blocked),
+  // while prescriptions, patient assignments and cash records that point at this user keep their history.
   await db
-    .delete(usersTable)
+    .update(usersTable)
+    .set({ isBlocked: true })
     .where(and(eq(usersTable.id, userId), eq(usersTable.clinicId, clinicId)));
   return res.status(204).send();
 });
@@ -151,7 +173,7 @@ router.post("/invitations", requireTeamManager, async (req, res) => {
     .select()
     .from(invitationsTable)
     .where(eq(invitationsTable.clinicId, String(clinicId)));
-  const nonAdmin = users.filter((u) => u.role !== "admin" && u.role !== "superadmin").length;
+  const nonAdmin = users.filter((u) => u.role !== "admin" && u.role !== "superadmin" && !u.isBlocked).length;
   const pending = invites.filter((i) => isPending(i.status, i.expiresAt)).length;
   const limit = getMemberLimit(clinic.subscriptionStatus);
 
