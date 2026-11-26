@@ -12,3 +12,5 @@ export * from "./password-reset-tokens.js";
 export * from "./email-verification-tokens.js";
 export * from "./auth-events.js";
 export * from "./admin-tools.js";
+export * from "./visit-records.js";
+export * from "./prescription-templates.js";
