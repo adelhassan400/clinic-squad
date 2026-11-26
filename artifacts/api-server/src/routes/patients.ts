@@ -3,6 +3,7 @@ import { z } from "zod";
 import { CreatePatientBody, PatchPatientBody } from "@workspace/api-zod";
 import { requireClinicAccess, requireRole } from "../middlewares/auth.js";
 import { PatientService } from "../services/patient.service.js";
+import { isMedicalRedactedRole, redactPatientForRole } from "../lib/access-policy.js";
 
 const router = Router({ mergeParams: true });
 router.use(requireClinicAccess);
@@ -18,16 +19,8 @@ router.get("/", async (req: any, res) => {
     };
 
     const result = await PatientService.listPatients(clinicId, filters);
-    const isAssistant = ["assistant", "secretary", "nurse"].includes(
-      req.authUser?.role,
-    );
-    if (isAssistant) {
-      result.data = result.data.map((patient: any) => ({
-        ...patient,
-        diagnosis: null,
-        clinicalNotes: null,
-        chronicConditions: null,
-      }));
+    if (isMedicalRedactedRole(req.authUser?.role)) {
+      result.data = result.data.map((patient: any) => redactPatientForRole(patient, req.authUser?.role));
     }
     return res.json(result);
   } catch (error: any) {
@@ -47,13 +40,8 @@ router.get("/queue", async (req: any, res) => {
       req.params.clinicId,
       doctorId,
     );
-    if (["assistant", "secretary", "nurse"].includes(req.authUser.role)) {
-      result.data = result.data.map((p: any) => ({
-        ...p,
-        diagnosis: null,
-        clinicalNotes: null,
-        chronicConditions: null,
-      }));
+    if (isMedicalRedactedRole(req.authUser.role)) {
+      result.data = result.data.map((p: any) => redactPatientForRole(p, req.authUser.role));
     }
     return res.json(result);
   } catch (error: any) {
@@ -74,7 +62,7 @@ router.post("/", async (req: any, res) => {
 
   try {
     const patient = await PatientService.createPatient(clinicId, parsed.data);
-    return res.status(201).json(patient);
+    return res.status(201).json(redactPatientForRole(patient, req.authUser?.role));
   } catch (error: any) {
     return res.status(500).json({ error: error.message });
   }
@@ -132,10 +120,7 @@ router.post("/register-and-queue", async (req: any, res) => {
           : {}),
       },
     );
-    const isAssistant = ["assistant", "secretary", "nurse"].includes(req.authUser?.role);
-    return res.status(201).json(isAssistant
-      ? { ...patient, diagnosis: null, clinicalNotes: null, chronicConditions: null }
-      : patient);
+    return res.status(201).json(redactPatientForRole(patient, req.authUser?.role));
   } catch (error: any) {
     if (
       error.message ===
@@ -188,19 +173,7 @@ router.get("/:patientId", async (req: any, res) => {
   try {
     const { clinicId, patientId } = req.params;
     const patient = await PatientService.getPatient(clinicId, patientId);
-    const isAssistant = ["assistant", "secretary", "nurse"].includes(
-      req.authUser?.role,
-    );
-    return res.json(
-      isAssistant
-        ? {
-            ...patient,
-            diagnosis: null,
-            clinicalNotes: null,
-            chronicConditions: null,
-          }
-        : patient,
-    );
+    return res.json(redactPatientForRole(patient, req.authUser?.role));
   } catch (error: any) {
     if (error.message === "Patient not found") {
       return res.status(404).json({ error: error.message });
@@ -248,9 +221,7 @@ router.patch("/:patientId", async (req: any, res) => {
     });
   }
 
-  const isAssistant = ["assistant", "secretary", "nurse"].includes(
-    req.authUser?.role,
-  );
+  const isAssistant = isMedicalRedactedRole(req.authUser?.role);
   if (parsed.data.status === "paid" && !parsed.data.paymentMethod) {
     return res
       .status(400)
@@ -277,7 +248,7 @@ router.patch("/:patientId", async (req: any, res) => {
       parsed.data,
       req.authUser,
     );
-    return res.json(patient);
+    return res.json(redactPatientForRole(patient, req.authUser?.role));
   } catch (error: any) {
     if (error.message === "Patient not found") {
       return res.status(404).json({ error: error.message });
@@ -294,6 +265,9 @@ router.patch("/:patientId", async (req: any, res) => {
 });
 
 router.delete("/:patientId", async (req: any, res) => {
+  if (req.authUser?.role === "manager") {
+    return res.status(403).json({ error: "Forbidden" });
+  }
   try {
     const { clinicId, patientId } = req.params;
     await PatientService.deletePatient(clinicId, patientId);
