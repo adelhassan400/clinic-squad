@@ -16,7 +16,7 @@ import { useLang } from "@/lib/lang";
 const schema = z.object({
   clinicName: z.string().min(2, "Clinic name must be at least 2 characters"),
   ownerName: z.string().min(2, "Name must be at least 2 characters"),
-  specialty: z.string().min(2, "Please enter your medical specialty"),
+  specialty: z.string(),
   whatsappNumber: z
     .string()
     .min(6, "Enter a valid WhatsApp number")
@@ -32,8 +32,9 @@ export default function RegisterPage() {
   const [, setLocation] = useLocation();
   const { t } = useLang();
   const [showPw, setShowPw] = useState(false);
+  const [practices, setPractices] = useState(true);
 
-  const { register, handleSubmit, formState: { errors } } = useForm<FormData>({
+  const { register, handleSubmit, setError, formState: { errors } } = useForm<FormData>({
     resolver: lzResolver(schema),
     defaultValues: { clinicName: "", ownerName: "", specialty: "", whatsappNumber: "", email: "", password: "" },
   });
@@ -41,7 +42,12 @@ export default function RegisterPage() {
   const registerMutation = useRegisterUser();
 
   const onSubmit = (data: FormData) => {
-    registerMutation.mutate({ data }, {
+    if (practices && data.specialty.trim().length < 2) {
+      setError("specialty", { message: "Please enter your medical specialty" });
+      return;
+    }
+    const payload = { ...data, specialty: practices ? data.specialty : undefined, practicesAsDoctor: practices };
+    registerMutation.mutate({ data: payload as never }, {
       onSuccess: (response) => {
         if (response.user && response.clinic && response.token) {
           login(response.user as AuthUser, response.clinic as AuthClinic, response.token);
@@ -148,6 +154,21 @@ export default function RegisterPage() {
             </div>
 
             <div>
+              <Label>{t("x.regPracticeLabel")}</Label>
+              <div className="mt-1.5 space-y-2 text-sm">
+                <label className="flex items-center gap-2">
+                  <input type="radio" name="practices" checked={practices} onChange={() => setPractices(true)} data-testid="radio-practices-yes" />
+                  {t("x.regPracticeYes")}
+                </label>
+                <label className="flex items-center gap-2">
+                  <input type="radio" name="practices" checked={!practices} onChange={() => setPractices(false)} data-testid="radio-practices-no" />
+                  {t("x.regPracticeNo")}
+                </label>
+              </div>
+            </div>
+
+            {practices && (
+            <div>
               <Label htmlFor="specialty">{t("auth.register.specialty") || "Medical Specialty"}</Label>
               <Input
                 id="specialty"
@@ -158,6 +179,7 @@ export default function RegisterPage() {
               />
               {errors.specialty && <p className="text-xs text-destructive mt-1">{errors.specialty.message}</p>}
             </div>
+            )}
 
             <div>
               <Label htmlFor="whatsappNumber">{t("auth.register.whatsapp") || "WhatsApp Number"}</Label>
