@@ -18,9 +18,9 @@ test("active, blocked, deactivated and missing statuses are not pre-activation",
   }
 });
 
-test("only admin, doctor and superadmin can access finance", () => {
-  assert.deepEqual([...FINANCE_ROLES].sort(), ["admin", "doctor", "superadmin"]);
-  for (const r of ["nurse", "assistant", "secretary", "", undefined, null]) {
+test("only admin and superadmin roles can access finance (founding owner is allowed by ownership, not role)", () => {
+  assert.deepEqual([...FINANCE_ROLES].sort(), ["admin", "superadmin"]);
+  for (const r of ["doctor", "nurse", "assistant", "secretary", "", undefined, null]) {
     assert.equal(canAccessFinance(r), false);
   }
 });
@@ -28,8 +28,7 @@ test("only admin, doctor and superadmin can access finance", () => {
 test("dashboard keeps finance figures for finance roles and zeroes them otherwise", () => {
   const s = { totalPatients: 6, monthlyRevenue: 1200, monthlyExpenses: 300 };
   assert.deepEqual(dashboardForRole(s, "admin"), s);
-  assert.deepEqual(dashboardForRole(s, "doctor"), s);
-  for (const r of ["secretary", "nurse", "assistant"]) {
+  for (const r of ["doctor", "secretary", "nurse", "assistant"]) {
     assert.deepEqual(dashboardForRole(s, r), { totalPatients: 6, monthlyRevenue: 0, monthlyExpenses: 0 });
   }
   assert.equal(s.monthlyRevenue, 1200);
