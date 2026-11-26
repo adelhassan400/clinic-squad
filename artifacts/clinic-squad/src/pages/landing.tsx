@@ -29,8 +29,13 @@ interface PublicPricing {
   updatedAt: string | null;
 }
 
-function formatPlanPrice(value: string | undefined, fallback: string) {
-  const price = value?.trim() || fallback;
+// Prices always come from Platform Settings (/api/platform/public-pricing). There is no
+// hard-coded number here, so a stale price can never show: while loading we show "...",
+// and if the request fails we show "Contact us" instead of guessing.
+function formatPlanPrice(value: string | undefined, state: "loading" | "error" | "ok", lang: string) {
+  if (state === "loading") return "...";
+  const price = value?.trim();
+  if (state === "error" || !price) return lang === "ar" ? "تواصل معنا" : "Contact us";
   return /(?:EGP|جنيه|£|\$|€)/i.test(price) ? price : `${price} EGP`;
 }
 
@@ -42,6 +47,8 @@ export default function LandingPage() {
     queryFn: () => customFetch<PublicPricing>("/api/platform/public-pricing"),
     staleTime: 60_000,
   });
+
+  const priceState: "loading" | "error" | "ok" = pricingQ.isError ? "error" : pricingQ.data ? "ok" : "loading";
 
   const features = [
     { icon: Users, titleKey: "feat.patients.title", descKey: "feat.patients.desc" },
@@ -55,7 +62,7 @@ export default function LandingPage() {
   const plans = [
     {
       nameKey: "pricing.basic.name",
-      price: formatPlanPrice(pricingQ.data?.basicMonthlyPrice, "200"),
+      price: formatPlanPrice(pricingQ.data?.basicMonthlyPrice, priceState, lang),
       period: lang === "ar" ? "/شهر" : "/month",
       descKey: "pricing.basic.desc",
       features: planFeatures.basic[lang],
@@ -63,7 +70,7 @@ export default function LandingPage() {
     },
     {
       nameKey: "pricing.premium.name",
-      price: formatPlanPrice(pricingQ.data?.premiumMonthlyPrice, "400"),
+      price: formatPlanPrice(pricingQ.data?.premiumMonthlyPrice, priceState, lang),
       period: lang === "ar" ? "/شهر" : "/month",
       descKey: "pricing.premium.desc",
       features: planFeatures.premium[lang],
