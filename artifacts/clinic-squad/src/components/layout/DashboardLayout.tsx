@@ -269,7 +269,7 @@ export function DashboardLayout({ children }: Props) {
           </div>
         )}
         {/* Top bar */}
-        <header className="h-14 flex items-center gap-3 px-4 border-b border-border bg-card">
+        <header className="h-14 flex items-center gap-2 sm:gap-3 px-3 sm:px-4 border-b border-border bg-card">
           <Button
             variant="ghost"
             size="icon"
@@ -282,7 +282,7 @@ export function DashboardLayout({ children }: Props) {
           {/* Global patient search — clinic users only */}
           {!isSuperAdmin && <GlobalSearch />}
 
-          <div className="flex-1" />
+          <div className="hidden sm:block flex-1" />
 
           {/* Language switcher always visible in top bar */}
           <LanguageSwitcher />
@@ -301,16 +301,18 @@ export function DashboardLayout({ children }: Props) {
           {!isSuperAdmin && clinic?.subscriptionStatus === "trial" && (
             <Link href="/subscription">
               <Button size="sm" variant="outline" className="text-xs border-primary/30 text-primary hover:bg-primary/10">
-                <Crown className="w-3 h-3 me-1.5" />
-                {t("common.upgradePlan")}
+                <Crown className="w-3.5 h-3.5 sm:w-3 sm:h-3 sm:me-1.5" />
+                <span className="hidden sm:inline">{t("common.upgradePlan")}</span>
+                <span className="sr-only sm:hidden">{t("common.upgradePlan")}</span>
               </Button>
             </Link>
           )}
           {!isSuperAdmin && clinic?.subscriptionStatus === "expired" && (
             <Link href="/subscription/expired">
               <Button size="sm" variant="destructive" className="text-xs">
-                <AlertTriangle className="w-3 h-3 me-1.5" />
-                {t("common.subExpired")}
+                <AlertTriangle className="w-3 h-3 sm:me-1.5" />
+                <span className="hidden sm:inline">{t("common.subExpired")}</span>
+                <span className="sr-only sm:hidden">{t("common.subExpired")}</span>
               </Button>
             </Link>
           )}
@@ -329,4 +331,4 @@ export function DashboardLayout({ children }: Props) {
       </div>
     </div>
   );
-      }
+}
