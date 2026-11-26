@@ -76,7 +76,7 @@ export default function TeamPage() {
     });
 
   if (!user || !clinic) return <Redirect to="/login" />;
-  if (user.role !== "admin" && user.role !== "doctor") {
+  if (user.role !== "admin" && !(user.role === "doctor" && clinic.ownerId === user.id)) {
     return <Redirect to="/admin" />;
   }
 
