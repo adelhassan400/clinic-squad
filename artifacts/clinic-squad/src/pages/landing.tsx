@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -11,6 +12,12 @@ import {
   ArrowRight, Sun, Moon, Zap, Lock, Globe, PhoneCall,
   UserPlus, Settings as SettingsIcon, ClipboardList, BarChart3
 } from "lucide-react";
+
+const screens = [
+  { id: "dashboard", en: "Dashboard", ar: "لوحة التحكم" },
+  { id: "queue", en: "Waiting list", ar: "قائمة الانتظار" },
+  { id: "patient", en: "Patient file", ar: "ملف المريض" },
+] as const;
 
 const planFeatures = {
   basic: {
@@ -42,6 +49,7 @@ function formatPlanPrice(value: string | undefined, state: "loading" | "error" |
 export default function LandingPage() {
   const { theme, toggleTheme } = useTheme();
   const { t, lang } = useLang();
+  const [screen, setScreen] = useState<(typeof screens)[number]["id"]>("dashboard");
   const pricingQ = useQuery<PublicPricing>({
     queryKey: ["/api/platform/public-pricing"],
     queryFn: () => customFetch<PublicPricing>("/api/platform/public-pricing"),
@@ -153,6 +161,42 @@ export default function LandingPage() {
         </div>
       </section>
 
+      {/* Product screens */}
+      <section id="screens" className="bg-primary/5 border-t border-border py-20">
+      <div className="max-w-5xl mx-auto px-6">
+        <div className="text-center mb-8">
+          <h2 className="text-3xl md:text-4xl font-serif font-bold mb-3">{lang === "ar" ? "شوف النظام من جوّه" : "See it in action"}</h2>
+          <p className="text-muted-foreground">
+            {lang === "ar" ? "صور حقيقية من النظام ببيانات تجريبية." : "Real screens from the app, with sample data."}
+          </p>
+        </div>
+        <div className="flex justify-center gap-2 mb-6 flex-wrap">
+          {screens.map((s) => (
+            <Button
+              key={s.id}
+              size="sm"
+              variant={screen === s.id ? "default" : "outline"}
+              onClick={() => setScreen(s.id)}
+              data-testid={`screen-tab-${s.id}`}
+            >
+              {s[lang]}
+            </Button>
+          ))}
+        </div>
+        <div className="rounded-xl border border-border overflow-hidden shadow-lg bg-card">
+          <img
+            src={`/screens/${screen}-${lang}.webp`}
+            alt={screens.find((s) => s.id === screen)![lang]}
+            width={1360}
+            height={820}
+            loading="lazy"
+            className="w-full h-auto block"
+            data-testid="screen-image"
+          />
+        </div>
+      </div>
+      </section>
+
       {/* Features */}
       <section id="features" className="bg-card border-y border-border py-20">
         <div className="max-w-6xl mx-auto px-6">
@@ -248,7 +292,8 @@ export default function LandingPage() {
       </section>
 
       {/* CTA */}
-      <section className="py-24 max-w-6xl mx-auto px-6 text-center">
+      <section className="bg-primary/10 border-t border-primary/20">
+      <div className="py-24 max-w-6xl mx-auto px-6 text-center">
         <h2 className="text-4xl md:text-5xl font-serif font-bold mb-6">
           {t("cta.title")}
         </h2>
@@ -269,6 +314,7 @@ export default function LandingPage() {
             </Button>
           </a>
         </div>
+      </div>
       </section>
 
       {/* Footer */}

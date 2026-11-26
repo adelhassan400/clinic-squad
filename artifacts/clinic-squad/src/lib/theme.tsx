@@ -11,8 +11,9 @@ const ThemeContext = createContext<ThemeContextType | null>(null);
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
   const [theme, setTheme] = useState<Theme>(() => {
-    const stored = localStorage.getItem("clinicsquad_theme");
-    return (stored === "light" ? "light" : "dark") as Theme;
+    // Light is the default. A saved choice only exists after the user used the toggle.
+    const stored = localStorage.getItem("clinicsquad_theme_choice");
+    return (stored === "dark" ? "dark" : "light") as Theme;
   });
 
   useEffect(() => {
@@ -22,10 +23,14 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     } else {
       root.classList.remove("dark");
     }
-    localStorage.setItem("clinicsquad_theme", theme);
   }, [theme]);
 
-  const toggleTheme = () => setTheme(t => t === "dark" ? "light" : "dark");
+  const toggleTheme = () =>
+    setTheme((t) => {
+      const next: Theme = t === "dark" ? "light" : "dark";
+      localStorage.setItem("clinicsquad_theme_choice", next);
+      return next;
+    });
 
   return (
     <ThemeContext.Provider value={{ theme, toggleTheme }}>
